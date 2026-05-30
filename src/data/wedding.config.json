@@ -1,0 +1,74 @@
+{
+  "couple": {
+    "person1": { "firstName": "John", "middleName": "Michael", "lastName": "Lien", "displayShort": "John" },
+    "person2": { "firstName": "Diana", "middleName": "Duchicela", "lastName": "Guajan", "displayShort": "Diana" },
+    "monogram": "J ⚭ D",
+    "displayCombined": "John & Diana"
+  },
+  "wedding": {
+    "date": "2027-03-13",
+    "dateDisplayEn": "Saturday, March 13, 2027",
+    "dateDisplayEs": "Sábado, 13 de marzo de 2027",
+    "timezone": "America/Guayaquil",
+    "ceremonyTime": "15:00",
+    "ceremonyTimeDisplay": "3:00 PM",
+    "receptionTime": "18:00",
+    "receptionTimeDisplay": "6:00 PM"
+  },
+  "venues": {
+    "ceremony": {
+      "name": "Basílica del Voto Nacional",
+      "addressLine1": "Carchi y Venezuela",
+      "addressLine2": "Centro Histórico",
+      "city": "Quito",
+      "country": "Ecuador",
+      "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Bas%C3%ADlica+del+Voto+Nacional+Quito",
+      "photoSlot": "basilica-exterior.jpg"
+    },
+    "reception": {
+      "name": "Hotel Plaza Grande",
+      "addressLine1": "García Moreno N5-16 y Chile",
+      "addressLine2": "Plaza de la Independencia, Centro Histórico",
+      "city": "Quito",
+      "country": "Ecuador",
+      "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Hotel+Plaza+Grande+Quito",
+      "website": "https://www.plazagrandequito.com/",
+      "photoSlot": "plaza-grande-hotel.jpg",
+      "shuttleNote": "Airport shuttle: contact hotel directly to arrange. Confirm at booking."
+    }
+  },
+  "airport": {
+    "code": "UIO",
+    "name": "Mariscal Sucre International Airport",
+    "city": "Quito",
+    "driveTimeMinutes": 45,
+    "taxiCostUsd": 26,
+    "expressBusCostUsd": 8
+  },
+  "guestWindow": {
+    "earliestArrival": "2027-03-08",
+    "typicalDeparture": "2027-03-14"
+  },
+  "rsvp": {
+    "deadline": "2026-11-15",
+    "deadlineDisplayEn": "Sunday, November 15, 2026",
+    "deadlineDisplayEs": "Domingo, 15 de noviembre de 2026",
+    "embedUrl": "RSVPIFY_EMBED_URL_GOES_HERE",
+    "fallbackUrl": "RSVPIFY_PUBLIC_URL_GOES_HERE",
+    "contactEmail": "rsvp@johnanddianawedding.com"
+  },
+  "registry": {
+    "amazon": {
+      "url": "AMAZON_REGISTRY_URL_GOES_HERE",
+      "enabled": true
+    }
+  },
+  "site": {
+    "domain": "johnanddianawedding.com",
+    "defaultLocale": "en",
+    "locales": ["en", "es"]
+  },
+  "social": {
+    "hashtag": "#LienGuajan2027"
+  }
+}
