@@ -1,0 +1,49 @@
+---
+import Base from '../../layouts/Base.astro';
+import { t, type Locale } from '../../lib/i18n';
+import faqs from '../../data/faqs.json';
+
+const locale: Locale = 'es';
+const categoryKey = (cat: string) => ({
+  'Wedding Day': 'weddingDay',
+  'Travel & Logistics': 'travelLogistics',
+  'Lodging': 'lodging',
+  'Gifts & Registry': 'giftsRegistry',
+  'Local Tips': 'localTips',
+}[cat] ?? cat);
+const grouped = faqs.reduce<Record<string, typeof faqs>>((acc, f) => {
+  (acc[f.category] ||= []).push(f);
+  return acc;
+}, {});
+---
+
+<Base title={t(locale, 'faq.heading') + ' · John & Diana'} description={t(locale, 'faq.heading')} lang={locale}>
+  <main>
+    <section class="section container container--narrow reveal" style="text-align:center;">
+      <p class="eyebrow">{t(locale, 'nav.faq')}</p>
+      <h1>{t(locale, 'faq.heading')}</h1>
+    </section>
+    {Object.entries(grouped).map(([category, items]) => (
+      <section class="section container container--narrow reveal">
+        <h2>{t(locale, `faq.categories.${categoryKey(category)}`)}</h2>
+        <div class="faq-list">
+          {items.map((item) => (
+            <details class="faq-item">
+              <summary>{locale === 'es' ? item.questionEs : item.questionEn}</summary>
+              <p>{locale === 'es' ? item.answerEs : item.answerEn}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+    ))}
+  </main>
+</Base>
+
+<style>
+  .faq-list { display: grid; gap: var(--space-2); }
+  .faq-item { padding: var(--space-2) var(--space-3); border: 1px solid var(--color-rule); border-radius: var(--radius-lg); background: rgba(255,255,255,0.58); box-shadow: var(--shadow-sm); transition: border-color var(--transition), background var(--transition); }
+  .faq-item:hover, .faq-item[open] { border-color: rgba(201,169,97,0.65); background: rgba(201,169,97,0.08); }
+  summary { cursor: pointer; font-weight: 700; color: var(--color-text); }
+  .faq-item p { margin-top: var(--space-2); color: var(--color-text-muted); }
+</style>
+

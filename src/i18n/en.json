@@ -1,1 +1,148 @@
-{}
+{
+  "nav": {
+    "home": "Home",
+    "ourStory": "Our Story",
+    "venues": "Venues",
+    "itinerary": "Itinerary",
+    "travel": "Travel",
+    "rsvp": "RSVP",
+    "registry": "Registry",
+    "faq": "FAQ",
+    "menu": "Menu"
+  },
+  "hero": {
+    "greeting": "Imanalla · Welcome",
+    "monogramCaption": "John Michael Lien & Diana Duchicela Guajan",
+    "saveTheDate": "Save the date for a joyful celebration in Quito, Ecuador.",
+    "savedate": "Save the date ·",
+    "primaryCta": "RSVP",
+    "secondaryCta": "View itinerary",
+    "dateLine": "Saturday, March 13, 2027",
+    "ceremonyLine": "Ceremony at 3:00 PM · Reception at 6:00 PM",
+    "imageAlt": "John & Diana, with the Basílica del Voto Nacional in Quito"
+  },
+  "home": {
+    "welcomeTitle": "Welcome to Quito",
+    "welcomeBlurb": "We are so grateful to celebrate our wedding with you in the heart of Ecuador. This site gathers the details you need for the ceremony, reception, travel, hotels, and a suggested guest itinerary.",
+    "keyDetailsTitle": "Key details",
+    "keyDetailsIntro": "Our ceremony and reception are both in Quito's historic Old Town, a short walk apart. Please RSVP before the deadline and check back for updates as the celebration gets closer.",
+    "heritageTitle": "A celebration of family and roots",
+    "travelTitle": "Planning your trip",
+    "detailsEyebrow": "Save the date",
+    "ceremony": "Ceremony",
+    "reception": "Reception",
+    "shortWalkBetween": "About an 8-minute walk between venues."
+  },
+  "ourStory": {
+    "heading": "Our Story",
+    "howWeMetHeading": "How we met",
+    "howWeMetBody": "[John and Diana's story will be added here.]",
+    "galleryHeading": "Moments together",
+    "heritageSubheading": "A note on heritage",
+    "heritageBody": "Imanalla, welcome. Diana's roots are in Otavalo, an Andean community known for its Kichwa language, music, and extraordinary weaving traditions. Otavalo textiles carry generations of artistry, patience, and identity, while Andean values honor family, reciprocity, and Pachamama—Mother Earth. As John and Diana begin married life, they carry those roots with gratitude. This celebration also honors kuyay, the Kichwa word for love: love of family, love of place, and the love that brings all of us together in Quito."
+  },
+  "venues": {
+    "heading": "Venues",
+    "ceremonyHeading": "Ceremony",
+    "receptionHeading": "Reception",
+    "walkingText": "The Basílica and Hotel Plaza Grande are about an 8-minute walk apart on a calm afternoon in Old Town.",
+    "shuttleDisclaimer": "Airport shuttles and private transfers should be arranged directly with your hotel and confirmed at booking.",
+    "unnamed": "Venue"
+  },
+  "itinerary": {
+    "heading": "Suggested Itinerary",
+    "intro": "This is a suggested itinerary for guests who would like to explore Quito before the wedding. Please adapt it to your arrival date, energy level, mobility, and interests—rest is part of the plan, especially at altitude.",
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "saturday": "Saturday",
+    "sunday": "Sunday",
+    "morning": "Morning",
+    "afternoon": "Afternoon",
+    "evening": "Evening",
+    "altitudeAdvisory": "Altitude advisory: take it easy, hydrate, and avoid heavy meals or alcohol while acclimating.",
+    "alternateArrivalsHeading": "Alternate arrival plans",
+    "alternateArrivalsIntro": "Arriving later in the week? These shorter options keep the pace gentle so you can enjoy the wedding day.",
+    "weddingDay": "Wedding Day",
+    "day": "Day"
+  },
+  "travel": {
+    "heading": "Travel",
+    "airportInfoHeading": "Arriving in Quito",
+    "airportInfoBody": "Fly into Mariscal Sucre International Airport (UIO), about 45–60 minutes from Old Town depending on traffic. Official airport taxis are typically about $26 to central Quito, and the airport express bus is about $8.",
+    "altitudeTip": "Quito sits at about 9,350 feet / 2,850 meters. Plan a gentle first day, drink water, and give yourself time to acclimate.",
+    "weatherTip": "March is part of the wet season. Expect cool mornings and evenings, possible rain, strong high-altitude sun, and temperatures around 50–69°F. Pack layers and a light rain jacket.",
+    "currencyTip": "Ecuador uses the U.S. Dollar. Small bills are helpful for taxis, markets, and tips.",
+    "safetyTip": "Use official taxis or trusted ride-share options, keep valuables close in busy areas, and take normal big-city precautions in Old Town.",
+    "flightsHeading": "Flights",
+    "hotelsHeading": "Hotels",
+    "flights": "Flights",
+    "hotels": "Hotels",
+    "stayHeading": "Where to stay",
+    "stayIntro": "A few 4★ and 5★ hotels in Quito's Old Town, within easy walking distance of the Basílica and Hotel Plaza Grande. Estimated rates are approximate; please verify for March 2027."
+  },
+  "rsvp": {
+    "heading": "RSVP",
+    "intro": "We would be honored to celebrate with you. Please let us know whether you can join us in Quito and share any meal or accessibility notes through the RSVP form.",
+    "deadlineCallout": "Please RSVP by Sunday, November 15, 2026.",
+    "fallbackText": "Can't load the form? Use this link:",
+    "contactIssues": "If you have any issues, email us at rsvp@johnanddianawedding.com.",
+    "setupPendingTitle": "RSVP form coming soon",
+    "setupPendingBody": "We're putting the finishing touches on the RSVP form. In the meantime, please reach out to us directly and we'll save your spot.",
+    "fallbackLink": "Open RSVP →"
+  },
+  "registry": {
+    "heading": "Registry",
+    "title": "Registry",
+    "intro": "Your presence in Quito is the greatest gift. For guests who would like to give something more, we are grateful for contributions toward our honeymoon and future home.",
+    "amazonButtonLabel": "View Amazon registry",
+    "viewRegistry": "View registry",
+    "moreComingSoon": "More registry options are coming soon.",
+    "moreSoon": "More registry options are coming soon."
+  },
+  "faq": {
+    "heading": "Frequently Asked Questions",
+    "categories": {
+      "weddingDay": "Wedding Day",
+      "travelLogistics": "Travel & Logistics",
+      "lodging": "Lodging",
+      "giftsRegistry": "Gifts & Registry",
+      "localTips": "Local Tips"
+    }
+  },
+  "footer": {
+    "copyright": "With love from John & Diana",
+    "tagline": "With love from John & Diana",
+    "languageEnglish": "English",
+    "languageSpanish": "Español",
+    "backToTop": "Back to top ↑"
+  },
+  "common": {
+    "loading": "Loading...",
+    "dateFormatHint": "Month day, year",
+    "viewMap": "View map",
+    "viewOnMap": "View on map",
+    "openInGoogleMaps": "Open in Google Maps",
+    "backToTop": "Back to top",
+    "learnMore": "Learn more",
+    "close": "Close",
+    "days": "Days",
+    "hours": "Hours",
+    "minutes": "Minutes",
+    "seconds": "Seconds",
+    "weddingPast": "Together at last",
+    "moreSoon": "More coming soon",
+    "search": "Search",
+    "comingSoon": "Coming soon"
+  },
+  "heritage": {
+    "headerLine": "Imanalla · Bienvenidos · Welcome",
+    "header": "Imanalla · Bienvenidos · Welcome",
+    "sectionTitle": "A note on heritage",
+    "title": "A note on heritage",
+    "paragraph": "Imanalla, welcome. Diana's roots are in Otavalo, an Andean community known for its Kichwa language, music, and extraordinary weaving traditions. Otavalo textiles carry generations of artistry, patience, and identity, while Andean values honor family, reciprocity, and Pachamama—Mother Earth. As John and Diana begin married life, they carry those roots with gratitude. This celebration also honors kuyay, the Kichwa word for love: love of family, love of place, and the love that brings all of us together in Quito.",
+    "body": "Imanalla, welcome. Diana's roots are in Otavalo, an Andean community known for its Kichwa language, music, and extraordinary weaving traditions. Otavalo textiles carry generations of artistry, patience, and identity, while Andean values honor family, reciprocity, and Pachamama—Mother Earth. As John and Diana begin married life, they carry those roots with gratitude. This celebration also honors kuyay, the Kichwa word for love: love of family, love of place, and the love that brings all of us together in Quito."
+  }
+}

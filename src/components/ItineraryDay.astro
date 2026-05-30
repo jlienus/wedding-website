@@ -1,0 +1,49 @@
+---
+import { t, type Locale } from '../lib/i18n';
+
+type Day = Record<string, any>;
+interface Props { day: Day; locale: Locale }
+const { day = {}, locale } = Astro.props;
+const accentMap: Record<string, string> = {
+  yellow: 'var(--color-ec-yellow)',
+  blue: 'var(--color-ec-blue)',
+  red: 'var(--color-ec-red)',
+  gold: 'var(--color-gold)',
+  none: 'var(--color-rule)',
+};
+const accent = accentMap[String(day.ecAccent ?? 'none')] ?? 'var(--color-rule)';
+const getText = (item: any) => locale === 'es' ? (item?.es ?? item?.bodyEs ?? item?.textEs ?? item) : (item?.en ?? item?.bodyEn ?? item?.textEn ?? item);
+const label = locale === 'es' ? (day.labelEs ?? day.dateLabelEs ?? day.label) : (day.labelEn ?? day.dateLabelEn ?? day.label);
+const sections = ['morning', 'afternoon', 'evening'].filter((part) => day[part]);
+const notes = locale === 'es' ? (day.notesEs ?? day.notes) : (day.notesEn ?? day.notes);
+---
+
+<article class="itinerary-day reveal" style={`--accent:${accent}`}>
+  {day.ecAccent !== 'none' && <div class="accent" aria-hidden="true"></div>}
+  <div class="content">
+    {day.isWeddingDay && <p class="eyebrow">🎉 {t(locale, 'itinerary.weddingDay')}</p>}
+    <header>
+      <h2>{label ?? t(locale, 'itinerary.day')}</h2>
+      {day.altitudeAdvisory && <span class="pill">{t(locale, 'itinerary.altitudeAdvisory')}</span>}
+    </header>
+    {sections.length > 0 ? sections.map((part) => (
+      <section>
+        <h3>{t(locale, `itinerary.${part}`)}</h3>
+        <p>{getText(day[part])}</p>
+      </section>
+    )) : <p class="empty">{t(locale, 'common.moreSoon')}</p>}
+    {notes && <aside>{notes}</aside>}
+  </div>
+</article>
+
+<style>
+  .itinerary-day { position: relative; display: grid; grid-template-columns: auto 1fr; overflow: hidden; border: 1px solid var(--color-rule); border-radius: var(--radius-lg); background: rgba(255,255,255,0.58); box-shadow: var(--shadow-sm); }
+  .accent { width: 6px; background: var(--accent); }
+  .content { padding: var(--space-3); }
+  header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
+  h2 { margin: 0; color: var(--color-gold); }
+  h3 { font-size: 1rem; margin: var(--space-2) 0 0.25rem; letter-spacing: 0.08em; text-transform: uppercase; }
+  .pill { display: inline-flex; padding: 0.28rem 0.7rem; border-radius: 999px; background: rgba(201,169,97,0.15); color: var(--color-text); font-size: var(--fs-tiny); font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; }
+  aside { margin-top: var(--space-2); padding: var(--space-2); border-left: 2px solid var(--accent); background: rgba(201,169,97,0.09); color: var(--color-text-muted); }
+  .empty { color: var(--color-text-muted); }
+</style>

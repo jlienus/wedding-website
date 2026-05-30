@@ -1,0 +1,34 @@
+---
+import config from '../data/wedding.config.json';
+import { t, type Locale } from '../lib/i18n';
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+const embedUrl = config.rsvp?.embedUrl ?? '';
+const fallbackUrl = config.rsvp?.fallbackUrl ?? '';
+const pending = !embedUrl || embedUrl === 'RSVPIFY_EMBED_URL_GOES_HERE';
+const contactEmail = (config.rsvp as any)?.contactEmail ?? '';
+const fallbackHref = fallbackUrl || (contactEmail ? `mailto:${contactEmail}` : '');
+---
+
+<section class="rsvp-embed reveal">
+  {pending ? (
+    <article class="placeholder">
+      <h2>{t(locale, 'rsvp.setupPendingTitle')}</h2>
+      <p>{t(locale, 'rsvp.setupPendingBody')}</p>
+      {fallbackHref && <a class="btn btn--gold" href={fallbackHref}>{t(locale, 'rsvp.fallbackLink')}</a>}
+    </article>
+  ) : (
+    <>
+      <iframe src={embedUrl} loading="lazy" title="RSVP" style="width:100%; min-height:900px; border:0;"></iframe>
+      <noscript><a href={fallbackUrl || embedUrl}>{t(locale, 'rsvp.fallbackLink')}</a></noscript>
+    </>
+  )}
+</section>
+
+<style>
+  .rsvp-embed { max-width: 58rem; margin: 0 auto; }
+  .placeholder { padding: var(--space-4); text-align: center; border: 1px solid rgba(201,169,97,0.45); border-radius: var(--radius-lg); background: rgba(255,255,255,0.62); box-shadow: var(--shadow-sm); }
+  .placeholder h2 { color: var(--color-gold); }
+  .placeholder .btn { margin-top: var(--space-2); }
+</style>
+

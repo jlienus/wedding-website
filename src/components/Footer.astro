@@ -1,0 +1,31 @@
+---
+import config from '../data/wedding.config.json';
+import { t, type Locale } from '../lib/i18n';
+
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+const date = locale === 'es' ? config.wedding.dateDisplayEs : config.wedding.dateDisplayEn;
+---
+
+<footer class="site-footer">
+  <a class="back-to-top" href="#top" data-back-to-top>{t(locale, 'footer.backToTop')}</a>
+  <div class="monogram" aria-hidden="true">{config.couple.monogram}</div>
+  <p>{t(locale, 'footer.tagline')}</p>
+  <p class="meta">{date}</p>
+  <p class="hashtag">{config.social?.hashtag}</p>
+</footer>
+
+<script is:inline>
+  document.querySelector('[data-back-to-top]')?.addEventListener('click', (event) => {
+    event.preventDefault();
+    window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  });
+</script>
+
+<style>
+  .site-footer { text-align: center; padding: 5rem var(--space-3); color: var(--color-text-muted); }
+  .back-to-top { display: inline-block; margin-bottom: var(--space-3); border: 0; font-size: var(--fs-tiny); letter-spacing: 0.1em; text-transform: uppercase; }
+  .monogram { font-family: var(--font-display); font-size: 2rem; letter-spacing: 0.16em; color: var(--color-gold); margin-bottom: var(--space-2); }
+  .meta, .hashtag { font-size: var(--fs-small); margin-bottom: 0.35rem; }
+  .hashtag { color: var(--color-gold); }
+</style>

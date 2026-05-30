@@ -1,0 +1,38 @@
+---
+import config from '../data/wedding.config.json';
+import { t, type Locale } from '../lib/i18n';
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+const date = locale === 'es' ? config.wedding.dateDisplayEs : config.wedding.dateDisplayEn;
+const { ceremony, reception } = config.venues;
+---
+
+<article class="details-card reveal">
+  <p class="eyebrow">{t(locale, 'home.detailsEyebrow')}</p>
+  <h2>{date}</h2>
+  <div class="detail-grid">
+    <section>
+      <h3>{t(locale, 'home.ceremony')}</h3>
+      <p>{ceremony.name}</p>
+      <p class="time">{config.wedding.ceremonyTimeDisplay}</p>
+      <a href={ceremony.mapsUrl} target="_blank" rel="noopener noreferrer">{t(locale, 'common.viewOnMap')}</a>
+    </section>
+    <section>
+      <h3>{t(locale, 'home.reception')}</h3>
+      <p>{reception.name}</p>
+      <p class="time">{config.wedding.receptionTimeDisplay}</p>
+      <a href={reception.mapsUrl} target="_blank" rel="noopener noreferrer">{t(locale, 'common.viewOnMap')}</a>
+    </section>
+  </div>
+  <p class="note">{t(locale, 'home.shortWalkBetween')}</p>
+</article>
+
+<style>
+  .details-card { max-width: 48rem; margin: 0 auto; padding: var(--space-4); border: 1px solid rgba(201,169,97,0.45); border-radius: var(--radius-lg); background: rgba(255,255,255,0.58); box-shadow: var(--shadow-sm); }
+  h2 { color: var(--color-gold); }
+  .detail-grid { display: grid; gap: var(--space-3); margin-top: var(--space-3); }
+  h3 { font-size: var(--fs-h3); margin-bottom: var(--space-1); }
+  .time { color: var(--color-text-muted); font-weight: 600; }
+  .note { margin: var(--space-3) 0 0; padding-top: var(--space-2); border-top: 1px solid var(--color-rule); color: var(--color-text-muted); font-size: var(--fs-small); }
+  @media (min-width: 700px) { .detail-grid { grid-template-columns: 1fr 1fr; } }
+</style>

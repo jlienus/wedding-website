@@ -1,1 +1,41 @@
-{}
+{
+  "flights": [
+    {
+      "providerKey": "kayak",
+      "providerName": "Kayak",
+      "url": "https://www.kayak.com/flights/US-UIO/2027-03-08/2027-03-14",
+      "noteEn": "Pre-filled to fly from the US to Quito (UIO), Mar 8 – Mar 14, 2027. Adjust your origin city on the page.",
+      "noteEs": "Prellenado para vuelos desde Estados Unidos a Quito (UIO), del 8 al 14 de marzo de 2027. Ajusten la ciudad de origen en la página."
+    },
+    {
+      "providerKey": "skyscanner",
+      "providerName": "Skyscanner",
+      "url": "https://www.skyscanner.com/transport/flights/us/uio/270308/270314/",
+      "noteEn": "Pre-filled for US-to-Quito flight searches around the wedding week. Adjust origin, travelers, and dates as needed.",
+      "noteEs": "Prellenado para búsquedas de vuelos de Estados Unidos a Quito durante la semana de la boda. Ajusten origen, viajeros y fechas según necesiten."
+    },
+    {
+      "providerKey": "googleflights",
+      "providerName": "Google Flights",
+      "url": "https://www.google.com/travel/flights?q=Flights+to+Quito+Ecuador+March+2027",
+      "noteEn": "Searches Google Flights for trips to Quito, Ecuador in March 2027. Add your origin city and preferred dates.",
+      "noteEs": "Busca en Google Flights viajes a Quito, Ecuador, en marzo de 2027. Agreguen su ciudad de origen y fechas preferidas."
+    }
+  ],
+  "hotels": [
+    {
+      "providerKey": "booking",
+      "providerName": "Booking.com",
+      "url": "https://www.booking.com/searchresults.html?ss=Quito%2C+Ecuador&checkin=2027-03-08&checkout=2027-03-14&group_adults=2&no_rooms=1&nflt=class%3D4%3Bclass%3D5",
+      "noteEn": "Pre-filtered to 4★ and 5★ hotels in Quito, Mar 8 – Mar 14, 2027.",
+      "noteEs": "Pre-filtrado para hoteles de 4★ y 5★ en Quito, del 8 al 14 de marzo de 2027."
+    },
+    {
+      "providerKey": "google",
+      "providerName": "Google Hotels",
+      "url": "https://www.google.com/travel/hotels/Quito,%20Ecuador?ts=CAESBwgFEAAaAEgB",
+      "noteEn": "Use Google Hotels to compare locations, rates, and availability in Quito. Adjust dates to match your travel plans.",
+      "noteEs": "Usen Google Hotels para comparar ubicaciones, tarifas y disponibilidad en Quito. Ajusten las fechas según sus planes de viaje."
+    }
+  ]
+}

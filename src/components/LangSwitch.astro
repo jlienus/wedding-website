@@ -1,0 +1,31 @@
+---
+import type { Locale } from '../lib/i18n';
+
+interface Props { currentLocale: Locale; currentPath: string }
+const { currentLocale, currentPath } = Astro.props;
+const normalizedPath = currentPath.replace(/\/$/, '') || '/';
+const enToEs: Record<string, string> = {
+  '/': '/es',
+  '/our-story': '/es/nuestra-historia',
+  '/venues': '/es/lugares',
+  '/itinerary': '/es/itinerario',
+  '/travel': '/es/viajes',
+  '/rsvp': '/es/rsvp',
+  '/registry': '/es/regalos',
+  '/faq': '/es/preguntas',
+};
+const esToEn = Object.fromEntries(Object.entries(enToEs).map(([en, es]) => [es, en]));
+const enHref = currentLocale === 'en' ? normalizedPath : esToEn[normalizedPath] ?? '/';
+const esHref = currentLocale === 'es' ? normalizedPath : enToEs[normalizedPath] ?? '/es';
+---
+
+<div class="lang-switch" aria-label="Language switcher">
+  <a href={enHref} aria-current={currentLocale === 'en' ? 'true' : undefined} class:list={{ current: currentLocale === 'en' }}>EN</a>
+  <a href={esHref} aria-current={currentLocale === 'es' ? 'true' : undefined} class:list={{ current: currentLocale === 'es' }}>ES</a>
+</div>
+
+<style>
+  .lang-switch { display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.2rem; border: 1px solid var(--color-rule); border-radius: 999px; background: rgba(255,255,255,0.35); }
+  a { border: 0; border-radius: 999px; padding: 0.3rem 0.55rem; font-size: 0.72rem; font-weight: 500; letter-spacing: 0.06em; color: var(--color-text-muted); }
+  a.current { background: var(--color-gold); color: var(--color-bg); font-weight: 700; }
+</style>

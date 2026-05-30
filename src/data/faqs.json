@@ -1,1 +1,114 @@
-[]
+[
+  {
+    "category": "Wedding Day",
+    "questionEn": "What time does the ceremony start? What about the reception?",
+    "questionEs": "¿A qué hora empieza la ceremonia? ¿Y la recepción?",
+    "answerEn": "The ceremony begins at 3:00 PM at Basílica del Voto Nacional. The reception begins at 6:00 PM at Hotel Plaza Grande.",
+    "answerEs": "La ceremonia empieza a las 3:00 PM en la Basílica del Voto Nacional. La recepción empieza a las 6:00 PM en el Hotel Plaza Grande."
+  },
+  {
+    "category": "Wedding Day",
+    "questionEn": "What is the dress code?",
+    "questionEs": "¿Cuál es el código de vestimenta?",
+    "answerEn": "Formal or cocktail attire. For the church ceremony, please choose respectful coverage with shoulders and knees covered.",
+    "answerEs": "Vestimenta formal o tipo cóctel. Para la ceremonia en la iglesia, por favor elijan una vestimenta respetuosa con hombros y rodillas cubiertos."
+  },
+  {
+    "category": "Wedding Day",
+    "questionEn": "Are kids welcome?",
+    "questionEs": "¿Pueden asistir niños?",
+    "answerEn": "TBD — we will confirm closer to the date. Please reach out if you are planning to bring children.",
+    "answerEs": "Por confirmar; lo comunicaremos más cerca de la fecha. Por favor contáctennos si están pensando asistir con niños."
+  },
+  {
+    "category": "Wedding Day",
+    "questionEn": "Can I bring a plus-one?",
+    "questionEs": "¿Puedo llevar acompañante?",
+    "answerEn": "Please refer to your invitation. If you are uncertain, reach out to us before RSVPing.",
+    "answerEs": "Por favor revisen su invitación. Si tienen dudas, escríbannos antes de confirmar su asistencia."
+  },
+  {
+    "category": "Wedding Day",
+    "questionEn": "Will there be meal options?",
+    "questionEs": "¿Habrá opciones de comida?",
+    "answerEn": "Multiple options will be available at the reception. Please confirm dietary needs on your RSVP.",
+    "answerEs": "Habrá varias opciones durante la recepción. Por favor indiquen sus necesidades alimentarias al confirmar asistencia."
+  },
+  {
+    "category": "Wedding Day",
+    "questionEn": "What is the photography guidance?",
+    "questionEs": "¿Cuál es la indicación sobre fotografía?",
+    "answerEn": "Personal photos are welcome during cocktails and the reception. Please respect the officiant’s request to refrain from flash photography during the ceremony itself.",
+    "answerEs": "Las fotos personales son bienvenidas durante el cóctel y la recepción. Durante la ceremonia, por favor respeten la indicación del oficiante de evitar fotografía con flash."
+  },
+  {
+    "category": "Travel & Logistics",
+    "questionEn": "Do I need to speak Spanish?",
+    "questionEs": "¿Necesito hablar español?",
+    "answerEn": "No. Many travel providers and hotel staff in Quito work with English-speaking guests. That said, learning hola, gracias, and por favor is always appreciated.",
+    "answerEs": "No. Muchos proveedores turísticos y hoteles en Quito atienden a visitantes que hablan inglés. Aun así, siempre se agradece aprender hola, gracias y por favor."
+  },
+  {
+    "category": "Travel & Logistics",
+    "questionEn": "What currency does Ecuador use?",
+    "questionEs": "¿Qué moneda se usa en Ecuador?",
+    "answerEn": "Ecuador uses the U.S. Dollar. Small bills are especially useful for taxis, markets, and tips.",
+    "answerEs": "Ecuador usa el dólar estadounidense. Los billetes pequeños son muy útiles para taxis, mercados y propinas."
+  },
+  {
+    "category": "Travel & Logistics",
+    "questionEn": "Will I need a visa?",
+    "questionEs": "¿Necesitaré visa?",
+    "answerEn": "U.S. citizens generally do not need a visa for tourist stays up to 90 days. Guests from other countries should check the Ecuadorian embassy or consulate guidance for their passport.",
+    "answerEs": "Los ciudadanos estadounidenses generalmente no necesitan visa para estadías turísticas de hasta 90 días. Invitados de otros países deben revisar la información de la embajada o consulado de Ecuador según su pasaporte."
+  },
+  {
+    "category": "Travel & Logistics",
+    "questionEn": "What is the weather like in March?",
+    "questionEs": "¿Cómo es el clima en marzo?",
+    "answerEn": "March is part of the wet season, with temperatures around 50–69°F. Pack layers, a rain jacket, comfortable shoes, and sun protection for high UV at altitude.",
+    "answerEs": "Marzo es parte de la temporada de lluvias, con temperaturas aproximadas de 10–21°C / 50–69°F. Empaquen capas, chaqueta impermeable, zapatos cómodos y protección solar por el alto índice UV en la altura."
+  },
+  {
+    "category": "Travel & Logistics",
+    "questionEn": "How do I get from the airport to Quito?",
+    "questionEs": "¿Cómo llego del aeropuerto a Quito?",
+    "answerEn": "Official airport taxis are typically about $26 to Old Town, the airport express bus is about $8, and ride-share options may be available. Confirm your fare or route before departing.",
+    "answerEs": "Los taxis oficiales del aeropuerto suelen costar alrededor de $26 hasta el Centro Histórico, el bus exprés cuesta alrededor de $8 y puede haber aplicaciones de transporte disponibles. Confirmen la tarifa o ruta antes de salir."
+  },
+  {
+    "category": "Travel & Logistics",
+    "questionEn": "Will I get altitude sickness?",
+    "questionEs": "¿Me puede afectar la altura?",
+    "answerEn": "Quito is about 9,350 feet / 2,850 meters above sea level. Many visitors feel mild breathlessness or fatigue. Arrive one to two days early if possible, hydrate, eat lightly, and take it easy for the first 48 hours.",
+    "answerEs": "Quito está a unos 2.850 metros / 9.350 pies sobre el nivel del mar. Muchas personas sienten leve falta de aire o cansancio. Si pueden, lleguen uno o dos días antes, hidrátense, coman ligero y tómenselo con calma las primeras 48 horas."
+  },
+  {
+    "category": "Lodging",
+    "questionEn": "Is there a hotel shuttle?",
+    "questionEs": "¿Hay traslado del hotel?",
+    "answerEn": "Hotel Plaza Grande can help arrange airport shuttle service; contact the hotel directly and confirm details when booking. Other hotels may offer similar service.",
+    "answerEs": "El Hotel Plaza Grande puede ayudar a coordinar traslado desde el aeropuerto; contacten directamente al hotel y confirmen los detalles al reservar. Otros hoteles podrían ofrecer servicios similares."
+  },
+  {
+    "category": "Lodging",
+    "questionEn": "Where should I stay?",
+    "questionEs": "¿Dónde debería hospedarme?",
+    "answerEn": "We recommend staying in or near Old Town for the easiest wedding-day logistics. See the Travel → Hotels section for suggested 4★ and 5★ options.",
+    "answerEs": "Recomendamos hospedarse en o cerca del Centro Histórico para facilitar la logística del día de la boda. Revisen la sección Viaje → Hoteles para opciones sugeridas de 4★ y 5★."
+  },
+  {
+    "category": "Gifts & Registry",
+    "questionEn": "Is there a gift registry?",
+    "questionEs": "¿Hay mesa de regalos?",
+    "answerEn": "Yes — please see the Registry page. Your presence is the greatest gift, and any contribution is deeply appreciated.",
+    "answerEs": "Sí; por favor revisen la página de Mesa de regalos. Su presencia es nuestro mejor regalo y cualquier contribución será recibida con mucho agradecimiento."
+  },
+  {
+    "category": "Local Tips",
+    "questionEn": "What if I have to cancel?",
+    "questionEs": "¿Qué hago si tengo que cancelar?",
+    "answerEn": "Please email us at rsvp@johnanddianawedding.com as soon as possible so we can update our counts.",
+    "answerEs": "Por favor escríbannos a rsvp@johnanddianawedding.com lo antes posible para poder actualizar nuestros números."
+  }
+]

@@ -1,0 +1,30 @@
+---
+import Base from '../layouts/Base.astro';
+import PhotoGallery from '../components/PhotoGallery.astro';
+import HeritageSection from '../components/HeritageSection.astro';
+import SectionDivider from '../components/SectionDivider.astro';
+import { t, type Locale } from '../lib/i18n';
+
+const locale: Locale = 'en';
+---
+
+<Base title={t(locale, 'nav.ourStory') + ' · John & Diana'} description={t(locale, 'ourStory.howWeMetBody')} lang={locale}>
+  <main>
+    <section class="section container container--narrow reveal" style="text-align:center;">
+      <p class="eyebrow">{t(locale, 'heritage.header')}</p>
+      <h1>{t(locale, 'ourStory.heading')}</h1>
+    </section>
+    <section class="section container container--narrow reveal">
+      <h2>{t(locale, 'ourStory.howWeMetHeading')}</h2>
+      <p>{t(locale, 'ourStory.howWeMetBody')}</p>
+    </section>
+    <SectionDivider />
+    <section class="section container reveal">
+      <h2 style="text-align:center;">{t(locale, 'ourStory.galleryHeading')}</h2>
+      <PhotoGallery slots={['couple-gallery-1.jpg','couple-gallery-2.jpg','couple-gallery-3.jpg','couple-gallery-4.jpg','couple-gallery-5.jpg','couple-gallery-6.jpg']} altPrefix={locale === 'es' ? 'Foto de John y Diana' : 'John and Diana photo'} />
+    </section>
+    <SectionDivider ornament="⚭" />
+    <HeritageSection locale={locale} />
+  </main>
+</Base>
+

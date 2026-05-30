@@ -1,1 +1,42 @@
-{}
+{
+  "ceremony": {
+    "id": "basilica",
+    "shortNameEn": "Basílica del Voto Nacional",
+    "shortNameEs": "Basílica del Voto Nacional",
+    "blurbEn": "Quito’s neo-Gothic masterpiece is considered the largest neo-Gothic basilica in the Americas. Construction began in 1892, and the church was consecrated by Pope John Paul II in 1985. Look for uniquely Ecuadorian details: gargoyles shaped like iguanas, tortoises, caimans, and jaguars instead of European mythological creatures. The towers offer 360° city views for a small fee, though the narrow stairs are best skipped by guests with mobility concerns.",
+    "blurbEs": "Esta obra maestra neogótica de Quito es considerada la basílica neogótica más grande de América. Su construcción comenzó en 1892 y fue consagrada por el papa Juan Pablo II en 1985. Observen sus detalles muy ecuatorianos: gárgolas con forma de iguanas, tortugas, caimanes y jaguares en lugar de criaturas mitológicas europeas. Las torres ofrecen vistas de 360° de la ciudad por una pequeña tarifa, aunque las escaleras estrechas no son recomendables para personas con movilidad limitada.",
+    "tipsEn": [
+      "Conservative dress for church: shoulders and knees covered",
+      "Arrive 30 minutes early because Old Town traffic can be unpredictable",
+      "Bring a light layer; evenings cool quickly in Quito"
+    ],
+    "tipsEs": [
+      "Vestimenta conservadora para la iglesia: hombros y rodillas cubiertos",
+      "Lleguen 30 minutos antes porque el tráfico del Centro Histórico puede ser impredecible",
+      "Lleven una capa ligera; las tardes se enfrían rápido en Quito"
+    ],
+    "photoSlot": "basilica-exterior.jpg",
+    "photoCaptionEn": "Basílica del Voto Nacional, Quito’s iconic neo-Gothic landmark.",
+    "photoCaptionEs": "Basílica del Voto Nacional, ícono neogótico de Quito."
+  },
+  "reception": {
+    "id": "plaza-grande",
+    "shortNameEn": "Hotel Plaza Grande",
+    "shortNameEs": "Hotel Plaza Grande",
+    "blurbEn": "Hotel Plaza Grande is a historic boutique hotel on Plaza de la Independencia, the heart of Quito’s UNESCO-listed Old Town. Bespoke interiors by designer Adriana Hoyos give the hotel a refined Ecuadorian character, and Salón San Francisco offers views over the historic center. It is about a 10-minute walk, or a 3-minute taxi ride, from the Basílica, so guests can stroll between ceremony and reception on a calm afternoon.",
+    "blurbEs": "El Hotel Plaza Grande es un hotel boutique histórico ubicado en la Plaza de la Independencia, corazón del Centro Histórico de Quito, declarado Patrimonio Mundial por la UNESCO. Sus interiores diseñados por Adriana Hoyos le dan un carácter ecuatoriano refinado, y el Salón San Francisco ofrece vistas al casco antiguo. Está a unos 10 minutos a pie, o 3 minutos en taxi, desde la Basílica, por lo que los invitados pueden caminar entre la ceremonia y la recepción en una tarde tranquila.",
+    "tipsEn": [
+      "Reception begins at 6:00 PM",
+      "The walk from the Basílica is short, but taxis are easy if preferred",
+      "Contact the hotel directly to arrange airport shuttle service"
+    ],
+    "tipsEs": [
+      "La recepción empieza a las 6:00 PM",
+      "La caminata desde la Basílica es corta, pero pueden tomar taxi si prefieren",
+      "Contacten directamente al hotel para coordinar traslado desde el aeropuerto"
+    ],
+    "photoSlot": "plaza-grande-hotel.jpg",
+    "photoCaptionEn": "Hotel Plaza Grande on Plaza de la Independencia in Quito’s Old Town.",
+    "photoCaptionEs": "Hotel Plaza Grande en la Plaza de la Independencia, Centro Histórico de Quito."
+  }
+}

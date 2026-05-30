@@ -1,1 +1,231 @@
-[]
+{
+  "days": [
+    {
+      "date": "2027-03-08",
+      "dayLabelKey": "itinerary.monday",
+      "ecAccent": "yellow",
+      "morning": {
+        "titleEn": "Arrival in Quito",
+        "titleEs": "Llegada a Quito",
+        "bodyEn": "Arrive at Mariscal Sucre International Airport (UIO) and transfer to Old Town. The drive is usually 45–60 minutes, with official airport taxis around $26 and the airport express bus around $8. Keep the day simple, check into your hotel, and drink plenty of water as your body adjusts to Quito’s altitude.",
+        "bodyEs": "Lleguen al Aeropuerto Internacional Mariscal Sucre (UIO) y trasládense al Centro Histórico. El trayecto suele tomar 45–60 minutos; los taxis oficiales cuestan alrededor de $26 y el bus exprés del aeropuerto alrededor de $8. Mantengan el día sencillo, hagan check-in y tomen bastante agua mientras se adaptan a la altura de Quito."
+      },
+      "afternoon": {
+        "titleEn": "Check in and rest",
+        "titleEs": "Check-in y descanso",
+        "bodyEn": "Settle into your hotel, unpack only what you need, and give yourself permission to rest. Quito sits high in the Andes, so even a short walk may feel different on the first day. If you want fresh air, take a gentle stroll near Plaza Grande and keep plans flexible.",
+        "bodyEs": "Instálense en el hotel, desempaquen solo lo necesario y dense permiso para descansar. Quito está en lo alto de los Andes, así que incluso una caminata corta puede sentirse distinta el primer día. Si quieren tomar aire, den un paseo suave por la Plaza Grande y mantengan planes flexibles."
+      },
+      "evening": {
+        "titleEn": "Low-key Old Town dinner",
+        "titleEs": "Cena tranquila en el Centro Histórico",
+        "bodyEn": "Choose an easy dinner near Plaza Grande and call it an early night. For the first evening, avoid alcohol and very heavy meals; hydration and sleep will help more than sightseeing. If you feel energetic, enjoy the lit façades of Old Town from nearby streets before heading back to the hotel.",
+        "bodyEs": "Elijan una cena sencilla cerca de la Plaza Grande y descansen temprano. La primera noche conviene evitar alcohol y comidas muy pesadas; hidratarse y dormir ayuda más que correr a conocerlo todo. Si tienen energía, disfruten las fachadas iluminadas del Centro Histórico antes de volver al hotel."
+      },
+      "altitudeAdvisory": true,
+      "notes": {
+        "en": "First night in Quito: hydrate, eat lightly, and rest.",
+        "es": "Primera noche en Quito: hidrátense, coman ligero y descansen."
+      },
+      "labelEn": "Monday · March 8",
+      "labelEs": "Lunes · 8 de marzo"
+    },
+    {
+      "date": "2027-03-09",
+      "dayLabelKey": "itinerary.tuesday",
+      "ecAccent": "yellow",
+      "morning": {
+        "titleEn": "Old Town acclimatization walk",
+        "titleEs": "Caminata de aclimatación por el Centro Histórico",
+        "bodyEn": "Keep the pace gentle with a self-guided Old Town walk: Plaza Grande, Iglesia de La Compañía de Jesús, San Francisco, and Calle La Ronda. La Compañía has a modest entry fee and a dazzling gold-leaf interior; San Francisco is free to enter. Pause often, enjoy the plazas, and treat this as acclimatization rather than a marathon.",
+        "bodyEs": "Mantengan un ritmo tranquilo con una caminata autoguiada por el Centro Histórico: Plaza Grande, Iglesia de La Compañía de Jesús, San Francisco y Calle La Ronda. La Compañía tiene una entrada moderada y un interior impresionante cubierto de pan de oro; San Francisco suele ser de ingreso libre. Hagan pausas y tómenlo como aclimatación, no como maratón."
+      },
+      "afternoon": {
+        "titleEn": "Mercado Central lunch",
+        "titleEs": "Almuerzo en el Mercado Central",
+        "bodyEn": "For lunch, consider Mercado Central, where simple plates often run about $5–10. It is a good place to try Ecuadorian flavors without a formal meal. Afterward, wander Calle La Ronda or return to the hotel for a nap if the altitude is catching up with you.",
+        "bodyEs": "Para el almuerzo, consideren el Mercado Central, donde muchos platos sencillos cuestan alrededor de $5–10. Es una buena forma de probar sabores ecuatorianos sin una comida formal. Después, paseen por La Ronda o vuelvan al hotel a descansar si sienten la altura."
+      },
+      "evening": {
+        "titleEn": "Light dinner and early night",
+        "titleEs": "Cena ligera y descanso temprano",
+        "bodyEn": "Choose a light dinner and try locro de papas, a comforting potato soup that is gentle at altitude. Keep alcohol optional or skip it entirely while you are still acclimating. A relaxed evening now will make the rest of the week much more enjoyable.",
+        "bodyEs": "Elijan una cena ligera y prueben el locro de papas, una sopa reconfortante y amable con el cuerpo en la altura. El alcohol es mejor dejarlo como opcional o evitarlo mientras siguen aclimatándose. Una noche tranquila hará que disfruten mucho más el resto de la semana."
+      },
+      "altitudeAdvisory": true,
+      "notes": {
+        "en": "Best as a slow cultural day, not a checklist.",
+        "es": "Mejor como día cultural pausado, no como lista de pendientes."
+      },
+      "labelEn": "Tuesday · March 9",
+      "labelEs": "Martes · 9 de marzo"
+    },
+    {
+      "date": "2027-03-10",
+      "dayLabelKey": "itinerary.wednesday",
+      "ecAccent": "blue",
+      "morning": {
+        "titleEn": "Mitad del Mundo excursion",
+        "titleEs": "Excursión a la Mitad del Mundo",
+        "bodyEn": "Head about 26 km north to Mitad del Mundo, roughly a 45-minute taxi ride from central Quito. The equator monument is typically open weekdays from 9 AM to 5 PM with about a $5 entry fee. Nearby Museo Solar Inti Ñan offers playful equator demonstrations and gravity experiments if you want a second stop.",
+        "bodyEs": "Vayan unos 26 km al norte hasta la Mitad del Mundo, aproximadamente 45 minutos en taxi desde el centro de Quito. El monumento ecuatorial suele abrir entre semana de 9 AM a 5 PM y la entrada cuesta alrededor de $5. Cerca, el Museo Solar Inti Ñan ofrece demostraciones divertidas sobre la línea ecuatorial y experimentos de gravedad."
+      },
+      "afternoon": {
+        "titleEn": "Crafts or Guayasamín",
+        "titleEs": "Artesanías o Guayasamín",
+        "bodyEn": "Return to Quito by early afternoon and choose your pace. Mercado Artesanal La Mariscal has roughly 200 stalls with textiles, hats, and souvenirs, while Capilla del Hombre offers a powerful introduction to Oswaldo Guayasamín’s art for about $8. Either option pairs well with a restful hotel break.",
+        "bodyEs": "Regresen a Quito a inicios de la tarde y elijan según su energía. El Mercado Artesanal La Mariscal reúne cerca de 200 puestos con textiles, sombreros y recuerdos; la Capilla del Hombre ofrece una poderosa introducción a la obra de Oswaldo Guayasamín por alrededor de $8. Cualquiera combina bien con una pausa en el hotel."
+      },
+      "evening": {
+        "titleEn": "Dinner in La Floresta",
+        "titleEs": "Cena en La Floresta",
+        "bodyEn": "For dinner, consider La Floresta, one of Quito’s most creative dining neighborhoods. URKO and Chez Jérôme are often recommended for a special meal; reserve ahead if possible. If you prefer something simpler, keep dinner casual and save energy for the full-day outing tomorrow.",
+        "bodyEs": "Para la cena, consideren La Floresta, uno de los barrios gastronómicos más creativos de Quito. URKO y Chez Jérôme suelen recomendarse para una comida especial; reserven con anticipación si pueden. Si prefieren algo más sencillo, mantengan la cena casual y guarden energía para la salida de todo el día de mañana."
+      },
+      "notes": {
+        "en": "A balanced day: one excursion, one optional afternoon activity.",
+        "es": "Un día equilibrado: una excursión y una actividad opcional por la tarde."
+      },
+      "labelEn": "Wednesday · March 10",
+      "labelEs": "Miércoles · 10 de marzo"
+    },
+    {
+      "date": "2027-03-11",
+      "dayLabelKey": "itinerary.thursday",
+      "ecAccent": "blue",
+      "morning": {
+        "titleEn": "Depart for Mindo Cloud Forest",
+        "titleEs": "Salida al bosque nublado de Mindo",
+        "bodyEn": "Depart around 7 AM for Mindo, about two hours northwest of Quito. The cloud forest is lush, green, and full of birds, with more than 450 species recorded in the area. A local guide can make birdwatching much more rewarding, especially in the cooler morning hours.",
+        "bodyEs": "Salgan alrededor de las 7 AM hacia Mindo, a unas dos horas al noroeste de Quito. El bosque nublado es verde, húmedo y lleno de aves, con más de 450 especies registradas en la zona. Un guía local puede hacer que la observación de aves sea mucho más especial, sobre todo durante las horas frescas de la mañana."
+      },
+      "afternoon": {
+        "titleEn": "Chocolate, trout, and adventure",
+        "titleEs": "Chocolate, trucha y aventura",
+        "bodyEn": "Take a chocolate tour at El Quetzal de Mindo, usually around $10, and enjoy a lunch of fresh trout. In the afternoon, choose your adventure: butterfly garden, ziplines, or river tubing depending on weather and comfort level. Keep dry layers handy, since cloud forest conditions can change quickly.",
+        "bodyEs": "Hagan un tour de chocolate en El Quetzal de Mindo, normalmente alrededor de $10, y disfruten un almuerzo con trucha fresca. Por la tarde, elijan su aventura: mariposario, canopy o tubing en el río, según el clima y su comodidad. Lleven capas secas a mano, porque el clima del bosque nublado cambia rápido."
+      },
+      "evening": {
+        "titleEn": "Return to Quito",
+        "titleEs": "Regreso a Quito",
+        "bodyEn": "Plan to be back in Quito around 7 PM. After a full day outdoors, keep the evening simple with room service, a quiet café, or an easy dinner near your hotel. Tomorrow includes high-altitude views and the welcome gathering, so rest is the best final activity.",
+        "bodyEs": "Planeen estar de vuelta en Quito alrededor de las 7 PM. Después de un día completo al aire libre, mantengan la noche sencilla con servicio al cuarto, una cafetería tranquila o una cena fácil cerca del hotel. Mañana habrá vistas en altura y el encuentro de bienvenida, así que descansar es la mejor actividad final."
+      },
+      "notes": {
+        "en": "Book transport or a day tour in advance for the smoothest experience.",
+        "es": "Reservar transporte o tour de día completo con anticipación hará la experiencia más fluida."
+      },
+      "labelEn": "Thursday · March 11",
+      "labelEs": "Jueves · 11 de marzo"
+    },
+    {
+      "date": "2027-03-12",
+      "dayLabelKey": "itinerary.friday",
+      "ecAccent": "red",
+      "morning": {
+        "titleEn": "TelefériQo views",
+        "titleEs": "Vistas desde el TelefériQo",
+        "bodyEn": "Go early, ideally between 8 and 9 AM, for the clearest TelefériQo views before clouds build. The cable car climbs to about 3,945 meters, and round-trip tickets are typically around $8.50. Move slowly at the top, sit if you feel lightheaded, and skip strenuous hiking unless you are fully acclimated.",
+        "bodyEs": "Vayan temprano, idealmente entre 8 y 9 AM, para tener las mejores vistas desde el TelefériQo antes de que suban las nubes. El teleférico llega a unos 3.945 metros y el boleto ida y vuelta suele costar alrededor de $8,50. Muévanse despacio arriba, siéntense si se marean y eviten caminatas exigentes si no están bien aclimatados."
+      },
+      "afternoon": {
+        "titleEn": "Rest, spa, or free time",
+        "titleEs": "Descanso, spa o tiempo libre",
+        "bodyEn": "Keep the afternoon intentionally open. This is a good window for a spa appointment, a quiet lunch, steaming outfits, or simply resting before wedding weekend begins. If you still need errands, choose places close to your hotel and avoid crossing the city late in the day.",
+        "bodyEs": "Dejen la tarde intencionalmente libre. Es un buen momento para un spa, un almuerzo tranquilo, preparar la ropa o simplemente descansar antes de que empiece el fin de semana de la boda. Si necesitan hacer diligencias, elijan lugares cerca del hotel y eviten cruzar la ciudad al final del día."
+      },
+      "evening": {
+        "titleEn": "Welcome drinks / rehearsal dinner",
+        "titleEs": "Bebidas de bienvenida / cena de ensayo",
+        "bodyEn": "Gather for welcome drinks or a rehearsal dinner at Hotel Plaza Grande or another designated Old Town venue. Details will be confirmed closer to the date. Expect a warm, easy evening focused on greeting family and friends before the wedding day.",
+        "bodyEs": "Reúnanse para bebidas de bienvenida o cena de ensayo en el Hotel Plaza Grande u otro lugar designado del Centro Histórico. Confirmaremos los detalles más cerca de la fecha. Será una noche cálida y tranquila para saludar a familiares y amigos antes del gran día."
+      },
+      "altitudeAdvisory": true,
+      "notes": {
+        "en": "TelefériQo is beautiful but very high—listen to your body.",
+        "es": "El TelefériQo es precioso pero muy alto: escuchen a su cuerpo."
+      },
+      "labelEn": "Friday · March 12",
+      "labelEs": "Viernes · 12 de marzo"
+    },
+    {
+      "date": "2027-03-13",
+      "dayLabelKey": "itinerary.saturday",
+      "ecAccent": "gold",
+      "isWeddingDay": true,
+      "morning": {
+        "titleEn": "Leisurely brunch and preparation",
+        "titleEs": "Brunch tranquilo y preparación",
+        "bodyEn": "Enjoy a slow morning with brunch, water, and plenty of time to get ready. Keep the schedule simple, especially if you are staying in Old Town. Formal or cocktail attire is encouraged, with shoulders and knees covered for the church ceremony.",
+        "bodyEs": "Disfruten una mañana tranquila con brunch, agua y suficiente tiempo para alistarse. Mantengan el horario sencillo, especialmente si se hospedan en el Centro Histórico. Se sugiere vestimenta formal o tipo cóctel, con hombros y rodillas cubiertos para la ceremonia en la iglesia."
+      },
+      "afternoon": {
+        "titleEn": "Wedding ceremony",
+        "titleEs": "Ceremonia de boda",
+        "bodyEn": "The ceremony begins at 3:00 PM at Basílica del Voto Nacional. Please plan to arrive about 30 minutes early, since Old Town traffic and parking can be unpredictable. The Basílica is grand and cool inside, so a light layer may be helpful.",
+        "bodyEs": "La ceremonia empieza a las 3:00 PM en la Basílica del Voto Nacional. Por favor planeen llegar unos 30 minutos antes, ya que el tráfico y el estacionamiento en el Centro Histórico pueden ser impredecibles. La Basílica es amplia y fresca por dentro, así que una capa ligera puede ser útil."
+      },
+      "evening": {
+        "titleEn": "Reception at Hotel Plaza Grande",
+        "titleEs": "Recepción en el Hotel Plaza Grande",
+        "bodyEn": "The reception begins at 6:00 PM at Hotel Plaza Grande, about an 8-minute walk from the Basílica. Guests may stroll together if the afternoon is calm, or take a short taxi if preferred. We cannot wait to celebrate with dinner, music, and joy in the heart of Quito.",
+        "bodyEs": "La recepción empieza a las 6:00 PM en el Hotel Plaza Grande, a unos 8 minutos a pie desde la Basílica. Si la tarde está tranquila, pueden caminar en grupo; si prefieren, pueden tomar un taxi corto. Nos emociona celebrar con cena, música y alegría en el corazón de Quito."
+      },
+      "notes": {
+        "en": "Wedding day: ceremony at 3:00 PM, reception at 6:00 PM.",
+        "es": "Día de boda: ceremonia a las 3:00 PM, recepción a las 6:00 PM."
+      },
+      "labelEn": "Saturday · March 13",
+      "labelEs": "Sábado · 13 de marzo"
+    },
+    {
+      "date": "2027-03-14",
+      "dayLabelKey": "itinerary.sunday",
+      "ecAccent": "none",
+      "morning": {
+        "titleEn": "Recovery brunch",
+        "titleEs": "Brunch de descanso",
+        "bodyEn": "Sleep in and enjoy brunch at the hotel or a nearby Old Town café. If you have energy, take one final gentle walk around Plaza Grande and let the morning stay unhurried. It is a good day for goodbyes, coffee, and one last view of Quito’s historic center.",
+        "bodyEs": "Duerman un poco más y disfruten brunch en el hotel o en una cafetería cercana del Centro Histórico. Si tienen energía, den una última caminata suave por la Plaza Grande y mantengan la mañana sin prisa. Es un buen día para despedidas, café y una última mirada al centro histórico de Quito."
+      },
+      "afternoon": {
+        "titleEn": "Airport transfers",
+        "titleEs": "Traslados al aeropuerto",
+        "bodyEn": "Plan 45–60 minutes for the drive to UIO, plus extra time for international check-in. Taxis to the airport are often around $22–26, depending on pickup point and provider. Confirm your transfer the day before if you have an early flight or a tight connection.",
+        "bodyEs": "Calculen 45–60 minutos para llegar al aeropuerto UIO, más tiempo adicional para el check-in internacional. Los taxis al aeropuerto suelen costar alrededor de $22–26, según el punto de salida y el proveedor. Confirmen su traslado el día anterior si tienen vuelo temprano o conexión ajustada."
+      },
+      "evening": {
+        "titleEn": "Extensions in Ecuador",
+        "titleEs": "Extensiones en Ecuador",
+        "bodyEn": "Some guests may continue on to the Galápagos, Cuenca, or the Amazon. If you extend your trip, build in enough time for domestic flights and changing climates. Ecuador is compact but wonderfully varied, so a few extra days can feel like an entirely new journey.",
+        "bodyEs": "Algunos invitados quizás continúen hacia Galápagos, Cuenca o la Amazonía. Si extienden el viaje, dejen suficiente tiempo para vuelos internos y cambios de clima. Ecuador es compacto pero muy diverso; unos días adicionales pueden sentirse como un viaje completamente nuevo."
+      },
+      "notes": {
+        "en": "Departure day can also become the start of a longer Ecuador adventure.",
+        "es": "El día de salida también puede ser el inicio de una aventura más larga por Ecuador."
+      },
+      "labelEn": "Sunday · March 14",
+      "labelEs": "Domingo · 14 de marzo"
+    }
+  ],
+  "alternateItineraries": {
+    "wednesdayArrival": {
+      "labelEn": "Arriving Wednesday, March 10 (4 nights)",
+      "labelEs": "Llegada miércoles, 10 de marzo (4 noches)",
+      "summaryEn": "Use Wednesday for arrival and rest. Make Thursday your gentle Old Town acclimatization day. On Friday, choose either Mindo for nature or Papallacta hot springs for a slower recovery day, then keep Saturday focused on the wedding.",
+      "summaryEs": "Usen el miércoles para llegar y descansar. Dediquen el jueves a una aclimatación tranquila por el Centro Histórico. El viernes elijan entre Mindo para naturaleza o las termas de Papallacta para un día más relajado, y reserven el sábado para la boda."
+    },
+    "thursdayArrival": {
+      "labelEn": "Arriving Thursday, March 11 (3 nights)",
+      "labelEs": "Llegada jueves, 11 de marzo (3 noches)",
+      "summaryEn": "Treat Thursday as arrival and rest, with only Plaza Grande if you want a short walk. On Friday, do a compact two-hour Old Town tour and, if energy allows, Capilla del Hombre. Skip TelefériQo because there is not enough acclimatization time.",
+      "summaryEs": "Tomen el jueves como día de llegada y descanso, con solo la Plaza Grande si desean caminar un poco. El viernes hagan un recorrido compacto de dos horas por el Centro Histórico y, si tienen energía, la Capilla del Hombre. Eviten el TelefériQo porque no habrá suficiente tiempo de aclimatación."
+    },
+    "fridayArrival": {
+      "labelEn": "Arriving Friday, March 12 (2 nights)",
+      "labelEs": "Llegada viernes, 12 de marzo (2 noches)",
+      "summaryEn": "Arrive, hydrate, and conserve energy. If you want to stretch your legs, walk only around Plaza Grande and return early. Make Saturday the priority so you can be fully present for the ceremony and reception.",
+      "summaryEs": "Lleguen, hidrátense y guarden energía. Si quieren caminar un poco, recorran solo la Plaza Grande y regresen temprano. Hagan del sábado la prioridad para estar plenamente presentes en la ceremonia y la recepción."
+    }
+  }
+}

@@ -1,0 +1,21 @@
+---
+import Base from '../layouts/Base.astro';
+import RegistryCard from '../components/RegistryCard.astro';
+import { t, type Locale } from '../lib/i18n';
+
+const locale: Locale = 'en';
+---
+
+<Base title={t(locale, 'registry.heading') + ' · John & Diana'} description={t(locale, 'registry.intro')} lang={locale}>
+  <main>
+    <section class="section container container--narrow reveal" style="text-align:center;">
+      <p class="eyebrow">{t(locale, 'nav.registry')}</p>
+      <h1>{t(locale, 'registry.heading')}</h1>
+      <p>{t(locale, 'registry.intro')}</p>
+    </section>
+    <section class="section container reveal">
+      <RegistryCard locale={locale} />
+    </section>
+  </main>
+</Base>
+

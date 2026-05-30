@@ -1,1 +1,148 @@
-{}
+{
+  "nav": {
+    "home": "Inicio",
+    "ourStory": "Nuestra historia",
+    "venues": "Lugares",
+    "itinerary": "Itinerario",
+    "travel": "Viaje",
+    "rsvp": "Confirmar asistencia",
+    "registry": "Mesa de regalos",
+    "faq": "Preguntas frecuentes",
+    "menu": "Menú"
+  },
+  "hero": {
+    "greeting": "Imanalla · Bienvenidos",
+    "monogramCaption": "John Michael Lien y Diana Duchicela Guajan",
+    "saveTheDate": "Reserven la fecha para celebrar con nosotros en Quito, Ecuador.",
+    "savedate": "Reserven la fecha ·",
+    "primaryCta": "Confirmar asistencia",
+    "secondaryCta": "Ver itinerario",
+    "dateLine": "Sábado, 13 de marzo de 2027",
+    "ceremonyLine": "Ceremonia a las 3:00 PM · Recepción a las 6:00 PM",
+    "imageAlt": "John y Diana, con la Basílica del Voto Nacional en Quito"
+  },
+  "home": {
+    "welcomeTitle": "Bienvenidos a Quito",
+    "welcomeBlurb": "Nos llena de alegría celebrar nuestra boda con ustedes en el corazón del Ecuador. En este sitio encontrarán los detalles de la ceremonia, la recepción, el viaje, los hoteles y un itinerario sugerido para invitados.",
+    "keyDetailsTitle": "Detalles principales",
+    "keyDetailsIntro": "La ceremonia y la recepción serán en el Centro Histórico de Quito, a poca distancia a pie. Por favor confirmen su asistencia antes de la fecha límite y revisen esta página para novedades conforme se acerque la celebración.",
+    "heritageTitle": "Una celebración de familia y raíces",
+    "travelTitle": "Planifiquen su viaje",
+    "detailsEyebrow": "Reserven la fecha",
+    "ceremony": "Ceremonia",
+    "reception": "Recepción",
+    "shortWalkBetween": "Aproximadamente 8 minutos a pie entre los dos lugares."
+  },
+  "ourStory": {
+    "heading": "Nuestra historia",
+    "howWeMetHeading": "Cómo nos conocimos",
+    "howWeMetBody": "[La historia de John y Diana irá aquí.]",
+    "galleryHeading": "Momentos juntos",
+    "heritageSubheading": "Sobre nuestras raíces",
+    "heritageBody": "Imanalla, bienvenidos. Las raíces de Diana están en Otavalo, una comunidad andina reconocida por su lengua kichwa, su música y su extraordinaria tradición textil. Los tejidos otavaleños guardan generaciones de arte, paciencia e identidad; y los valores andinos honran la familia, la reciprocidad y la Pachamama, la Madre Tierra. Al iniciar su vida de casados, John y Diana llevan esas raíces con gratitud. Esta celebración también honra el kuyay, palabra kichwa para amor: amor a la familia, a la tierra y al encuentro que nos reúne en Quito."
+  },
+  "venues": {
+    "heading": "Lugares",
+    "ceremonyHeading": "Ceremonia",
+    "receptionHeading": "Recepción",
+    "walkingText": "La Basílica y el Hotel Plaza Grande están a unos 8 minutos a pie en una tarde tranquila del Centro Histórico.",
+    "shuttleDisclaimer": "Los traslados desde el aeropuerto y servicios privados deben coordinarse directamente con el hotel y confirmarse al reservar.",
+    "unnamed": "Lugar"
+  },
+  "itinerary": {
+    "heading": "Itinerario sugerido",
+    "intro": "Este es un itinerario sugerido para quienes deseen conocer Quito antes de la boda. Adáptenlo según su fecha de llegada, energía, movilidad e intereses: descansar también es parte del plan, especialmente por la altura.",
+    "monday": "Lunes",
+    "tuesday": "Martes",
+    "wednesday": "Miércoles",
+    "thursday": "Jueves",
+    "friday": "Viernes",
+    "saturday": "Sábado",
+    "sunday": "Domingo",
+    "morning": "Mañana",
+    "afternoon": "Tarde",
+    "evening": "Noche",
+    "altitudeAdvisory": "Aviso por la altura: tómenselo con calma, hidrátense y eviten comidas pesadas o alcohol mientras se aclimatan.",
+    "alternateArrivalsHeading": "Planes para llegadas alternativas",
+    "alternateArrivalsIntro": "¿Llegan más tarde en la semana? Estas opciones más cortas mantienen un ritmo tranquilo para que disfruten el día de la boda.",
+    "weddingDay": "Día de la boda",
+    "day": "Día"
+  },
+  "travel": {
+    "heading": "Viaje",
+    "airportInfoHeading": "Llegada a Quito",
+    "airportInfoBody": "El aeropuerto es el Mariscal Sucre (UIO), ubicado a unos 45–60 minutos del Centro Histórico según el tráfico. Los taxis oficiales del aeropuerto suelen costar alrededor de $26 hasta el centro de Quito, y el bus exprés cuesta alrededor de $8.",
+    "altitudeTip": "Quito está a unos 2.850 metros / 9.350 pies sobre el nivel del mar. Planifiquen un primer día tranquilo, tomen agua y dense tiempo para aclimatarse.",
+    "weatherTip": "Marzo es temporada de lluvias. Esperen mañanas y noches frescas, posible lluvia, sol fuerte por la altura y temperaturas aproximadas de 10–21°C / 50–69°F. Empaquen capas y una chaqueta ligera impermeable.",
+    "currencyTip": "Ecuador usa el dólar estadounidense. Conviene llevar billetes pequeños para taxis, mercados y propinas.",
+    "safetyTip": "Usen taxis oficiales o aplicaciones confiables, mantengan sus pertenencias cerca en zonas concurridas y tomen precauciones normales de ciudad en el Centro Histórico.",
+    "flightsHeading": "Vuelos",
+    "hotelsHeading": "Hoteles",
+    "flights": "Vuelos",
+    "hotels": "Hoteles",
+    "stayHeading": "Dónde hospedarse",
+    "stayIntro": "Algunos hoteles 4★ y 5★ del Centro Histórico de Quito, a poca distancia a pie de la Basílica y del Hotel Plaza Grande. Las tarifas son aproximadas; por favor verifiquen para marzo de 2027."
+  },
+  "rsvp": {
+    "heading": "Confirmar asistencia",
+    "intro": "Nos encantaría celebrar con ustedes. Por favor indíquennos si podrán acompañarnos en Quito y compartan cualquier necesidad alimentaria o de accesibilidad en el formulario.",
+    "deadlineCallout": "Por favor confirmen su asistencia hasta el domingo, 15 de noviembre de 2026.",
+    "fallbackText": "¿No carga el formulario? Usen este enlace:",
+    "contactIssues": "Si tienen algún problema, escríbannos a rsvp@johnanddianawedding.com.",
+    "setupPendingTitle": "El formulario llegará pronto",
+    "setupPendingBody": "Estamos dando los últimos toques al formulario de confirmación. Mientras tanto, contáctennos directamente y guardaremos su lugar.",
+    "fallbackLink": "Abrir confirmación →"
+  },
+  "registry": {
+    "heading": "Mesa de regalos",
+    "title": "Mesa de regalos",
+    "intro": "Su presencia en Quito es nuestro mejor regalo. Para quienes deseen tener un detalle adicional, agradeceremos mucho contribuciones para nuestra luna de miel y nuestro futuro hogar.",
+    "amazonButtonLabel": "Ver mesa de regalos en Amazon",
+    "viewRegistry": "Ver mesa de regalos",
+    "moreComingSoon": "Pronto agregaremos más opciones de registro.",
+    "moreSoon": "Pronto agregaremos más opciones de registro."
+  },
+  "faq": {
+    "heading": "Preguntas frecuentes",
+    "categories": {
+      "weddingDay": "Día de la boda",
+      "travelLogistics": "Viaje y logística",
+      "lodging": "Hospedaje",
+      "giftsRegistry": "Regalos y mesa de regalos",
+      "localTips": "Consejos locales"
+    }
+  },
+  "footer": {
+    "copyright": "Con cariño, John y Diana",
+    "tagline": "Con cariño, John y Diana",
+    "languageEnglish": "English",
+    "languageSpanish": "Español",
+    "backToTop": "Volver arriba ↑"
+  },
+  "common": {
+    "loading": "Cargando...",
+    "dateFormatHint": "Día de mes de año",
+    "viewMap": "Ver mapa",
+    "viewOnMap": "Ver en el mapa",
+    "openInGoogleMaps": "Abrir en Google Maps",
+    "backToTop": "Volver arriba",
+    "learnMore": "Conocer más",
+    "close": "Cerrar",
+    "days": "Días",
+    "hours": "Horas",
+    "minutes": "Minutos",
+    "seconds": "Segundos",
+    "weddingPast": "Por fin juntos",
+    "moreSoon": "Próximamente",
+    "search": "Buscar",
+    "comingSoon": "Próximamente"
+  },
+  "heritage": {
+    "headerLine": "Imanalla · Bienvenidos · Welcome",
+    "header": "Imanalla · Bienvenidos · Welcome",
+    "sectionTitle": "Sobre nuestras raíces",
+    "title": "Sobre nuestras raíces",
+    "paragraph": "Imanalla, bienvenidos. Las raíces de Diana están en Otavalo, una comunidad andina reconocida por su lengua kichwa, su música y su extraordinaria tradición textil. Los tejidos otavaleños guardan generaciones de arte, paciencia e identidad; y los valores andinos honran la familia, la reciprocidad y la Pachamama, la Madre Tierra. Al iniciar su vida de casados, John y Diana llevan esas raíces con gratitud. Esta celebración también honra el kuyay, palabra kichwa para amor: amor a la familia, a la tierra y al encuentro que nos reúne en Quito.",
+    "body": "Imanalla, bienvenidos. Las raíces de Diana están en Otavalo, una comunidad andina reconocida por su lengua kichwa, su música y su extraordinaria tradición textil. Los tejidos otavaleños guardan generaciones de arte, paciencia e identidad; y los valores andinos honran la familia, la reciprocidad y la Pachamama, la Madre Tierra. Al iniciar su vida de casados, John y Diana llevan esas raíces con gratitud. Esta celebración también honra el kuyay, palabra kichwa para amor: amor a la familia, a la tierra y al encuentro que nos reúne en Quito."
+  }
+}

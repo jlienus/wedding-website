@@ -1,0 +1,30 @@
+---
+import Base from '../layouts/Base.astro';
+import VenueCard from '../components/VenueCard.astro';
+import SectionDivider from '../components/SectionDivider.astro';
+import { t, type Locale } from '../lib/i18n';
+import venues from '../data/venues.json';
+
+const locale: Locale = 'en';
+---
+
+<Base title={t(locale, 'venues.heading') + ' · John & Diana'} description={t(locale, 'venues.walkingText')} lang={locale}>
+  <main>
+    <section class="section container container--narrow reveal" style="text-align:center;">
+      <p class="eyebrow">{t(locale, 'home.detailsEyebrow')}</p>
+      <h1>{t(locale, 'venues.heading')}</h1>
+      <p>{t(locale, 'venues.walkingText')}</p>
+    </section>
+    <section class="section container reveal">
+      <h2>{t(locale, 'venues.ceremonyHeading')}</h2>
+      <VenueCard venue={venues.ceremony} locale={locale} />
+    </section>
+    <SectionDivider />
+    <section class="section container reveal">
+      <h2>{t(locale, 'venues.receptionHeading')}</h2>
+      <VenueCard venue={venues.reception} locale={locale} />
+    </section>
+    <p class="container container--narrow reveal" style="text-align:center; color: var(--color-text-muted);"><em>{t(locale, 'venues.shuttleDisclaimer')}</em></p>
+  </main>
+</Base>
+

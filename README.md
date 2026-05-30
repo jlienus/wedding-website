@@ -1,43 +1,80 @@
-# Astro Starter Kit: Minimal
+# John & Diana Wedding Website
 
-```sh
-npm create astro@latest -- --template minimal
+## Project
+
+Wedding website for **John Michael Lien & Diana Duchicela Guajan**.
+
+- Wedding date: **Saturday, March 13, 2027**
+- Location: **Quito, Ecuador**
+
+## Stack
+
+- **Astro + TypeScript** for the website
+- **Azure Static Web Apps** for hosting
+- **Cloudflare DNS** for the custom domain
+- **RSVPify** embedded for RSVP collection
+- **Bilingual English + Spanish** content
+
+## Quick start
+
+```powershell
+cd C:\Users\johnlien\Development\wedding-website
+npm install
+npm run dev
+# opens http://localhost:4321
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Common tasks
 
-## 🚀 Project Structure
+| Task | Where to go |
+|---|---|
+| Change wedding details, copy, itinerary, hotels, FAQs, links, or photos | [CONTENT-EDITING-GUIDE.md](CONTENT-EDITING-GUIDE.md) |
+| Get the site live at `johnanddianawedding.com` | [NEXT-STEPS.md](NEXT-STEPS.md) |
+| Add or replace website photos | [public\images\README.md](public\images\README.md) |
+| Build the site before deployment | Run `npm run build` |
+| Preview the site while editing | Run `npm run dev` |
 
-Inside of your Astro project, you'll see the following folders and files:
+## Project structure
 
 ```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+wedding-website\
+├─ .github\              GitHub Actions workflows for Azure deployment
+├─ public\               Static files copied directly to the website
+│  └─ images\            Drop-in photo slots for the site
+├─ src\                  Website source code, pages, components, data, and translations
+├─ dist\                 Generated production build output; created by npm run build
+├─ astro.config.mjs      Astro configuration
+├─ package.json          npm scripts and dependencies
+├─ README.md             Project overview
+├─ CONTENT-EDITING-GUIDE.md
+└─ NEXT-STEPS.md
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+## Build & deploy
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+```powershell
+npm run build
+```
 
-Any static assets, like images, can be placed in the `public/` directory.
+This produces the production site in `dist\`.
 
-## 🧞 Commands
+After GitHub and Azure Static Web Apps are connected, pushing to `main` on GitHub triggers the Azure Static Web Apps workflow automatically. Azure builds the Astro site and deploys the contents of `dist\`.
 
-All commands are run from the root of the project, from a terminal:
+## Cost summary
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+- Domain through Cloudflare Registrar: about **$9/year**
+- Azure Static Web Apps Free tier: **$0**
+- Cloudflare DNS: **$0**
+- RSVPify Event plan: about **$35-75 one-time**
 
-## 👀 Want to learn more?
+Rough total: **$10-30/year + $35-75 once.**
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+## Links
+
+- [Content Editing Guide](CONTENT-EDITING-GUIDE.md)
+- [Next Steps to Go Live](NEXT-STEPS.md)
+- [Photo Slot Guide](public\images\README.md)
+
+## Credits
+
+Built with help from Copilot CLI.

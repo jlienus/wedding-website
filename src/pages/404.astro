@@ -1,0 +1,19 @@
+---
+import Base from '../layouts/Base.astro';
+import config from '../data/wedding.config.json';
+---
+
+<Base title="Page not found · John & Diana" description="The page you're looking for doesn't exist." lang="en">
+  <main class="container container--narrow not-found reveal">
+    <p class="monogram">{config.couple.monogram}</p>
+    <h1>Page not found</h1>
+    <p>The page you're looking for doesn't exist. Let's get you back home.</p>
+    <a class="btn btn--gold" href="/">Home</a>
+  </main>
+</Base>
+
+<style>
+  .not-found { min-height: 70vh; display: grid; place-items: center; align-content: center; gap: var(--space-2); text-align: center; padding-block: var(--space-7); }
+  .monogram { font-family: var(--font-display); font-size: clamp(4rem, 12vw, 7rem); color: var(--color-gold); letter-spacing: 0.18em; margin: 0; }
+</style>
+

@@ -1,13 +1,13 @@
 ---
-import Base from '../layouts/Base.astro';
-import Hero from '../components/Hero.astro';
-import CountdownTimer from '../components/CountdownTimer.astro';
-import WeddingDetailsCard from '../components/WeddingDetailsCard.astro';
-import HeritageSection from '../components/HeritageSection.astro';
-import SectionDivider from '../components/SectionDivider.astro';
-import { t, type Locale } from '../lib/i18n';
+import Base from '../../layouts/Base.astro';
+import Hero from '../../components/Hero.astro';
+import CountdownTimer from '../../components/CountdownTimer.astro';
+import WeddingDetailsCard from '../../components/WeddingDetailsCard.astro';
+import HeritageSection from '../../components/HeritageSection.astro';
+import SectionDivider from '../../components/SectionDivider.astro';
+import { t, type Locale } from '../../lib/i18n';
 
-const locale: Locale = 'en';
+const locale: Locale = 'es';
 ---
 
 <Base title="John & Diana · March 13, 2027" description={t(locale, 'home.welcomeBlurb')} lang={locale}>
@@ -33,8 +33,8 @@ const locale: Locale = 'en';
     <section class="section container reveal" style="text-align:center;">
       <h2>{t(locale, 'home.travelTitle')}</h2>
       <div class="cta-row">
-        <a class="btn btn--gold" href="/itinerary">{t(locale, 'nav.itinerary')}</a>
-        <a class="btn" href="/travel">{t(locale, 'nav.travel')}</a>
+        <a class="btn btn--gold" href="/es/itinerario">{t(locale, 'nav.itinerary')}</a>
+        <a class="btn" href="/es/viajes">{t(locale, 'nav.travel')}</a>
       </div>
     </section>
   </main>

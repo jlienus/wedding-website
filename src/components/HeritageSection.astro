@@ -1,0 +1,26 @@
+---
+import { t, type Locale } from '../lib/i18n';
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+---
+
+<section class="heritage reveal">
+  <svg viewBox="0 0 120 28" width="80" height="20" role="img" aria-hidden="true">
+    <path d="M2 14h16L30 4l12 20L54 4l12 20L78 4l12 20 12-10h16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M60 8l8 6-8 6-8-6z" fill="none" stroke="currentColor" stroke-width="2" />
+  </svg>
+  <p class="eyebrow">{t(locale, 'heritage.header')}</p>
+  <h2>{t(locale, 'heritage.title')}</h2>
+  <p>{t(locale, 'heritage.body')}</p>
+  <svg viewBox="0 0 120 28" width="80" height="20" role="img" aria-hidden="true">
+    <path d="M2 14h16L30 4l12 20L54 4l12 20L78 4l12 20 12-10h16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M60 8l8 6-8 6-8-6z" fill="none" stroke="currentColor" stroke-width="2" />
+  </svg>
+</section>
+
+<style>
+  .heritage { max-width: 50rem; margin: 0 auto; text-align: center; padding: var(--space-5) var(--space-3); }
+  h2 { color: var(--color-gold); }
+  p:not(.eyebrow) { font-size: 1.125rem; color: var(--color-text-muted); line-height: var(--lh-normal); }
+  svg { display: block; margin: var(--space-2) auto; color: var(--color-gold); }
+</style>

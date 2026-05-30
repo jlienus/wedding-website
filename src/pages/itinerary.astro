@@ -1,0 +1,46 @@
+---
+import Base from '../layouts/Base.astro';
+import ItineraryDay from '../components/ItineraryDay.astro';
+import SectionDivider from '../components/SectionDivider.astro';
+import { t, type Locale } from '../lib/i18n';
+import itinerary from '../data/itinerary.json';
+
+const locale: Locale = 'en';
+const alternateItineraries = Object.values(itinerary.alternateItineraries);
+---
+
+<Base title={t(locale, 'itinerary.heading') + ' · John & Diana'} description={t(locale, 'itinerary.intro')} lang={locale}>
+  <main>
+    <section class="section container container--narrow reveal" style="text-align:center;">
+      <p class="eyebrow">{t(locale, 'nav.itinerary')}</p>
+      <h1>{t(locale, 'itinerary.heading')}</h1>
+      <p>{t(locale, 'itinerary.intro')}</p>
+    </section>
+    <section class="section container reveal">
+      <div style="display:grid; gap: var(--space-3);">
+        {itinerary.days.map((day) => <ItineraryDay day={day} locale={locale} />)}
+      </div>
+    </section>
+    <SectionDivider />
+    <section class="section container reveal">
+      <h2>{t(locale, 'itinerary.alternateArrivalsHeading')}</h2>
+      <p>{t(locale, 'itinerary.alternateArrivalsIntro')}</p>
+      <div class="alternate-grid">
+        {alternateItineraries.map((item) => (
+          <article class="alternate-card reveal">
+            <h3>{locale === 'es' ? item.labelEs : item.labelEn}</h3>
+            <p>{locale === 'es' ? item.summaryEs : item.summaryEn}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  </main>
+</Base>
+
+<style>
+  .alternate-grid { display: grid; gap: var(--space-2); margin-top: var(--space-3); }
+  .alternate-card { padding: var(--space-3); border: 1px solid var(--color-rule); border-radius: var(--radius-lg); background: rgba(255,255,255,0.58); box-shadow: var(--shadow-sm); }
+  .alternate-card h3 { color: var(--color-gold); }
+  @media (min-width: 760px) { .alternate-grid { grid-template-columns: repeat(3, 1fr); } }
+</style>
+

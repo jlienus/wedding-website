@@ -1,0 +1,88 @@
+---
+import LangSwitch from './LangSwitch.astro';
+import config from '../data/wedding.config.json';
+import { t, type Locale } from '../lib/i18n';
+
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+
+const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
+const links = [
+  { key: 'home', path: locale === 'es' ? '/es' : '/' },
+  { key: 'ourStory', path: locale === 'es' ? '/es/nuestra-historia' : '/our-story' },
+  { key: 'venues', path: locale === 'es' ? '/es/lugares' : '/venues' },
+  { key: 'itinerary', path: locale === 'es' ? '/es/itinerario' : '/itinerary' },
+  { key: 'travel', path: locale === 'es' ? '/es/viajes' : '/travel' },
+  { key: 'rsvp', path: locale === 'es' ? '/es/rsvp' : '/rsvp' },
+  { key: 'registry', path: locale === 'es' ? '/es/regalos' : '/registry' },
+  { key: 'faq', path: locale === 'es' ? '/es/preguntas' : '/faq' },
+];
+---
+
+<header class="site-header" data-site-header>
+  <div class="nav-shell">
+    <a class="monogram" href={locale === 'es' ? '/es' : '/'} aria-label={config.couple.displayCombined}>
+      {config.couple.monogram}
+    </a>
+    <nav class="primary-nav" aria-label="primary">
+      {links.map((link) => {
+        const isActive = currentPath === link.path || (link.path !== '/' && currentPath.startsWith(`${link.path}/`));
+        return (
+          <a href={link.path} aria-current={isActive ? 'page' : undefined} class:list={['nav-link', { active: isActive }]}>
+            {t(locale, `nav.${link.key}`)}
+          </a>
+        );
+      })}
+    </nav>
+    <div class="nav-actions">
+      <LangSwitch currentLocale={locale} currentPath={currentPath} />
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu" data-menu-toggle>
+        <span class="sr-only">{t(locale, 'nav.menu')}</span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+  <div class="mobile-panel" id="mobile-menu" data-mobile-menu hidden>
+    {links.map((link) => {
+      const isActive = currentPath === link.path || (link.path !== '/' && currentPath.startsWith(`${link.path}/`));
+      return <a href={link.path} aria-current={isActive ? 'page' : undefined}>{t(locale, `nav.${link.key}`)}</a>;
+    })}
+  </div>
+</header>
+
+<script is:inline>
+  (() => {
+    const header = document.querySelector('[data-site-header]');
+    const toggle = document.querySelector('[data-menu-toggle]');
+    const panel = document.querySelector('[data-mobile-menu]');
+    const updateHeader = () => header?.classList.toggle('is-scrolled', window.scrollY > 8);
+    updateHeader();
+    window.addEventListener('scroll', updateHeader, { passive: true });
+    toggle?.addEventListener('click', () => {
+      const open = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', String(!open));
+      if (panel) panel.hidden = open;
+      header?.classList.toggle('menu-open', !open);
+    });
+  })();
+</script>
+
+<style>
+  .site-header { position: sticky; top: 0; z-index: 50; background: rgba(250, 248, 244, 0.78); transition: background var(--transition), box-shadow var(--transition), backdrop-filter var(--transition); }
+  .site-header.is-scrolled, .site-header.menu-open { background: rgba(250, 248, 244, 0.92); backdrop-filter: blur(8px); box-shadow: var(--shadow-sm); }
+  .nav-shell { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--space-2); max-width: var(--container-wide); margin: 0 auto; padding: 0.85rem var(--space-3); }
+  .monogram { border: 0; font-family: var(--font-display); font-size: 1.45rem; letter-spacing: 0.12em; white-space: nowrap; }
+  .primary-nav { display: none; justify-content: center; gap: clamp(0.7rem, 1.6vw, 1.4rem); }
+  .nav-link { position: relative; border: 0; font-size: var(--fs-tiny); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.35rem 0; }
+  .nav-link::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--color-gold); transform: scaleX(0); transform-origin: center; transition: transform var(--transition); }
+  .nav-link:hover::after, .nav-link.active::after { transform: scaleX(1); }
+  .nav-actions { display: inline-flex; align-items: center; gap: var(--space-1); }
+  .menu-toggle { display: inline-grid; gap: 0.25rem; width: 2.5rem; height: 2.5rem; place-content: center; border: 1px solid var(--color-rule); border-radius: 999px; background: rgba(255, 255, 255, 0.35); }
+  .menu-toggle span[aria-hidden="true"] { width: 1.05rem; height: 1px; background: var(--color-text); }
+  .mobile-panel { display: grid; gap: 0.8rem; padding: var(--space-2) var(--space-3) var(--space-3); border-top: 1px solid var(--color-rule); background: rgba(250, 248, 244, 0.96); }
+  .mobile-panel a { border: 0; font-family: var(--font-display); font-size: 1.35rem; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+  @media (min-width: 700px) { .primary-nav { display: flex; } .menu-toggle { display: none; } .mobile-panel { display: none; } }
+</style>
