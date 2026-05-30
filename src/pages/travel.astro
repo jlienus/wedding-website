@@ -44,7 +44,7 @@ const receptionText = locale === 'es' ? 'Lugar de la recepción' : 'Reception ve
             <h3>{hotel.name}</h3>
             <p class="tag">{locale === 'es' ? hotel.tagEs : hotel.tagEn}</p>
             <p>{locale === 'es' ? hotel.blurbEs : hotel.blurbEn}</p>
-            <p class="meta">{hotel.estRateNote}</p>
+            <p class="meta">{locale === 'es' ? hotel.estRateNoteEs : hotel.estRateNote}</p>
             <p class="meta">{meterText(hotel.distanceFromBasilicaMeters)}</p>
             <a class="btn" href={hotel.url} target="_blank" rel="noopener noreferrer">{visitText}</a>
           </article>
@@ -57,14 +57,14 @@ const receptionText = locale === 'es' ? 'Lugar de la recepción' : 'Reception ve
 <style>
   .travel-tips { display: grid; gap: var(--space-2); margin: var(--space-3) 0 0; }
   .travel-tips div, .hotel-card { padding: var(--space-3); border: 1px solid var(--color-rule); border-radius: var(--radius-lg); background: rgba(255,255,255,0.58); box-shadow: var(--shadow-sm); }
-  .travel-tips dt { font-weight: 700; color: var(--color-gold); }
+  .travel-tips dt { font-weight: 700; color: var(--color-gold-deep); }
   .travel-tips dd { margin: 0.35rem 0 0; color: var(--color-text-muted); }
   .hotel-grid { display: grid; gap: var(--space-3); margin-top: var(--space-3); }
   .hotel-card { position: relative; display: grid; align-content: start; gap: var(--space-1); }
-  .hotel-card h3 { color: var(--color-gold); margin-bottom: 0; }
+  .hotel-card h3 { color: var(--color-gold-deep); margin-bottom: 0; }
   .tag, .badge { display: inline-flex; width: fit-content; padding: 0.25rem 0.65rem; border-radius: 999px; font-size: var(--fs-tiny); font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; }
   .tag { background: rgba(16,68,130,0.08); color: var(--color-text); }
-  .badge { background: rgba(201,169,97,0.16); color: var(--color-gold); }
+  .badge { background: rgba(201,169,97,0.22); color: var(--color-gold-deep); }
   .meta { color: var(--color-text-muted); font-size: var(--fs-small); margin-bottom: 0; }
   .hotel-card .btn { margin-top: var(--space-2); justify-self: start; }
   @media (min-width: 760px) { .travel-tips { grid-template-columns: repeat(2, 1fr); } }

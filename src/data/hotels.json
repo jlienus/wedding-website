@@ -6,6 +6,7 @@
     "blurbEn": "The reception venue and one of Old Town’s most elegant boutique hotels, located directly on Plaza de la Independencia. Staying here keeps wedding-day logistics simple and places guests in the center of historic Quito.",
     "blurbEs": "El lugar de la recepción y uno de los hoteles boutique más elegantes del Centro Histórico, ubicado directamente en la Plaza de la Independencia. Hospedarse aquí simplifica la logística del día de la boda y deja a los invitados en pleno corazón histórico de Quito.",
     "estRateNote": "$200-450/night (verify for March 2027)",
+    "estRateNoteEs": "$200-450/noche (verificar para marzo 2027)",
     "distanceFromBasilicaMeters": 800,
     "url": "https://www.plazagrandequito.com/",
     "isReceptionVenue": true
@@ -17,6 +18,7 @@
     "blurbEn": "A celebrated luxury boutique hotel on Plaza San Francisco, known for polished service, historic architecture, and an excellent Old Town location. A strong choice for guests seeking a memorable Quito stay close to the main wedding area.",
     "blurbEs": "Un reconocido hotel boutique de lujo en la Plaza San Francisco, conocido por su servicio cuidado, arquitectura histórica y excelente ubicación en el Centro Histórico. Una gran opción para quienes buscan una estadía memorable cerca de la zona principal de la boda.",
     "estRateNote": "$200-400/night (verify for March 2027)",
+    "estRateNoteEs": "$200-400/noche (verificar para marzo 2027)",
     "distanceFromBasilicaMeters": 300,
     "url": "https://www.casagangotena.com/",
     "isReceptionVenue": false
@@ -28,6 +30,7 @@
     "blurbEn": "A charming colonial mansion hotel with interior patios, warm service, and a central Old Town address. It offers a traditional Quito atmosphere at a slightly more moderate rate than the top luxury properties.",
     "blurbEs": "Un encantador hotel en una casona colonial con patios interiores, atención cálida y ubicación céntrica en el Centro Histórico. Ofrece un ambiente quiteño tradicional con tarifas algo más moderadas que los hoteles de lujo principales.",
     "estRateNote": "$120-250/night (verify for March 2027)",
+    "estRateNoteEs": "$120-250/noche (verificar para marzo 2027)",
     "distanceFromBasilicaMeters": 500,
     "url": "https://www.hotelpatioandaluz.com/",
     "isReceptionVenue": false
@@ -39,6 +42,7 @@
     "blurbEn": "A small boutique property in a converted historic building, offering character and a quieter feel within walking distance of Old Town landmarks. Good for guests who prefer intimate hotels over larger properties.",
     "blurbEs": "Una pequeña propiedad boutique en un edificio histórico restaurado, con mucho carácter y un ambiente más tranquilo a poca distancia de los puntos principales del Centro Histórico. Ideal para quienes prefieren hoteles íntimos en lugar de propiedades grandes.",
     "estRateNote": "$100-200/night (verify for March 2027)",
+    "estRateNoteEs": "$100-200/noche (verificar para marzo 2027)",
     "distanceFromBasilicaMeters": 600,
     "url": "https://www.elrelicariodelcarmen.com/",
     "isReceptionVenue": false
@@ -50,6 +54,7 @@
     "blurbEn": "A boutique Old Town option with historic charm and convenient access to plazas, churches, and cafés. It may suit guests who want character, walkability, and a quieter base for the wedding weekend.",
     "blurbEs": "Una opción boutique en el Centro Histórico con encanto patrimonial y acceso conveniente a plazas, iglesias y cafeterías. Puede ser ideal para quienes buscan carácter, facilidad para caminar y una base tranquila durante el fin de semana de la boda.",
     "estRateNote": "$120-250/night (verify for March 2027)",
+    "estRateNoteEs": "$120-250/noche (verificar para marzo 2027)",
     "distanceFromBasilicaMeters": 600,
     "url": "https://www.villacolonnaquito.com/",
     "isReceptionVenue": false

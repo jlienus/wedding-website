@@ -6,8 +6,9 @@ const { locale } = Astro.props;
 const embedUrl = config.rsvp?.embedUrl ?? '';
 const fallbackUrl = config.rsvp?.fallbackUrl ?? '';
 const pending = !embedUrl || embedUrl === 'RSVPIFY_EMBED_URL_GOES_HERE';
+const fallbackIsPlaceholder = !fallbackUrl || fallbackUrl === 'RSVPIFY_PUBLIC_URL_GOES_HERE';
 const contactEmail = (config.rsvp as any)?.contactEmail ?? '';
-const fallbackHref = fallbackUrl || (contactEmail ? `mailto:${contactEmail}` : '');
+const fallbackHref = !fallbackIsPlaceholder ? fallbackUrl : (contactEmail ? `mailto:${contactEmail}` : '');
 ---
 
 <section class="rsvp-embed reveal">
@@ -20,7 +21,7 @@ const fallbackHref = fallbackUrl || (contactEmail ? `mailto:${contactEmail}` : '
   ) : (
     <>
       <iframe src={embedUrl} loading="lazy" title="RSVP" style="width:100%; min-height:900px; border:0;"></iframe>
-      <noscript><a href={fallbackUrl || embedUrl}>{t(locale, 'rsvp.fallbackLink')}</a></noscript>
+      <noscript><a href={!fallbackIsPlaceholder ? fallbackUrl : embedUrl}>{t(locale, 'rsvp.fallbackLink')}</a></noscript>
     </>
   )}
 </section>
@@ -28,7 +29,7 @@ const fallbackHref = fallbackUrl || (contactEmail ? `mailto:${contactEmail}` : '
 <style>
   .rsvp-embed { max-width: 58rem; margin: 0 auto; }
   .placeholder { padding: var(--space-4); text-align: center; border: 1px solid rgba(201,169,97,0.45); border-radius: var(--radius-lg); background: rgba(255,255,255,0.62); box-shadow: var(--shadow-sm); }
-  .placeholder h2 { color: var(--color-gold); }
+  .placeholder h2 { color: var(--color-gold-deep); }
   .placeholder .btn { margin-top: var(--space-2); }
 </style>
 

@@ -1,7 +1,9 @@
 {
-  "navigationFallback": {
-    "rewrite": "/404.html",
-    "exclude": ["/images/*.{png,jpg,gif,svg,webp}", "/*.{css,js,ico,svg}"]
+  "responseOverrides": {
+    "404": {
+      "rewrite": "/404.html",
+      "statusCode": 404
+    }
   },
   "globalHeaders": {
     "Cache-Control": "public, max-age=600, must-revalidate",

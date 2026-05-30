@@ -16,7 +16,7 @@ const itemUrl = (item: any) => item.url ?? item.href ?? '#';
     <div class="cards">
       {flights.length ? flights.map((item: any) => (
         <a class="provider-card" href={itemUrl(item)} target="_blank" rel="noopener noreferrer">
-          <h3>{item.name ?? item.provider}</h3>
+          <h3>{item.providerName ?? item.name ?? item.provider}</h3>
           {itemNote(item) && <p>{itemNote(item)}</p>}
           <span class="cta">{t(locale, 'common.search')} →</span>
         </a>
@@ -28,7 +28,7 @@ const itemUrl = (item: any) => item.url ?? item.href ?? '#';
     <div class="cards">
       {hotels.length ? hotels.map((item: any) => (
         <a class="provider-card" href={itemUrl(item)} target="_blank" rel="noopener noreferrer">
-          <h3>{item.name ?? item.provider}</h3>
+          <h3>{item.providerName ?? item.name ?? item.provider}</h3>
           {itemNote(item) && <p>{itemNote(item)}</p>}
           <span class="cta">{t(locale, 'common.search')} →</span>
         </a>
@@ -43,7 +43,7 @@ const itemUrl = (item: any) => item.url ?? item.href ?? '#';
   .cards { display: grid; gap: var(--space-2); }
   .provider-card { display: block; padding: var(--space-3); border: 1px solid var(--color-rule); border-radius: var(--radius-lg); background: rgba(255,255,255,0.58); box-shadow: var(--shadow-sm); }
   .provider-card:hover { transform: translateY(-2px); }
-  .provider-card h3 { margin-bottom: 0.35rem; color: var(--color-gold); }
+  .provider-card h3 { margin-bottom: 0.35rem; color: var(--color-gold-deep); }
   .provider-card p { color: var(--color-text-muted); }
   .cta { font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
   @media (min-width: 720px) { .cards { grid-template-columns: repeat(3, 1fr); } }

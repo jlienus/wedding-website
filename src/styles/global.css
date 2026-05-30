@@ -38,7 +38,7 @@ a {
   border-bottom: 1px solid var(--color-gold);
   transition: color var(--transition), border-color var(--transition);
 }
-a:hover { color: var(--color-gold); }
+a:hover { color: var(--color-gold-deep); }
 
 button {
   font-family: inherit;
@@ -80,8 +80,8 @@ img, picture, svg, video { display: block; max-width: 100%; height: auto; }
   color: var(--color-bg);
   border-color: var(--color-text);
 }
-.btn--gold { border-color: var(--color-gold); color: var(--color-gold); }
-.btn--gold:hover { background: var(--color-gold); color: var(--color-bg); border-color: var(--color-gold); }
+.btn--gold { border-color: var(--color-gold-deep); color: var(--color-gold-deep); }
+.btn--gold:hover { background: var(--color-gold-deep); color: var(--color-bg); border-color: var(--color-gold-deep); }
 .btn--primary { background: var(--color-text); color: var(--color-bg); }
 .btn--primary:hover { background: transparent; color: var(--color-text); }
 

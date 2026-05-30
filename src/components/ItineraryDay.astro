@@ -32,7 +32,7 @@ const notes = locale === 'es' ? (day.notesEs ?? day.notes) : (day.notesEn ?? day
         <p>{getText(day[part])}</p>
       </section>
     )) : <p class="empty">{t(locale, 'common.moreSoon')}</p>}
-    {notes && <aside>{notes}</aside>}
+    {notes && <aside>{getText(notes)}</aside>}
   </div>
 </article>
 
@@ -41,7 +41,7 @@ const notes = locale === 'es' ? (day.notesEs ?? day.notes) : (day.notesEn ?? day
   .accent { width: 6px; background: var(--accent); }
   .content { padding: var(--space-3); }
   header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
-  h2 { margin: 0; color: var(--color-gold); }
+  h2 { margin: 0; color: var(--color-gold-deep); }
   h3 { font-size: 1rem; margin: var(--space-2) 0 0.25rem; letter-spacing: 0.08em; text-transform: uppercase; }
   .pill { display: inline-flex; padding: 0.28rem 0.7rem; border-radius: 999px; background: rgba(201,169,97,0.15); color: var(--color-text); font-size: var(--fs-tiny); font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; }
   aside { margin-top: var(--space-2); padding: var(--space-2); border-left: 2px solid var(--accent); background: rgba(201,169,97,0.09); color: var(--color-text-muted); }
