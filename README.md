@@ -10,8 +10,9 @@ Wedding website for **John Michael Lien & Diana Duchicela Guajan**.
 ## Stack
 
 - **Astro + TypeScript** for the website
-- **Azure Static Web Apps** for hosting
-- **Cloudflare DNS** for the custom domain
+- **Azure Static Web Apps** for hosting (Free tier, on Visual Studio subscription)
+- **Azure App Service Domains** for the custom domain (on Pay-As-You-Go subscription)
+- **Azure DNS** for record hosting
 - **RSVPify** embedded for RSVP collection
 - **Bilingual English + Spanish** content
 
@@ -62,12 +63,12 @@ After GitHub and Azure Static Web Apps are connected, pushing to `main` on GitHu
 
 ## Cost summary
 
-- Domain through Cloudflare Registrar: about **$9/year**
-- Azure Static Web Apps Free tier: **$0**
-- Cloudflare DNS: **$0**
+- Domain (Azure App Service Domains, Pay-As-You-Go sub): about **$12/year** (PAYG credit card)
+- Azure DNS zone hosting: about **$6/year** (PAYG credit card by default; optionally moved to VS credits)
+- Azure Static Web Apps Free tier (Visual Studio sub): **$0** (VS Azure credits)
 - RSVPify Event plan: about **$35-75 one-time**
 
-Rough total: **$10-30/year + $35-75 once.**
+Rough total: **~$18/year + $35-75 once.** Domain + DNS land on the PAYG card (Visual Studio credits can't buy through Azure Marketplace). Hosting and deployment ride on VS credits.
 
 ## Links
 

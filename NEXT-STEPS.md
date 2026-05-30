@@ -1,13 +1,37 @@
 # Next Steps: Go Live at johnanddianawedding.com
 
-Follow this walkthrough to go from “code on my laptop” to a live wedding website at `johnanddianawedding.com`.
+Follow this walkthrough to go from "code on my laptop" to a live wedding website at `johnanddianawedding.com`.
 
-## Phase 1: Register the domain (~10 min, ~$9.15)
+> **Two-subscription setup.** Visual Studio / MSDN Azure subscriptions (the monthly-credit kind) are blocked from Marketplace purchases, including Azure App Service Domains. To stay fully inside Azure, this guide uses **two of your Azure subscriptions**:
+>
+> | What | Subscription | How it's billed |
+> |---|---|---|
+> | App Service Domain (registration) | Pay-As-You-Go (PAYG) | Credit card on PAYG (~$12/yr) |
+> | Azure DNS zone (auto-created with the domain) | PAYG | Credit card on PAYG (~$6/yr; optional to move to VS — see Phase 4b) |
+> | Azure Static Web App (hosting) | Visual Studio | VS Azure credits ($0 on Free tier) |
+> | GitHub Actions deploy pipeline | n/a (GitHub) | Free |
+>
+> Cross-subscription DNS → SWA works natively; you'll be switching subscription context in the Azure portal a few times.
 
-1. Go to https://dash.cloudflare.com/sign-up — create a free Cloudflare account if you do not have one.
-2. Click **Registrar** → **Register Domains** → search for `johnanddianawedding.com`.
-3. Confirm the price, around **$9.15/year** at-cost, then check out.
-4. Cloudflare auto-creates a DNS zone for the domain. You will add records in Phase 4.
+## Phase 1: Buy the domain through Azure App Service Domains (PAYG sub, ~10 min, ~$12/yr)
+
+1. Sign in to https://portal.azure.com.
+2. In the top-right subscription/directory filter (or the global subscription picker on whatever blade you open), make sure you're operating in your **Pay-As-You-Go subscription**.
+3. Search the portal for **App Service Domains** → click **Create**.
+4. Fill in:
+   - Subscription: **Pay-As-You-Go**
+   - Resource group: create new, name `rg-wedding-domain`
+   - Domain name: search for `johnanddianawedding.com`
+   - Privacy protection: **enable** (free, hides your personal info from WHOIS)
+   - Auto-renew: **enable** (so you don't lose the domain mid-event-planning)
+   - Hostname assignment: skip / "Configure later" — we'll point it at the SWA in Phase 4
+5. Fill in contact info (registrar requirement — use whatever is fine for WHOIS even with privacy on).
+6. Review + create. Confirm the ~$11.99/yr charge to your credit card.
+7. After purchase (~2-5 minutes), check `rg-wedding-domain`. It will contain two resources:
+   - The **App Service Domain** registration record
+   - An **Azure DNS zone** named `johnanddianawedding.com` with four assigned Azure nameservers
+
+That's it for the PAYG side until Phase 4.
 
 ## Phase 2: Push code to GitHub (~10 min)
 
@@ -22,12 +46,13 @@ git remote add origin https://github.com/<your-username>/wedding-website.git
 git push -u origin main
 ```
 
-## Phase 3: Create the Azure Static Web App (~15 min, FREE)
+## Phase 3: Create the Azure Static Web App on the VS subscription (~15 min, FREE)
 
-1. Sign in to https://portal.azure.com.
+1. Back in https://portal.azure.com, **switch the subscription context to your Visual Studio subscription**.
 2. Search for **Static Web Apps** → **Create**.
 3. Fill in:
-   - Resource Group: create new, name e.g. `rg-wedding`
+   - Subscription: **Visual Studio** (uses credits)
+   - Resource Group: create new, name `rg-wedding` (separate from `rg-wedding-domain` because they're in different subs)
    - Name: `swa-wedding-jd`
    - Plan type: **Free**
    - Region: **East US 2** or closest available region
@@ -35,23 +60,41 @@ git push -u origin main
    - Build presets: **Astro**
    - App location: `/`
    - Output location: `dist`
-4. Review + create. After about 2 minutes, Azure provisions the app and triggers a GitHub Actions run.
-5. Wait for the GitHub Action to complete. Your site will be live at a URL like `https://<random-words>.azurestaticapps.net`.
+4. Review + create. After about 2 minutes, Azure provisions the app and triggers the GitHub Actions workflow.
+5. Wait for the GitHub Action to complete (~3-5 minutes). Your site goes live at a default URL like `https://<random-words>.azurestaticapps.net`. **Note this default hostname — you'll need it in Phase 4.**
 
-## Phase 4: Connect the custom domain (~15 min)
+## Phase 4: Connect the custom domain (cross-subscription, ~15 min)
 
-1. In Azure portal → Static Web App → **Custom domains** → **Add** → choose **Custom domain on other DNS**.
-2. Enter `www.johnanddianawedding.com` first. The `www` subdomain is easier to validate.
-3. Azure gives you a CNAME target like `polite-sea-123456.1.azurestaticapps.net`.
-4. In Cloudflare dashboard → DNS for your domain:
-   - Add CNAME: `www` → `<azure-target>`
-   - Proxy: **DNS-only / gray cloud** initially
-5. Back in Azure, click **Validate**. This usually takes 1-5 minutes. Once validated, Azure issues a free TLS certificate.
-6. Repeat for the apex `johnanddianawedding.com`:
-   - In Cloudflare DNS, add CNAME: `@` → `<azure-target>`
-   - Cloudflare's CNAME flattening makes this work at the apex.
-   - In Azure, add the apex custom domain and validate it.
-7. Optional: turn the Cloudflare proxy back on for both records once validation is complete.
+This is where the two subscriptions meet: the DNS zone lives in PAYG, the SWA lives in VS. Azure handles this fine — you just bounce between subscription contexts.
+
+### 4a. Add the www subdomain
+
+1. In Azure portal → switch to **Visual Studio** sub → open your Static Web App → **Custom domains** → **Add** → choose **Custom domain on other DNS**.
+2. Enter `www.johnanddianawedding.com` first (subdomains validate faster than apex).
+3. Azure shows you a CNAME target (like `polite-sea-123456.1.azurestaticapps.net`) and a TXT validation token. Leave this tab open.
+4. In a new tab, switch portal context to **Pay-As-You-Go** sub → open the **DNS zone** `johnanddianawedding.com` (in `rg-wedding-domain`) → **+ Record set**:
+   - **CNAME** record: name = `www`, alias = the SWA target, TTL = 3600.
+   - **TXT** record: name = `_dnsauth.www` (or whatever Azure's prompt shows), value = the validation token.
+5. Back on the VS-sub SWA Custom-domains blade, click **Validate**. Usually takes 1-5 minutes. Once validated, Azure issues a free managed TLS certificate automatically.
+
+### 4b. Add the apex domain
+
+1. In VS sub → SWA → **Custom domains** → **Add** → repeat with `johnanddianawedding.com` (no `www`).
+2. Azure prompts for an apex record. In the PAYG DNS zone:
+   - Add an **A record** with the **Alias record set toggle ON** → point it at your Static Web App resource (use the resource picker — it will let you pick the SWA from the VS subscription). This is Azure DNS's native way to handle apex → SWA without CNAME-flattening workarounds.
+   - Add the second TXT validation record as Azure instructs.
+3. Validate in the SWA blade.
+4. Site is now live at both `https://johnanddianawedding.com` and `https://www.johnanddianawedding.com` with TLS.
+
+### 4c. (Optional) Move the DNS zone to VS sub to bill it against credits
+
+If you want the ~$6/yr DNS hosting cost on VS credits instead of the PAYG card, you can move just the DNS zone resource (the App Service Domain registration record itself must stay in PAYG):
+
+1. PAYG sub → `rg-wedding-domain` → click the DNS zone → **Move** → **Move to another subscription**.
+2. Pick VS sub + a resource group in VS sub (e.g., `rg-wedding`).
+3. Confirm. The Azure nameservers do **not** change when a zone moves, so DNS keeps working. The records you added in step 4a/4b carry along automatically.
+
+Skip this step if you'd rather not touch it — $6/yr is a rounding error.
 
 ## Phase 5: Set up RSVPify and wire it in (~20 min, $35-75 one-time)
 
@@ -83,7 +126,7 @@ Quickest start: save your engagement photo as `public\images\hero.jpg` at about 
 
 ## Phase 7: Generate QR codes for printed invites (~15 min)
 
-For your “fully public” model, the same RSVP URL works for everyone, so one QR code is enough.
+For your "fully public" model, the same RSVP URL works for everyone, so one QR code is enough.
 
 1. Go to a free QR generator like https://www.qr-code-generator.com/.
 2. Enter your RSVP URL: `https://johnanddianawedding.com/rsvp`.
@@ -113,11 +156,14 @@ A week before the wedding, do a final pass:
 
 ## Cost summary (annual)
 
-| Item | Cost |
-|---|---|
-| Domain (Cloudflare Registrar) | $9.15/yr |
-| Azure Static Web Apps (Free tier) | $0 |
-| Cloudflare DNS | $0 |
-| RSVPify (Event plan) | $35-75 one-time |
-| GitHub | $0 Public or $0 Private under user limits |
-| **Total** | **~$45-85 for the year** |
+| Item | Cost | Billed to |
+|---|---|---|
+| App Service Domain (PAYG sub) | ~$12/yr | PAYG credit card |
+| Azure DNS zone hosting | ~$6/yr | PAYG credit card (or VS credits if you do Phase 4c) |
+| Azure DNS queries (at our traffic) | effectively $0 | n/a |
+| Azure Static Web Apps Free (VS sub) | $0 | VS Azure credits |
+| RSVPify (Event plan) | $35-75 one-time | Credit card |
+| GitHub | $0 | n/a |
+| **Total** | **~$18/yr + $35-75 once** | |
+
+No external registrar, no Cloudflare, no third-party DNS. Domain + DNS + hosting all sit in Azure, split across the two subscriptions to respect the Marketplace rules on VS credits.
