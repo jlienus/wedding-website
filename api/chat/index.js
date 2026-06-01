@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require('crypto');
 const facts = require('./wedding-facts.json');
 
 const ALLOWED_ORIGINS = new Set([
@@ -15,7 +16,9 @@ const RATE_LIMIT_PER_HOUR = 30;
 const MAX_USER_MESSAGE_CHARS = 800;
 const MAX_HISTORY_MESSAGES = 12;
 const MAX_OUTPUT_TOKENS = 350;
+const MAX_BODY_BYTES = 24 * 1024;
 const MODEL_TEMPERATURE = 0.4;
+const IP_HASH_SALT = process.env.IP_HASH_SALT || process.env.WEBSITE_SITE_NAME || 'wedding-default-salt';
 
 // Per-instance in-memory rate-limit counter. Cleared on cold start.
 const ipBuckets = new Map();
@@ -44,6 +47,10 @@ function rateLimit(ip) {
   return { ok: true };
 }
 
+function hashIp(ip) {
+  return crypto.createHash('sha256').update(ip + '|' + IP_HASH_SALT).digest('hex').slice(0, 10);
+}
+
 function corsHeaders(origin) {
   const allow = ALLOWED_ORIGINS.has(origin) ? origin : 'https://johnanddianaswedding.com';
   return {
@@ -57,9 +64,13 @@ function corsHeaders(origin) {
 
 function buildSystemPrompt(locale) {
   const lang = locale === 'es' ? 'Spanish' : 'English';
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const weekday = now.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
   return [
     `You are the Wedding Concierge for John & Diana's wedding website (johnanddianaswedding.com).`,
     `Always answer in ${lang}. If the user writes in the other language, mirror it.`,
+    `Today is ${weekday}, ${today} (UTC). The wedding is Saturday, March 13, 2027 — you may compute simple date math (days until, weeks until) without external tools.`,
     ``,
     `## Persona`,
     `Warm, gracious, and concise — like a thoughtful host welcoming guests. Keep replies short (2-4 sentences). Use plain text. No emoji. No markdown unless a short bullet list genuinely helps.`,
@@ -175,11 +186,24 @@ module.exports = async function (context, req) {
     return;
   }
 
+  const contentType = ((req.headers && (req.headers['content-type'] || req.headers['Content-Type'])) || '').toLowerCase();
+  if (!contentType.includes('application/json')) {
+    context.res = { status: 415, headers: cors, body: { error: 'Content-Type must be application/json' } };
+    return;
+  }
+
+  if (req.rawBody && typeof req.rawBody === 'string' && req.rawBody.length > MAX_BODY_BYTES) {
+    context.res = { status: 413, headers: cors, body: { error: 'Payload too large' } };
+    return;
+  }
+
   const fwd = (req.headers && (req.headers['x-forwarded-for'] || req.headers['X-Forwarded-For'])) || '';
   const ip = fwd.split(',')[0].trim() || 'unknown';
+  const ipHash = hashIp(ip);
 
   const rl = rateLimit(ip);
   if (!rl.ok) {
+    context.log(`chat 429 ipHash=${ipHash}`);
     context.res = {
       status: 429,
       headers: { ...cors, 'Retry-After': String(rl.retryAfter) },
@@ -216,15 +240,21 @@ module.exports = async function (context, req) {
 
   try {
     const result = await callAzureOpenAI(messages, context);
-    context.log(`chat ok locale=${locale} ip=${ip} in=${result.usage && result.usage.prompt_tokens} out=${result.usage && result.usage.completion_tokens}`);
+    context.log(`chat 200 locale=${locale} ipHash=${ipHash} in=${result.usage && result.usage.prompt_tokens} out=${result.usage && result.usage.completion_tokens}`);
     context.res = {
       status: 200,
-      headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      headers: {
+        ...cors,
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+        'Referrer-Policy': 'no-referrer'
+      },
       body: { reply: result.reply, locale }
     };
   } catch (err) {
     const code = err && err.message ? err.message : 'UNKNOWN';
-    context.log.error(`chat error: ${code}`);
+    context.log.error(`chat 502 ipHash=${ipHash} code=${code}`);
     const friendly = locale === 'es'
       ? 'Lo siento — el asistente está teniendo problemas. Por favor escríbannos a rsvp@johnanddianaswedding.com.'
       : "Sorry — the assistant is having trouble right now. Please email us at rsvp@johnanddianaswedding.com.";

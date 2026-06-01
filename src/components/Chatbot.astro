@@ -45,7 +45,14 @@ const suggestions = locale === 'es' ? [
 ];
 ---
 
-<div class="chatbot" data-chatbot data-locale={locale}>
+<div
+  class="chatbot"
+  data-chatbot
+  data-locale={locale}
+  data-greeting={ui.greeting}
+  data-error-generic={ui.errorGeneric}
+  data-error-rate={ui.errorRate}
+>
   <button
     type="button"
     class="chatbot__launcher"
@@ -111,18 +118,14 @@ const suggestions = locale === 'es' ? [
   </section>
 </div>
 
-<script
-  is:inline
-  define:vars={{
-    locale,
-    greeting: ui.greeting,
-    errorGeneric: ui.errorGeneric,
-    errorRate: ui.errorRate
-  }}
->
+<script>
   (() => {
     const root = document.querySelector('[data-chatbot]');
     if (!root) return;
+    const locale = root.dataset.locale;
+    const greeting = root.dataset.greeting;
+    const errorGeneric = root.dataset.errorGeneric;
+    const errorRate = root.dataset.errorRate;
     const launcher = root.querySelector('[data-launcher]');
     const panel = root.querySelector('[data-panel]');
     const closeBtn = root.querySelector('[data-close]');
@@ -212,11 +215,15 @@ const suggestions = locale === 'es' ? [
       const typingNode = appendMessage('assistant', '', { typing: true });
 
       let payload;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
       try {
-        const apiPath = '/api/chat';
-        const res = await fetch(apiPath, {
+        const res = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'omit',
+          cache: 'no-store',
+          signal: controller.signal,
           body: JSON.stringify({
             message: trimmed,
             locale,
@@ -228,10 +235,12 @@ const suggestions = locale === 'es' ? [
         if (res.status === 429) {
           appendMessage('assistant', errorRate);
         } else if (!res.ok) {
-          appendMessage('assistant', payload.reply || errorGeneric);
+          const fallback = typeof payload.reply === 'string' ? String(payload.reply).slice(0, 4000) : errorGeneric;
+          appendMessage('assistant', fallback);
         } else if (payload && typeof payload.reply === 'string') {
-          history.push({ role: 'assistant', content: payload.reply });
-          appendMessage('assistant', payload.reply);
+          const reply = String(payload.reply).slice(0, 4000);
+          history.push({ role: 'assistant', content: reply });
+          appendMessage('assistant', reply);
           saveHistory();
         } else {
           appendMessage('assistant', errorGeneric);
@@ -240,6 +249,7 @@ const suggestions = locale === 'es' ? [
         typingNode.remove();
         appendMessage('assistant', errorGeneric);
       } finally {
+        clearTimeout(timeoutId);
         setBusy(false);
         input.focus();
       }
