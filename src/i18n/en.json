@@ -51,7 +51,15 @@
     "shuttleDisclaimer": "Airport shuttles and private transfers should be arranged directly with your hotel and confirmed at booking.",
     "unnamed": "Venue",
     "hashtagCalloutHeading": "Share your photos",
-    "hashtagCalloutBody": "Use #LienGuajan2027 on social media so we can relive the day with all of you."
+    "hashtagCalloutBody": "Use #LienGuajan2027 on social media so we can relive the day with all of you.",
+    "ballroomCaption": "The ballroom, with the dance floor at the far end",
+    "tableCaption": "A table setting under the coffered ceiling",
+    "ballroomAlt": "The Hotel Plaza Grande ballroom with round tables, gold candelabras with floral arrangements, and a wooden dance floor",
+    "tableAlt": "A round table at Hotel Plaza Grande with gold linens, a tall floral candelabra, fine crystal, and the ballroom's stone fireplace in the background"
+  },
+  "menu": {
+    "eyebrow": "Saturday evening",
+    "heading": "The Wedding Dinner"
   },
   "itinerary": {
     "heading": "Suggested Itinerary",

@@ -1,0 +1,68 @@
+---
+import { type Locale } from '../lib/i18n';
+
+interface Photo {
+  src: string;
+  altEn: string;
+  altEs: string;
+  captionEn?: string;
+  captionEs?: string;
+}
+
+interface Props { photos: Photo[]; locale?: Locale }
+const { photos = [], locale = 'en' } = Astro.props;
+---
+
+<div class="reception-gallery">
+  {photos.map((photo) => (
+    <figure class="reception-gallery__item reveal">
+      <img
+        src={photo.src}
+        alt={locale === 'es' ? photo.altEs : photo.altEn}
+        loading="lazy"
+        onerror="this.closest('figure')?.classList.add('image-missing'); this.style.display='none';"
+      />
+      {(photo.captionEn || photo.captionEs) && (
+        <figcaption>{locale === 'es' ? (photo.captionEs ?? photo.captionEn) : (photo.captionEn ?? photo.captionEs)}</figcaption>
+      )}
+    </figure>
+  ))}
+</div>
+
+<style>
+  .reception-gallery {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+  }
+  .reception-gallery__item {
+    margin: 0;
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-rule);
+    background: var(--gradient-surface);
+    box-shadow: var(--shadow-sm);
+  }
+  .reception-gallery__item img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+  .reception-gallery__item figcaption {
+    padding: var(--space-2) var(--space-3);
+    color: var(--color-text-muted);
+    font-size: var(--fs-small);
+    font-style: italic;
+    text-align: center;
+  }
+  .reception-gallery__item.image-missing {
+    aspect-ratio: 16 / 9;
+    background: linear-gradient(135deg, var(--color-silver-light) 0%, var(--color-bg) 50%, var(--color-gold-light) 100%);
+  }
+  @media (min-width: 720px) {
+    .reception-gallery { grid-template-columns: 1fr 1fr; }
+  }
+</style>

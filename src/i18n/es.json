@@ -51,7 +51,15 @@
     "shuttleDisclaimer": "Los traslados desde el aeropuerto y servicios privados deben coordinarse directamente con el hotel y confirmarse al reservar.",
     "unnamed": "Lugar",
     "hashtagCalloutHeading": "Compartan sus fotos",
-    "hashtagCalloutBody": "Usen #LienGuajan2027 en redes sociales para que podamos revivir el día con todos ustedes."
+    "hashtagCalloutBody": "Usen #LienGuajan2027 en redes sociales para que podamos revivir el día con todos ustedes.",
+    "ballroomCaption": "El salón principal, con la pista de baile al fondo",
+    "tableCaption": "Una mesa preparada bajo el techo artesonado",
+    "ballroomAlt": "Salón del Hotel Plaza Grande con mesas redondas, candelabros dorados con arreglos florales y pista de baile de madera",
+    "tableAlt": "Mesa redonda en el Hotel Plaza Grande con mantelería dorada, un candelabro floral alto, cristalería fina y la chimenea de piedra del salón al fondo"
+  },
+  "menu": {
+    "eyebrow": "Sábado por la noche",
+    "heading": "La cena nupcial"
   },
   "itinerary": {
     "heading": "Itinerario sugerido",

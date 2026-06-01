@@ -10,6 +10,8 @@ to comply with the share-alike terms.
 | `images/hero.jpg` | Wikimedia Commons | Cayambe | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:Quito_calle_Venezuela_Basilica.jpg |
 | `images/basilica-exterior.jpg` | Wikimedia Commons | Cayambe | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:Quito_calle_Venezuela_Basilica.jpg |
 | `images/plaza-grande-hotel.jpg` | Wikimedia Commons | Mike's Birds (Flickr: pazzani) | CC BY-SA 2.0 | https://commons.wikimedia.org/wiki/File:Quito,_Ecuador-_Hotel_Plaza_Grande_(32793100587).jpg |
+| `images/reception-ballroom.jpg` | Supplied by Hotel Plaza Grande / Paladar Fino Catering as part of the wedding package proposal (March 2026) | Hotel Plaza Grande | Used with permission for this event website | — |
+| `images/reception-table.jpg` | Supplied by Hotel Plaza Grande / Paladar Fino Catering as part of the wedding package proposal (March 2026) | Hotel Plaza Grande | Used with permission for this event website | — |
 
 Photos were cropped and re-encoded for web delivery via `scripts/process-photos.mjs`;
 the underlying images are unchanged in substance and remain available at the

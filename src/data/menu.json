@@ -1,0 +1,73 @@
+{
+  "caterer": {
+    "name": "Paladar Fino Catering y Eventos",
+    "introEn": "A four-course plated dinner served in the Hotel Plaza Grande ballroom, catered by Paladar Fino. Final dish selections from each course are being confirmed closer to the date.",
+    "introEs": "Cena de cuatro tiempos servida en el salón del Hotel Plaza Grande, a cargo de Paladar Fino. Las selecciones finales de cada tiempo se confirmarán más cerca de la fecha."
+  },
+  "courses": [
+    {
+      "id": "starter",
+      "labelEn": "Starter",
+      "labelEs": "Entrada",
+      "noteEn": "One from the catalog",
+      "noteEs": "Catálogo a elección",
+      "options": [
+        { "en": "Seafood salpicón — delights from the sea", "es": "Salpicón de mariscos — delicias del mar" },
+        { "en": "Beef in puff pastry with basil sauce", "es": "Hojaldre de res en salsa de albahaca" },
+        { "en": "Causa limeña — layered Peruvian potato terrine", "es": "Causa limeña" }
+      ]
+    },
+    {
+      "id": "sorbet",
+      "labelEn": "Sorbet",
+      "labelEs": "Sorbete",
+      "noteEn": "Palate cleanser",
+      "noteEs": "Refresco de paladar",
+      "options": [
+        { "en": "Passion fruit with Ecuadorian spirit", "es": "Maracuyá y espíritu del Ecuador" },
+        { "en": "Tangerine and fresh mint", "es": "Mandarina y menta fresca" }
+      ]
+    },
+    {
+      "id": "main",
+      "labelEn": "Main course",
+      "labelEs": "Plato fuerte",
+      "noteEn": "One from the catalog, with sides",
+      "noteEs": "Catálogo a elección, con guarniciones",
+      "options": [
+        { "en": "Chicken cordon bleu in a fine-herb sauce", "es": "Cordón bleu de pollo en salsa a las finas hierbas" },
+        { "en": "Beef tenderloin in red-wine sauce", "es": "Lomo fino en salsa de vino tinto" }
+      ],
+      "sidesEn": "Choice of potato, vegetable, and rice (unlimited)",
+      "sidesEs": "Papa, guarnición y arroz a elección (arroz ilimitado)"
+    },
+    {
+      "id": "dessert",
+      "labelEn": "Dessert",
+      "labelEs": "Postre",
+      "noteEn": "One from the catalog",
+      "noteEs": "Catálogo a elección",
+      "options": [
+        { "en": "Chocolate dome", "es": "Domo de chocolate" },
+        { "en": "Red-fruit cheesecake", "es": "Cheesecake de frutos rojos" },
+        { "en": "Classic tiramisu", "es": "Tiramisú clásico" }
+      ]
+    }
+  ],
+  "beverages": {
+    "labelEn": "Beverages",
+    "labelEs": "Bebidas",
+    "linesEn": [
+      "Unlimited soft drinks throughout the evening — sodas, still and sparkling water, ice",
+      "Hot-beverage station — Ecuadorian aromatic herbal water (aguas aromáticas), brewed coffee, milk, and tea",
+      "Full corkage service for spirits and sparkling wines"
+    ],
+    "linesEs": [
+      "Bebidas suaves ilimitadas durante todo el evento: gaseosas, agua mineral, agua con gas y hielo",
+      "Estación permanente de bebidas calientes: agua aromática, café pasado, leche y té",
+      "Servicio completo de descorche para destilados y espumantes"
+    ]
+  },
+  "footnoteEn": "Have a dietary restriction or allergy? Please note it on your RSVP — we'll work with the chef to accommodate you.",
+  "footnoteEs": "¿Tienes alguna restricción alimentaria o alergia? Por favor indícalo al confirmar asistencia y coordinaremos con el chef para acomodarte."
+}

@@ -1,6 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
 import VenueCard from '../components/VenueCard.astro';
+import ReceptionGallery from '../components/ReceptionGallery.astro';
+import MenuSection from '../components/MenuSection.astro';
 import SectionDivider from '../components/SectionDivider.astro';
 import { t, type Locale } from '../lib/i18n';
 import venues from '../data/venues.json';
@@ -8,6 +10,23 @@ import config from '../data/wedding.config.json';
 
 const locale: Locale = 'en';
 const hashtag = config.social.hashtag;
+
+const receptionPhotos = [
+  {
+    src: '/images/reception-ballroom.jpg',
+    altEn: t(locale, 'venues.ballroomAlt'),
+    altEs: t('es', 'venues.ballroomAlt'),
+    captionEn: t(locale, 'venues.ballroomCaption'),
+    captionEs: t('es', 'venues.ballroomCaption'),
+  },
+  {
+    src: '/images/reception-table.jpg',
+    altEn: t(locale, 'venues.tableAlt'),
+    altEs: t('es', 'venues.tableAlt'),
+    captionEn: t(locale, 'venues.tableCaption'),
+    captionEs: t('es', 'venues.tableCaption'),
+  },
+];
 ---
 
 <Base title={t(locale, 'venues.heading') + ' · John & Diana'} description={t(locale, 'venues.walkingText')} lang={locale}>
@@ -25,6 +44,8 @@ const hashtag = config.social.hashtag;
     <section class="section container reveal">
       <h2>{t(locale, 'venues.receptionHeading')}</h2>
       <VenueCard venue={venues.reception} locale={locale} />
+      <ReceptionGallery photos={receptionPhotos} locale={locale} />
+      <MenuSection locale={locale} />
     </section>
     <section class="section container container--narrow reveal">
       <aside class="hashtag-callout">
