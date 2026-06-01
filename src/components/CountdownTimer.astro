@@ -19,7 +19,7 @@ const labels = {
   <div class="unit"><strong data-seconds>0</strong><span>{labels.seconds}</span></div>
 </section>
 
-<script is:inline>
+<script>
   document.querySelectorAll('[data-countdown]').forEach((root) => {
     const target = new Date(root.dataset.target).getTime();
     const set = (selector, value) => { const el = root.querySelector(selector); if (el) el.textContent = String(value).padStart(2, '0'); };

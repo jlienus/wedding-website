@@ -40,7 +40,7 @@ const absoluteOgImage = ogImage.startsWith('http') ? ogImage : new URL(ogImage, 
     <slot />
     <Footer locale={lang} />
     <Chatbot locale={lang} />
-    <script is:inline>
+    <script>
       (() => {
         const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const revealItems = document.querySelectorAll('.reveal');

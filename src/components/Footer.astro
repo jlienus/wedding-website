@@ -15,7 +15,7 @@ const date = locale === 'es' ? config.wedding.dateDisplayEs : config.wedding.dat
   <p class="hashtag">{config.social?.hashtag}</p>
 </footer>
 
-<script is:inline>
+<script>
   document.querySelector('[data-back-to-top]')?.addEventListener('click', (event) => {
     event.preventDefault();
     window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
