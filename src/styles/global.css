@@ -125,6 +125,34 @@ img, picture, svg, video { display: block; max-width: 100%; height: auto; }
   margin-bottom: var(--space-2);
 }
 
+/* On-this-page anchor strip — used on long pages (Venues, Travel, FAQ, Our Story) */
+.page-anchors {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 0.65rem;
+  margin: var(--space-3) auto 0;
+  padding: 0.65rem 1.25rem;
+  border-top: 1px solid var(--color-rule);
+  border-bottom: 1px solid var(--color-rule);
+}
+.page-anchors a {
+  border: 0;
+  font-size: var(--fs-tiny);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  padding: 0.1rem 0;
+  transition: color var(--transition);
+}
+.page-anchors a:hover, .page-anchors a:focus-visible { color: var(--color-gold-deep); }
+.page-anchors__sep { color: var(--color-gold); opacity: 0.7; font-size: var(--fs-tiny); }
+
+/* Anchor target — leaves room for the sticky site header on jump */
+.anchor-target { scroll-margin-top: 5.5rem; }
+
 /* Reveal-on-scroll utility */
 .reveal {
   opacity: 0;

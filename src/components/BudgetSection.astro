@@ -1,0 +1,312 @@
+---
+import { t, type Locale } from '../lib/i18n';
+import budget from '../data/budget.json';
+import travelLinks from '../data/travel-links.json';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const isEs = locale === 'es';
+
+const dailyCosts = budget.dailyCosts;
+const tripStyles = budget.tripStyles;
+const flightRanges = budget.flightRanges;
+const tips = budget.tips;
+const snapshotMonth = isEs ? budget.snapshotMonthEs : budget.snapshotMonthEn;
+
+const googleFlights = travelLinks.flights.find((f) => f.providerKey === 'googleflights');
+const skyscanner = travelLinks.flights.find((f) => f.providerKey === 'skyscanner');
+
+const nightLabels = {
+  '3': isEs ? '3 noches' : '3 nights',
+  '5': isEs ? '5 noches' : '5 nights',
+  '7': isEs ? '7 noches' : '7 nights',
+};
+const styleColLabel = isEs ? 'Estilo' : 'Style';
+const tipsHeading = isEs ? 'Consejos para encontrar mejores tarifas' : 'Tips for finding the best fare';
+const checkLabelGF = isEs ? 'Buscar en Google Flights ↗' : 'Check Google Flights ↗';
+const checkLabelSC = isEs ? 'Buscar en Skyscanner ↗' : 'Check Skyscanner ↗';
+const tableCaption = isEs ? 'Total estimado por persona (sin vuelo, habitación compartida)' : 'Estimated total per person (excluding flight, double occupancy)';
+---
+
+<section class="budget-section">
+  <p class="eyebrow">{t(locale, 'budget.eyebrow')}</p>
+  <h2 class="budget-section__heading">{t(locale, 'budget.heading')}</h2>
+  <p class="budget-section__intro">{t(locale, 'budget.intro')}</p>
+
+  <div class="budget-block">
+    <h3>{t(locale, 'budget.dailyHeading')}</h3>
+    <dl class="cost-list">
+      {dailyCosts.map((item) => (
+        <div>
+          <dt>{isEs ? item.labelEs : item.labelEn}</dt>
+          <dd>{item.range}</dd>
+        </div>
+      ))}
+    </dl>
+  </div>
+
+  <div class="budget-block">
+    <h3>{t(locale, 'budget.totalsHeading')}</h3>
+    <p class="block-intro">{tableCaption}</p>
+    <div class="budget-table-wrap">
+      <table class="budget-table">
+        <thead>
+          <tr>
+            <th scope="col">{styleColLabel}</th>
+            <th scope="col">{nightLabels['3']}</th>
+            <th scope="col">{nightLabels['5']}</th>
+            <th scope="col">{nightLabels['7']}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {tripStyles.map((style) => (
+            <tr>
+              <th scope="row">
+                <span class="style-label">{isEs ? style.labelEs : style.labelEn}</span>
+                <span class="style-summary">{isEs ? style.summaryEs : style.summaryEn}</span>
+              </th>
+              <td>{style.perPersonByNights['3']}</td>
+              <td>{style.perPersonByNights['5']}</td>
+              <td>{style.perPersonByNights['7']}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="budget-block">
+    <h3>{t(locale, 'budget.flightsHeading')}</h3>
+    <p class="block-intro">{t(locale, 'budget.flightsIntro')}</p>
+    <dl class="cost-list cost-list--flights">
+      {flightRanges.map((region) => (
+        <div>
+          <dt>{isEs ? region.regionEs : region.regionEn}</dt>
+          <dd>
+            <span class="range">{region.range}</span>
+            {(isEs ? region.noteEs : region.noteEn) && (
+              <span class="region-note">{isEs ? region.noteEs : region.noteEn}</span>
+            )}
+          </dd>
+        </div>
+      ))}
+    </dl>
+
+    <h4 class="tips-heading">{tipsHeading}</h4>
+    <ul class="tips">
+      {tips.map((tip) => (
+        <li>{isEs ? tip.es : tip.en}</li>
+      ))}
+    </ul>
+
+    {(googleFlights || skyscanner) && (
+      <p class="cta-row">
+        {googleFlights && (
+          <a class="btn" href={googleFlights.url} target="_blank" rel="noopener noreferrer">{checkLabelGF}</a>
+        )}
+        {skyscanner && (
+          <a class="btn" href={skyscanner.url} target="_blank" rel="noopener noreferrer">{checkLabelSC}</a>
+        )}
+      </p>
+    )}
+  </div>
+
+  <p class="snapshot">
+    <em>{t(locale, 'budget.disclaimer').replace('{month}', snapshotMonth)}</em>
+  </p>
+</section>
+
+<style>
+  .budget-section {
+    position: relative;
+    margin: var(--space-3) auto 0;
+    padding: var(--space-5) var(--space-4) var(--space-4);
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-lg);
+    background: var(--gradient-surface);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .budget-section::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 4px;
+    background: var(--gradient-gold-fill, linear-gradient(90deg, transparent, var(--color-gold), transparent));
+  }
+  .budget-section .eyebrow { text-align: center; margin-bottom: var(--space-1); }
+  .budget-section__heading { text-align: center; margin-bottom: var(--space-2); }
+  .budget-section__intro { text-align: center; color: var(--color-text-muted); max-width: 44rem; margin: 0 auto var(--space-4); }
+
+  .budget-block { margin-top: var(--space-4); }
+  .budget-block h3 {
+    font-family: var(--font-display);
+    color: var(--color-gold-deep);
+    text-align: center;
+    margin-bottom: var(--space-2);
+    font-style: italic;
+    letter-spacing: 0.01em;
+  }
+  .block-intro {
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: var(--fs-small);
+    margin: 0 auto var(--space-3);
+    max-width: 36rem;
+  }
+
+  /* Daily cost / flight range key-value list */
+  .cost-list {
+    display: grid;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--color-rule);
+  }
+  .cost-list > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-2);
+    padding: 0.6rem 0.25rem;
+    border-bottom: 1px solid var(--color-rule);
+  }
+  .cost-list dt { margin: 0; color: var(--color-text); font-weight: 500; }
+  .cost-list dd {
+    margin: 0;
+    color: var(--color-gold-deep);
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 500;
+    text-align: right;
+  }
+  .cost-list--flights dd { display: flex; flex-direction: column; gap: 0.15rem; align-items: flex-end; }
+  .cost-list--flights .range { color: var(--color-gold-deep); font-family: var(--font-display); font-size: 1.05rem; }
+  .cost-list--flights .region-note {
+    color: var(--color-text-muted);
+    font-family: var(--font-body);
+    font-size: var(--fs-tiny);
+    font-style: italic;
+    letter-spacing: 0.02em;
+    font-weight: 400;
+    max-width: 16rem;
+  }
+
+  /* Two-column daily cost grid on wider screens */
+  @media (min-width: 640px) {
+    .cost-list:not(.cost-list--flights) {
+      grid-template-columns: 1fr 1fr;
+      column-gap: var(--space-4);
+    }
+    .cost-list:not(.cost-list--flights) > div:nth-last-child(2):nth-child(odd) { border-bottom: 1px solid var(--color-rule); }
+  }
+
+  /* Sample budget table */
+  .budget-table-wrap { overflow-x: auto; }
+  .budget-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 auto;
+    text-align: left;
+  }
+  .budget-table thead th {
+    font-family: var(--font-body);
+    font-size: var(--fs-tiny);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    padding: 0.65rem 0.5rem;
+    border-bottom: 1px solid var(--color-rule);
+    text-align: right;
+  }
+  .budget-table thead th:first-child { text-align: left; }
+  .budget-table tbody th, .budget-table tbody td {
+    padding: 0.85rem 0.5rem;
+    border-bottom: 1px solid var(--color-rule);
+    vertical-align: top;
+  }
+  .budget-table tbody tr:last-child th, .budget-table tbody tr:last-child td { border-bottom: 0; }
+  .budget-table tbody th { text-align: left; font-weight: 500; }
+  .budget-table tbody td {
+    text-align: right;
+    color: var(--color-gold-deep);
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .style-label {
+    display: block;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 1.15rem;
+    color: var(--color-text);
+    margin-bottom: 0.15rem;
+  }
+  .style-summary {
+    display: block;
+    color: var(--color-text-muted);
+    font-size: var(--fs-tiny);
+    font-weight: 400;
+    line-height: 1.45;
+  }
+
+  .tips-heading {
+    margin: var(--space-3) 0 var(--space-1);
+    font-family: var(--font-body);
+    font-size: var(--fs-small);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    text-align: center;
+  }
+  .tips {
+    list-style: none;
+    margin: 0 auto;
+    padding: 0;
+    max-width: 42rem;
+  }
+  .tips li {
+    position: relative;
+    padding: 0.45rem 0 0.45rem 1.25rem;
+    color: var(--color-text-muted);
+    line-height: 1.55;
+  }
+  .tips li::before {
+    content: '•';
+    position: absolute;
+    left: 0.15rem;
+    color: var(--color-gold);
+  }
+
+  .cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-2);
+    margin: var(--space-3) 0 0;
+  }
+
+  .snapshot {
+    text-align: center;
+    margin: var(--space-4) 0 0;
+    color: var(--color-text-muted);
+    font-size: var(--fs-tiny);
+  }
+
+  @media (max-width: 540px) {
+    .budget-section { padding: var(--space-4) var(--space-3) var(--space-3); }
+    .budget-table { table-layout: fixed; }
+    .budget-table thead th, .budget-table tbody th, .budget-table tbody td { padding: 0.55rem 0.3rem; font-size: var(--fs-small); }
+    .budget-table thead th:first-child, .budget-table tbody th { width: 36%; }
+    .budget-table thead th:not(:first-child), .budget-table tbody td { width: 21.33%; }
+    .budget-table tbody td { font-size: 0.95rem; }
+    .style-summary { display: none; }
+    .style-label { font-size: 1rem; }
+  }
+</style>

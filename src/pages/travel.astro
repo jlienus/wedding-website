@@ -2,6 +2,8 @@
 import Base from '../layouts/Base.astro';
 import TravelDeepLinks from '../components/TravelDeepLinks.astro';
 import SectionDivider from '../components/SectionDivider.astro';
+import PageAnchors from '../components/PageAnchors.astro';
+import BudgetSection from '../components/BudgetSection.astro';
 import { t, type Locale } from '../lib/i18n';
 import hotels from '../data/hotels.json';
 import en from '../i18n/en.json';
@@ -13,6 +15,14 @@ const connectivity = (locale === 'es' ? es : en).travel.connectivity;
 const meterText = (meters: number) => locale === 'es' ? `A ${meters} metros de la Basílica` : `${meters} m from the Basílica`;
 const visitText = locale === 'es' ? `${t(locale, 'common.learnMore')} ↗` : 'Visit website ↗';
 const receptionText = locale === 'es' ? 'Lugar de la recepción' : 'Reception venue';
+
+const anchorLinks = [
+  { href: '#arrival', label: t(locale, 'travel.anchorArrival') },
+  { href: '#booking', label: t(locale, 'travel.anchorBooking') },
+  { href: '#budget', label: t(locale, 'travel.anchorBudget') },
+  { href: '#stay', label: t(locale, 'travel.anchorStay') },
+  { href: '#sights', label: t(locale, 'travel.anchorActivities') },
+];
 ---
 
 <Base title={t(locale, 'travel.heading') + ' · John & Diana'} description={t(locale, 'travel.airportInfoBody')} lang={locale}>
@@ -21,8 +31,9 @@ const receptionText = locale === 'es' ? 'Lugar de la recepción' : 'Reception ve
       <p class="eyebrow">{t(locale, 'nav.travel')}</p>
       <h1>{t(locale, 'travel.heading')}</h1>
       <p>{t(locale, 'travel.stayIntro')}</p>
+      <PageAnchors locale={locale} links={anchorLinks} />
     </section>
-    <section class="section container reveal">
+    <section id="arrival" class="section container reveal anchor-target">
       <h2>{t(locale, 'travel.airportInfoHeading')}</h2>
       <p>{t(locale, 'travel.airportInfoBody')}</p>
       <dl class="travel-tips">
@@ -33,12 +44,16 @@ const receptionText = locale === 'es' ? 'Lugar de la recepción' : 'Reception ve
       </dl>
     </section>
     <SectionDivider />
-    <section class="section container reveal">
+    <section id="booking" class="section container reveal anchor-target">
       <h2>{t(locale, 'travel.flightsHeading')} &amp; {t(locale, 'travel.hotelsHeading')}</h2>
       <TravelDeepLinks locale={locale} />
     </section>
     <SectionDivider />
-    <section class="section container reveal">
+    <section id="budget" class="section container reveal anchor-target">
+      <BudgetSection locale={locale} />
+    </section>
+    <SectionDivider />
+    <section id="stay" class="section container reveal anchor-target">
       <h2>{t(locale, 'travel.stayHeading')}</h2>
       <p>{t(locale, 'travel.stayIntro')}</p>
       <div class="hotel-grid">
@@ -56,7 +71,7 @@ const receptionText = locale === 'es' ? 'Lugar de la recepción' : 'Reception ve
       </div>
     </section>
     <SectionDivider />
-    <section class="section container reveal">
+    <section id="sights" class="section container reveal anchor-target">
       <h2>{t(locale, 'travel.sightseeingHeading')}</h2>
       <p>{t(locale, 'travel.sightseeingIntro')}</p>
       <div class="info-grid">

@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import PageAnchors from '../../components/PageAnchors.astro';
 import { t, type Locale } from '../../lib/i18n';
 import faqs from '../../data/faqs.json';
 
@@ -11,10 +12,15 @@ const categoryKey = (cat: string) => ({
   'Gifts & Registry': 'giftsRegistry',
   'Local Tips': 'localTips',
 }[cat] ?? cat);
+const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const grouped = faqs.reduce<Record<string, typeof faqs>>((acc, f) => {
   (acc[f.category] ||= []).push(f);
   return acc;
 }, {});
+const anchorLinks = Object.keys(grouped).map((category) => ({
+  href: `#${slugify(category)}`,
+  label: t(locale, `faq.categories.${categoryKey(category)}`),
+}));
 ---
 
 <Base title={t(locale, 'faq.heading') + ' · John & Diana'} description={t(locale, 'faq.heading')} lang={locale}>
@@ -22,9 +28,10 @@ const grouped = faqs.reduce<Record<string, typeof faqs>>((acc, f) => {
     <section class="section container container--narrow reveal" style="text-align:center;">
       <p class="eyebrow">{t(locale, 'nav.faq')}</p>
       <h1>{t(locale, 'faq.heading')}</h1>
+      <PageAnchors locale={locale} links={anchorLinks} />
     </section>
     {Object.entries(grouped).map(([category, items]) => (
-      <section class="section container container--narrow reveal">
+      <section id={slugify(category)} class="section container container--narrow reveal anchor-target">
         <h2>{t(locale, `faq.categories.${categoryKey(category)}`)}</h2>
         <div class="faq-list">
           {items.map((item) => (

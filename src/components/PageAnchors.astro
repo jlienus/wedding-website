@@ -1,0 +1,26 @@
+---
+import { t, type Locale } from '../lib/i18n';
+
+interface AnchorLink {
+  href: string;
+  label: string;
+}
+
+interface Props {
+  locale: Locale;
+  links: AnchorLink[];
+  ariaLabel?: string;
+}
+
+const { locale, links, ariaLabel } = Astro.props;
+const label = ariaLabel ?? t(locale, 'common.onThisPage');
+---
+
+<nav class="page-anchors" aria-label={label}>
+  {links.map((link, i) => (
+    <>
+      {i > 0 && <span class="page-anchors__sep" aria-hidden="true">·</span>}
+      <a href={link.href}>{link.label}</a>
+    </>
+  ))}
+</nav>

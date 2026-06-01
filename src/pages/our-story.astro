@@ -4,9 +4,16 @@ import PhotoGallery from '../components/PhotoGallery.astro';
 import HeritageSection from '../components/HeritageSection.astro';
 import OurStoryTimeline from '../components/OurStoryTimeline.astro';
 import SectionDivider from '../components/SectionDivider.astro';
+import PageAnchors from '../components/PageAnchors.astro';
 import { t, type Locale } from '../lib/i18n';
 
 const locale: Locale = 'en';
+const anchorLinks = [
+  { href: '#how-we-met', label: t(locale, 'ourStory.anchorHowWeMet') },
+  { href: '#journey', label: t(locale, 'ourStory.anchorJourney') },
+  { href: '#moments', label: t(locale, 'ourStory.anchorMoments') },
+  { href: '#heritage', label: t(locale, 'ourStory.anchorHeritage') },
+];
 ---
 
 <Base title={t(locale, 'nav.ourStory') + ' · John & Diana'} description={t(locale, 'ourStory.howWeMetBody')} lang={locale}>
@@ -14,22 +21,25 @@ const locale: Locale = 'en';
     <section class="section container container--narrow reveal" style="text-align:center;">
       <p class="eyebrow">{t(locale, 'heritage.header')}</p>
       <h1>{t(locale, 'ourStory.heading')}</h1>
+      <PageAnchors locale={locale} links={anchorLinks} />
     </section>
-    <section class="section container container--narrow reveal">
+    <section id="how-we-met" class="section container container--narrow reveal anchor-target">
       <h2 style="text-align:center;">{t(locale, 'ourStory.howWeMetHeading')}</h2>
       <p>{t(locale, 'ourStory.howWeMetBody')}</p>
     </section>
     <SectionDivider />
-    <section class="section container">
+    <section id="journey" class="section container anchor-target">
       <OurStoryTimeline locale={locale} />
     </section>
     <SectionDivider />
-    <section class="section container reveal">
+    <section id="moments" class="section container reveal anchor-target">
       <h2 style="text-align:center;">{t(locale, 'ourStory.galleryHeading')}</h2>
       <PhotoGallery slots={['couple-gallery-1.jpg','couple-gallery-2.jpg','couple-gallery-3.jpg','couple-gallery-4.jpg','couple-gallery-5.jpg','couple-gallery-6.jpg']} altPrefix={locale === 'es' ? 'Foto de John y Diana' : 'John and Diana photo'} />
     </section>
     <SectionDivider ornament="⚭" />
-    <HeritageSection locale={locale} />
+    <div id="heritage" class="anchor-target">
+      <HeritageSection locale={locale} />
+    </div>
   </main>
 </Base>
 

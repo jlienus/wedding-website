@@ -41,7 +41,11 @@
     "heritageSubheading": "Sobre nuestras raíces",
     "heritageBody": "Imanalla, bienvenidos. Las raíces de Diana están en Otavalo, una comunidad andina reconocida por su lengua kichwa, su música y su extraordinaria tradición textil. Los tejidos otavaleños guardan generaciones de arte, paciencia e identidad; y los valores andinos honran la familia, la reciprocidad y la Pachamama, la Madre Tierra. Al iniciar su vida de casados, John y Diana llevan esas raíces con gratitud. Esta celebración también honra el kuyay, palabra kichwa para amor: amor a la familia, a la tierra y al encuentro que nos reúne en Quito.",
     "timelineHeading": "Nuestro camino juntos",
-    "timelineIntro": "Algunos momentos del camino — las fechas marcadas Por confirmar se completarán a medida que crezca la página."
+    "timelineIntro": "Algunos momentos del camino — las fechas marcadas Por confirmar se completarán a medida que crezca la página.",
+    "anchorHowWeMet": "Cómo nos conocimos",
+    "anchorJourney": "Nuestro camino",
+    "anchorMoments": "Momentos",
+    "anchorHeritage": "Raíces"
   },
   "venues": {
     "heading": "Lugares",
@@ -72,6 +76,16 @@
   "cocktails": {
     "eyebrow": "Hora de bienvenida",
     "heading": "Cócteles de bienvenida"
+  },
+  "budget": {
+    "eyebrow": "Planificación del viaje",
+    "heading": "Estimando el costo de su viaje",
+    "intro": "Quito es maravillosamente accesible una vez que llegan — los vuelos son la variable más cambiante. Usen los rangos a continuación como punto de partida y sumen su propia cotización de vuelo para tener un estimado completo.",
+    "dailyHeading": "Cuánto cuesta el día a día en Quito",
+    "totalsHeading": "Totales aproximados por viaje",
+    "flightsHeading": "Estimando su vuelo",
+    "flightsIntro": "Tarifas económicas ida y vuelta desde EE. UU. a Quito (UIO), basadas en búsquedas para viajes alrededor del 13 de marzo de 2027.",
+    "disclaimer": "Precios a {month}, solo como guía de planificación. Las tarifas aéreas y hoteleras fluctúan; verifíquen antes de reservar."
   },
   "itinerary": {
     "heading": "Itinerario sugerido",
@@ -126,7 +140,12 @@
       { "name": "eSIM (recomendado)", "details": "Airalo y Holafly venden eSIMs para Ecuador desde unos $5–15 por 1–2 GB. Instálenla antes de volar y actívenla al llegar — sin cambiar de chip físico." },
       { "name": "SIM local", "details": "Claro y Movistar venden SIMs prepago en el aeropuerto UIO por unos $10 con varios GB de datos. Lleven un teléfono liberado." },
       { "name": "WiFi", "details": "La mayoría de hoteles, cafés y restaurantes de Quito ofrecen WiFi gratis a sus clientes." }
-    ]
+    ],
+    "anchorArrival": "Llegada",
+    "anchorBooking": "Reservas",
+    "anchorBudget": "Presupuesto",
+    "anchorStay": "Hospedaje",
+    "anchorActivities": "Excursiones"
   },
   "rsvp": {
     "heading": "Confirmar asistencia",
@@ -182,7 +201,8 @@
     "addToCalendar": "Agregar al calendario",
     "addToCalendarHint": "Descarga un archivo .ics con la ceremonia y la recepción en hora de Ecuador.",
     "search": "Buscar",
-    "comingSoon": "Próximamente"
+    "comingSoon": "Próximamente",
+    "onThisPage": "En esta página"
   },
   "heritage": {
     "headerLine": "Imanalla · Bienvenidos · Welcome",

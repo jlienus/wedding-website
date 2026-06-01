@@ -41,7 +41,11 @@
     "heritageSubheading": "A note on heritage",
     "heritageBody": "Imanalla, welcome. Diana's roots are in Otavalo, an Andean community known for its Kichwa language, music, and extraordinary weaving traditions. Otavalo textiles carry generations of artistry, patience, and identity, while Andean values honor family, reciprocity, and Pachamama—Mother Earth. As John and Diana begin married life, they carry those roots with gratitude. This celebration also honors kuyay, the Kichwa word for love: love of family, love of place, and the love that brings all of us together in Quito.",
     "timelineHeading": "Our journey together",
-    "timelineIntro": "A few milestones along the way — dates marked TBD will be filled in as the page grows."
+    "timelineIntro": "A few milestones along the way — dates marked TBD will be filled in as the page grows.",
+    "anchorHowWeMet": "How we met",
+    "anchorJourney": "Our journey",
+    "anchorMoments": "Moments",
+    "anchorHeritage": "Heritage"
   },
   "venues": {
     "heading": "Venues",
@@ -72,6 +76,16 @@
   "cocktails": {
     "eyebrow": "Welcome hour",
     "heading": "Welcome Cocktails"
+  },
+  "budget": {
+    "eyebrow": "Planning ahead",
+    "heading": "Estimating your trip cost",
+    "intro": "Quito is delightfully affordable once you arrive — flights are the biggest variable. Use the ranges below as a starting point, then add your own flight quote for a full estimate.",
+    "dailyHeading": "What things cost in Quito",
+    "totalsHeading": "Sample trip totals",
+    "flightsHeading": "Estimating your flight",
+    "flightsIntro": "Round-trip economy fares from the US to Quito (UIO), based on searches for travel around March 13, 2027.",
+    "disclaimer": "Prices as of {month} — for planning guidance only. Airfare and hotel rates fluctuate; please verify before booking."
   },
   "itinerary": {
     "heading": "Suggested Itinerary",
@@ -126,7 +140,12 @@
       { "name": "eSIM (recommended)", "details": "Airalo and Holafly sell Ecuador eSIMs from about $5–15 for 1–2 GB. Install before flying and activate on arrival — no SIM swap needed." },
       { "name": "Local SIM", "details": "Claro and Movistar sell prepaid SIMs at UIO airport for around $10 with a few GB of data. Bring an unlocked phone." },
       { "name": "WiFi", "details": "Most hotels, cafés, and restaurants in Quito offer free WiFi to customers." }
-    ]
+    ],
+    "anchorArrival": "Arrival",
+    "anchorBooking": "Booking",
+    "anchorBudget": "Budget",
+    "anchorStay": "Stay",
+    "anchorActivities": "Sights"
   },
   "rsvp": {
     "heading": "RSVP",
@@ -182,7 +201,8 @@
     "addToCalendar": "Add to calendar",
     "addToCalendarHint": "Downloads an .ics file with the ceremony and reception in Ecuador time.",
     "search": "Search",
-    "comingSoon": "Coming soon"
+    "comingSoon": "Coming soon",
+    "onThisPage": "On this page"
   },
   "heritage": {
     "headerLine": "Imanalla · Bienvenidos · Welcome",

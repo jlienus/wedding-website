@@ -1,0 +1,64 @@
+{
+  "snapshotMonthEn": "June 2026",
+  "snapshotMonthEs": "junio de 2026",
+  "dailyCosts": [
+    { "labelEn": "Set lunch (almuerzo)", "labelEs": "Almuerzo del día", "range": "$3–5" },
+    { "labelEn": "Sit-down dinner", "labelEs": "Cena en restaurante", "range": "$15–25" },
+    { "labelEn": "Café coffee", "labelEs": "Café en cafetería", "range": "$2–3" },
+    { "labelEn": "Bottled water (1 L)", "labelEs": "Agua embotellada (1 L)", "range": "$0.60–1" },
+    { "labelEn": "Local beer", "labelEs": "Cerveza nacional", "range": "$2–3" },
+    { "labelEn": "Taxi across Old Town", "labelEs": "Taxi en el Centro Histórico", "range": "$3–5" },
+    { "labelEn": "Metro fare (one-way)", "labelEs": "Metro (un viaje)", "range": "$0.45" },
+    { "labelEn": "Museum entry", "labelEs": "Entrada a museo", "range": "$2–5" }
+  ],
+  "tripStyles": [
+    {
+      "id": "budget",
+      "labelEn": "Budget",
+      "labelEs": "Económico",
+      "summaryEn": "Airbnb or small hotel · street food and almuerzos · metro and short taxis",
+      "summaryEs": "Airbnb u hotel pequeño · comida callejera y almuerzos · metro y taxis cortos",
+      "perPersonByNights": { "3": "$145", "5": "$240", "7": "$335" }
+    },
+    {
+      "id": "comfortable",
+      "labelEn": "Comfortable",
+      "labelEs": "Cómodo",
+      "summaryEn": "Mid-range hotel (~$100/night) · mix of café and sit-down meals · regular taxis",
+      "summaryEs": "Hotel de gama media (~$100/noche) · mezcla de cafés y restaurantes · taxis habituales",
+      "perPersonByNights": { "3": "$360", "5": "$600", "7": "$840" }
+    },
+    {
+      "id": "splurge",
+      "labelEn": "Splurge",
+      "labelEs": "Lujo",
+      "summaryEn": "Plaza Grande / Casa Gangotena (~$300/night) · fine dining · private transport",
+      "summaryEs": "Plaza Grande / Casa Gangotena (~$300/noche) · alta gastronomía · transporte privado",
+      "perPersonByNights": { "3": "$840", "5": "$1,400", "7": "$1,960" }
+    }
+  ],
+  "flightRanges": [
+    { "regionEn": "Miami / Florida gateways", "regionEs": "Miami / Florida", "range": "$285–325", "noteEn": "Most affordable US gateway to UIO", "noteEs": "La opción más accesible desde EE. UU." },
+    { "regionEn": "East Coast (NYC · BOS · DC · ATL)", "regionEs": "Costa Este (NY · BOS · DC · ATL)", "range": "$400–475", "noteEn": null, "noteEs": null },
+    { "regionEn": "Central US (CHI · DFW · IAH)", "regionEs": "Centro de EE. UU. (CHI · DFW · IAH)", "range": "$450–575", "noteEn": null, "noteEs": null },
+    { "regionEn": "West Coast (LAX · SFO · SEA)", "regionEs": "Costa Oeste (LAX · SFO · SEA)", "range": "$525–625", "noteEn": "Usually involves a connection", "noteEs": "Suele requerir una conexión" }
+  ],
+  "tips": [
+    {
+      "en": "Book Tuesday or Wednesday departures — typically $50–150 cheaper than weekend flights.",
+      "es": "Reserven salidas martes o miércoles: suelen costar entre $50 y $150 menos que los vuelos de fin de semana."
+    },
+    {
+      "en": "Lock in fares 6–10 weeks before March 13, 2027 for the best balance of price and seat availability.",
+      "es": "Aseguren tarifas entre 6 y 10 semanas antes del 13 de marzo de 2027 para equilibrar precio y disponibilidad."
+    },
+    {
+      "en": "Set a Google Flights price alert on your route — fares to UIO swing $100+ week to week.",
+      "es": "Activen una alerta de precios en Google Flights para su ruta — las tarifas a UIO varían más de $100 por semana."
+    },
+    {
+      "en": "Consider arriving 1–2 days early to adjust to Quito's 2,850 m / 9,350 ft altitude before the wedding.",
+      "es": "Consideren llegar 1 o 2 días antes para aclimatarse a los 2.850 m de altitud de Quito antes de la boda."
+    }
+  ]
+}
