@@ -6,20 +6,26 @@ type Venue = Record<string, any>;
 interface Props { venue: Venue; photoUrlBase?: string; locale?: Locale }
 const { venue = {}, photoUrlBase = '/images/', locale = 'en' } = Astro.props;
 const id = String(venue.id ?? venue.key ?? venue.type ?? '').toLowerCase();
-const venueConfig = id.includes('reception') ? config.venues.reception : id.includes('ceremony') ? config.venues.ceremony : undefined;
-const name = venue.name ?? venueConfig?.name ?? t(locale, 'venues.unnamed');
+const venueConfig = id === 'plaza-grande' || id.includes('reception') || id.includes('plaza')
+  ? config.venues.reception
+  : id === 'basilica' || id.includes('ceremony') || id.includes('basilica')
+    ? config.venues.ceremony
+    : undefined;
+const localizedName = locale === 'es' ? venue.shortNameEs : venue.shortNameEn;
+const name = venue.name ?? localizedName ?? venueConfig?.name ?? t(locale, 'venues.unnamed');
 const address = venue.address ?? venueConfig?.address ?? [venueConfig?.addressLine1, venueConfig?.addressLine2, venueConfig?.city, venueConfig?.country].filter(Boolean).join(', ');
 const mapsUrl = venue.mapsUrl ?? venueConfig?.mapsUrl ?? '';
 const blurb = locale === 'es' ? (venue.blurbEs ?? venue.blurb) : (venue.blurbEn ?? venue.blurb);
 const tips = (locale === 'es' ? (venue.tipsEs ?? venue.tips) : (venue.tipsEn ?? venue.tips)) ?? [];
-const photoSlot = venue.photoSlot ?? venue.photo ?? 'venue-placeholder.jpg';
-const caption = venue.caption ?? name;
+const photoSlot = venue.photoSlot ?? venueConfig?.photoSlot ?? venue.photo ?? 'venue-placeholder.jpg';
+const altText = locale === 'es' ? (venue.photoCaptionEs ?? name) : (venue.photoCaptionEn ?? name);
+const district = [venueConfig?.addressLine2, venueConfig?.city].filter(Boolean).join(' · ');
 ---
 
 <article class="venue-card reveal">
   <figure>
-    <img src={`${photoUrlBase}${photoSlot}`} alt={caption} loading="lazy" onerror="this.style.display='none'; this.closest('figure')?.classList.add('image-missing');" />
-    {caption && <figcaption>{caption}</figcaption>}
+    <img src={`${photoUrlBase}${photoSlot}`} alt={altText} loading="lazy" onerror="this.style.display='none'; this.closest('figure')?.classList.add('image-missing');" />
+    {district && <figcaption>{district}</figcaption>}
   </figure>
   <div class="content">
     <h2>{name}</h2>
