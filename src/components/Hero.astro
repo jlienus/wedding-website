@@ -17,7 +17,13 @@ const cityVenue = `${config.venues.reception.city}, ${config.venues.reception.co
   <noscript><img src={`/images/${photoSlot}`} alt={t(locale, 'hero.imageAlt')} /></noscript>
   <div class="hero-overlay reveal">
     <p class="eyebrow">{t(locale, 'heritage.header')}</p>
-    <span class="hero-rule" aria-hidden="true"></span>
+    <span class="hero-rule" aria-hidden="true">
+      <svg viewBox="0 0 140 10" width="140" height="10" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+        <line x1="2" y1="5" x2="56" y2="5" stroke="currentColor" stroke-width="1" stroke-opacity="0.55" stroke-linecap="round" />
+        <path d="M70 1 L74 5 L70 9 L66 5 Z" fill="currentColor" />
+        <line x1="84" y1="5" x2="138" y2="5" stroke="currentColor" stroke-width="1" stroke-opacity="0.55" stroke-linecap="round" />
+      </svg>
+    </span>
     <h1>{config.couple.monogram}</h1>
     <p class="save-date">{savedateLine}</p>
     <p class="subtitle">{cityVenue}</p>
@@ -67,7 +73,8 @@ const cityVenue = `${config.venues.reception.city}, ${config.venues.reception.co
     color: var(--color-text);
   }
   .eyebrow { color: var(--color-gold-deep); letter-spacing: 0.22em; }
-  .hero-rule { display: block; width: 4.5rem; height: 1px; margin: var(--space-2) auto var(--space-3); background: var(--gradient-gold-line); }
+  .hero-rule { display: block; margin: var(--space-1) auto var(--space-3); color: var(--color-gold-deep); line-height: 0; }
+  .hero-rule svg { display: block; margin: 0 auto; }
   h1 {
     font-size: clamp(4rem, 10vw, 6rem);
     letter-spacing: 0.22em;
