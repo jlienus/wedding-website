@@ -9,8 +9,6 @@
       "id": "starter",
       "labelEn": "Starter",
       "labelEs": "Entrada",
-      "noteEn": "One from the catalog",
-      "noteEs": "Catálogo a elección",
       "options": [
         { "en": "Seafood salpicón — delights from the sea", "es": "Salpicón de mariscos — delicias del mar" },
         { "en": "Beef in puff pastry with basil sauce", "es": "Hojaldre de res en salsa de albahaca" },
@@ -21,8 +19,6 @@
       "id": "sorbet",
       "labelEn": "Sorbet",
       "labelEs": "Sorbete",
-      "noteEn": "Palate cleanser",
-      "noteEs": "Refresco de paladar",
       "options": [
         { "en": "Passion fruit with Ecuadorian spirit", "es": "Maracuyá y espíritu del Ecuador" },
         { "en": "Tangerine and fresh mint", "es": "Mandarina y menta fresca" }
@@ -32,21 +28,17 @@
       "id": "main",
       "labelEn": "Main course",
       "labelEs": "Plato fuerte",
-      "noteEn": "One from the catalog, with sides",
-      "noteEs": "Catálogo a elección, con guarniciones",
       "options": [
         { "en": "Chicken cordon bleu in a fine-herb sauce", "es": "Cordón bleu de pollo en salsa a las finas hierbas" },
         { "en": "Beef tenderloin in red-wine sauce", "es": "Lomo fino en salsa de vino tinto" }
       ],
-      "sidesEn": "Choice of potato, vegetable, and rice (unlimited)",
-      "sidesEs": "Papa, guarnición y arroz a elección (arroz ilimitado)"
+      "sidesEn": "Served with choice of potato, vegetable, and rice (unlimited)",
+      "sidesEs": "Servido con papa, guarnición y arroz a elección (arroz ilimitado)"
     },
     {
       "id": "dessert",
       "labelEn": "Dessert",
       "labelEs": "Postre",
-      "noteEn": "One from the catalog",
-      "noteEs": "Catálogo a elección",
       "options": [
         { "en": "Chocolate dome", "es": "Domo de chocolate" },
         { "en": "Red-fruit cheesecake", "es": "Cheesecake de frutos rojos" },
