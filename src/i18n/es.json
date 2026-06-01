@@ -87,6 +87,24 @@
     "flightsIntro": "Tarifas económicas ida y vuelta desde EE. UU. a Quito (UIO), basadas en búsquedas para viajes alrededor del 13 de marzo de 2027.",
     "disclaimer": "Precios a {month}, solo como guía de planificación. Las tarifas aéreas y hoteleras fluctúan; verifíquen antes de reservar."
   },
+  "altitude": {
+    "eyebrow": "Aviso de salud y seguridad",
+    "heading": "Prepárense para la altura — la seguridad es lo primero",
+    "intro": "Quito está a 2.850 m / 9.350 ft. El aire enrarecido afecta a casi todos — incluso a viajeros frecuentes y en buena forma. El sol intenso de la altura y el aire seco también deshidratan más rápido que al nivel del mar, así que unos hábitos sencillos hacen una gran diferencia en cómo se sentirán durante la semana de la boda.",
+    "itemsHeading": "Antes y durante el viaje",
+    "items": [
+      "Hidrátense bastante. Tomen agua constantemente — mucho más de lo que tomarían en casa. Limiten la cafeína y el alcohol las primeras 24 a 48 horas; ambos aceleran la deshidratación en altura.",
+      "Tómenselo con calma el primer día. Duerman bien, caminen despacio y eviten caminatas exigentes, ejercicio fuerte y comidas pesadas. Dejen las noches largas para más cerca de la boda.",
+      "Lleguen 1 o 2 días antes si pueden. Aclimatarse antes de la ceremonia hace la celebración mucho más disfrutable y reduce notablemente el riesgo de sentirse mal el día principal.",
+      "Coman liviano y con carbohidratos al inicio. Sopas, pan, fruta y almuerzos ecuatorianos sientan mejor que cenas pesadas las primeras noches.",
+      "Prueben el mate de coca. Lo ofrecen en casi todos los hoteles y ayuda con dolores de cabeza leves o náuseas. El ibuprofeno o acetaminofén también alivia el dolor de cabeza por la altura.",
+      "Lleven protector solar SPF 30+ y un sombrero con ala. La radiación UV es fuerte a 2.850 m incluso con nubes, y las quemaduras empeoran la deshidratación."
+    ],
+    "extraCareHeading": "Cuidado adicional para algunos invitados",
+    "extraCare": "Si fuman, tienen 60 años o más, o padecen condiciones cardíacas, pulmonares o de presión arterial, por favor consulten a su médico antes de viajar. Consideren llegar uno o dos días antes, tomarlo aún más con calma, y preguntarle a su médico sobre medicamentos para la altura (acetazolamida / Diamox) como prevención. Lleven sus medicamentos habituales en el equipaje de mano.",
+    "helpHeading": "Cuándo buscar atención médica",
+    "help": "Un dolor de cabeza fuerte que no cede con medicamento, falta de aire persistente en reposo, vómitos repetidos, confusión o dolor en el pecho son señales de alerta de mal de altura y requieren atención médica inmediata. El número de emergencias en Quito es 911 (hay operadores que hablan inglés), y la recepción de cualquier hotel puede llamar a un doctor o coordinar el traslado."
+  },
   "itinerary": {
     "heading": "Itinerario sugerido",
     "intro": "Este es un itinerario sugerido para quienes deseen conocer Quito antes de la boda. Adáptenlo según su fecha de llegada, energía, movilidad e intereses: descansar también es parte del plan, especialmente por la altura.",

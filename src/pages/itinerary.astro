@@ -3,6 +3,7 @@ import Base from '../layouts/Base.astro';
 import ItineraryDay from '../components/ItineraryDay.astro';
 import AddToCalendar from '../components/AddToCalendar.astro';
 import SectionDivider from '../components/SectionDivider.astro';
+import AltitudeAdvisory from '../components/AltitudeAdvisory.astro';
 import { t, type Locale } from '../lib/i18n';
 import itinerary from '../data/itinerary.json';
 
@@ -18,6 +19,9 @@ const alternateItineraries = Object.values(itinerary.alternateItineraries);
       <p>{t(locale, 'itinerary.intro')}</p>
       <p class="tz-note">🕒 {t(locale, 'itinerary.timeZoneNote')}</p>
       <p class="cal-row"><AddToCalendar locale={locale} /></p>
+    </section>
+    <section class="section container container--narrow reveal" style="padding-top: 0;">
+      <AltitudeAdvisory locale={locale} />
     </section>
     <section class="section container reveal">
       <div style="display:grid; gap: var(--space-3);">

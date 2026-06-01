@@ -87,6 +87,24 @@
     "flightsIntro": "Round-trip economy fares from the US to Quito (UIO), based on searches for travel around March 13, 2027.",
     "disclaimer": "Prices as of {month} — for planning guidance only. Airfare and hotel rates fluctuate; please verify before booking."
   },
+  "altitude": {
+    "eyebrow": "Health & safety note",
+    "heading": "Plan for the altitude — safety comes first",
+    "intro": "Quito sits at 2,850 m / 9,350 ft. The thinner air affects almost everyone — even fit, experienced travelers feel it. The high-altitude sun and dry mountain air also dehydrate you faster than at sea level, so a few simple habits make a real difference in how good you feel for the wedding week.",
+    "itemsHeading": "Before and during your trip",
+    "items": [
+      "Hydrate aggressively. Drink water steadily all day — much more than you would at home. Limit caffeine and alcohol for the first 24–48 hours; both speed up dehydration at altitude.",
+      "Take it easy your first day. Sleep in, walk slowly, and skip strenuous hikes, gym sessions, and heavy meals. Save the late nights for closer to the wedding.",
+      "Arrive 1–2 days early if you can. Acclimating before the ceremony makes the celebration far more enjoyable — and dramatically reduces the risk of feeling unwell on the big day.",
+      "Eat light, carbohydrate-forward meals at first. Soups, breads, fruit, and Ecuadorian almuerzos sit better than rich dinners those first nights.",
+      "Try coca tea (mate de coca). It's offered at most hotels and helps with mild headache or nausea. Ibuprofen or acetaminophen also eases altitude headaches.",
+      "Pack SPF 30+ sunscreen and a brimmed hat. UV is intense at 2,850 m even on cloudy days, and sunburn worsens dehydration."
+    ],
+    "extraCareHeading": "Extra care for some guests",
+    "extraCare": "If you smoke, are 60 or older, or have heart, lung, or blood-pressure conditions, please talk to your doctor before traveling. Consider arriving an extra day or two early, pacing yourself even more slowly, and asking your provider about altitude medication (acetazolamide / Diamox) as a preventive option. Bring any regular medications in your carry-on.",
+    "helpHeading": "When to seek medical help",
+    "help": "A severe headache that doesn't respond to medication, persistent shortness of breath at rest, repeated vomiting, confusion, or chest pain are warning signs of altitude sickness and require immediate medical attention. Quito's emergency number is 911 (English-speaking dispatchers available), and any hotel front desk can summon a doctor or arrange transport."
+  },
   "itinerary": {
     "heading": "Suggested Itinerary",
     "intro": "This is a suggested itinerary for guests who would like to explore Quito before the wedding. Please adapt it to your arrival date, energy level, mobility, and interests—rest is part of the plan, especially at altitude.",

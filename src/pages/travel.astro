@@ -4,6 +4,7 @@ import TravelDeepLinks from '../components/TravelDeepLinks.astro';
 import SectionDivider from '../components/SectionDivider.astro';
 import PageAnchors from '../components/PageAnchors.astro';
 import BudgetSection from '../components/BudgetSection.astro';
+import AltitudeAdvisory from '../components/AltitudeAdvisory.astro';
 import { t, type Locale } from '../lib/i18n';
 import hotels from '../data/hotels.json';
 import en from '../i18n/en.json';
@@ -33,11 +34,13 @@ const anchorLinks = [
       <p>{t(locale, 'travel.stayIntro')}</p>
       <PageAnchors locale={locale} links={anchorLinks} />
     </section>
+    <section class="section container container--narrow reveal" style="padding-top: 0;">
+      <AltitudeAdvisory locale={locale} />
+    </section>
     <section id="arrival" class="section container reveal anchor-target">
       <h2>{t(locale, 'travel.airportInfoHeading')}</h2>
       <p>{t(locale, 'travel.airportInfoBody')}</p>
       <dl class="travel-tips">
-        <div><dt>🏔️ {t(locale, 'itinerary.altitudeAdvisory')}</dt><dd>{t(locale, 'travel.altitudeTip')}</dd></div>
         <div><dt>☀️ {locale === 'es' ? 'Clima' : 'Weather'}</dt><dd>{t(locale, 'travel.weatherTip')}</dd></div>
         <div><dt>💵 {locale === 'es' ? 'Moneda' : 'Currency'}</dt><dd>{t(locale, 'travel.currencyTip')}</dd></div>
         <div><dt>🧭 {locale === 'es' ? 'Seguridad' : 'Safety'}</dt><dd>{t(locale, 'travel.safetyTip')}</dd></div>

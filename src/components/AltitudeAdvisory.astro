@@ -1,0 +1,144 @@
+---
+import type { Locale } from '../lib/i18n';
+import en from '../i18n/en.json';
+import es from '../i18n/es.json';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const data = (locale === 'es' ? es : en).altitude;
+---
+
+<aside class="altitude-advisory reveal" role="note" aria-labelledby="altitude-advisory-heading">
+  <div class="altitude-advisory__stripe" aria-hidden="true"></div>
+  <div class="altitude-advisory__body">
+    <p class="altitude-advisory__eyebrow"><span class="altitude-advisory__icon" aria-hidden="true">🏔️</span>{data.eyebrow}</p>
+    <h2 id="altitude-advisory-heading" class="altitude-advisory__heading">{data.heading}</h2>
+    <p class="altitude-advisory__intro">{data.intro}</p>
+    <p class="altitude-advisory__subheading">{data.itemsHeading}</p>
+    <ul class="altitude-advisory__list">
+      {data.items.map((item: string) => <li>{item}</li>)}
+    </ul>
+    <div class="altitude-advisory__card altitude-advisory__card--care">
+      <h3><span aria-hidden="true">💛</span> {data.extraCareHeading}</h3>
+      <p>{data.extraCare}</p>
+    </div>
+    <div class="altitude-advisory__card altitude-advisory__card--help">
+      <h3><span aria-hidden="true">🚨</span> {data.helpHeading}</h3>
+      <p>{data.help}</p>
+    </div>
+  </div>
+</aside>
+
+<style>
+  .altitude-advisory {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin-top: var(--space-3);
+    background: var(--color-surface-pearl);
+    border: 1px solid var(--color-gold);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+  }
+  .altitude-advisory__stripe {
+    flex: 0 0 6px;
+    background: var(--gradient-gold-fill);
+  }
+  .altitude-advisory__body {
+    flex: 1 1 auto;
+    padding: var(--space-4) var(--space-4) var(--space-3);
+    min-width: 0;
+  }
+  .altitude-advisory__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0 0 0.65rem;
+    font-family: var(--font-sans, inherit);
+    font-size: var(--fs-tiny);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--color-gold-deep);
+  }
+  .altitude-advisory__icon { font-size: 1.05rem; }
+  .altitude-advisory__heading {
+    margin: 0 0 var(--space-2);
+    font-size: var(--fs-h3);
+    color: var(--color-text);
+    line-height: 1.2;
+  }
+  .altitude-advisory__intro {
+    margin: 0 0 var(--space-3);
+    color: var(--color-text);
+  }
+  .altitude-advisory__subheading {
+    margin: var(--space-3) 0 0.6rem;
+    font-size: var(--fs-tiny);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--color-gold-deep);
+  }
+  .altitude-advisory__list {
+    list-style: none;
+    margin: 0 0 var(--space-3);
+    padding: 0;
+    display: grid;
+    gap: 0.65rem;
+  }
+  .altitude-advisory__list li {
+    position: relative;
+    padding-left: 1.5rem;
+    color: var(--color-text);
+    line-height: 1.5;
+  }
+  .altitude-advisory__list li::before {
+    content: "▲";
+    position: absolute;
+    left: 0;
+    top: 0.18rem;
+    color: var(--color-gold-deep);
+    font-size: 0.72rem;
+  }
+  .altitude-advisory__card {
+    margin-top: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+  }
+  .altitude-advisory__card h3 {
+    margin: 0 0 0.35rem;
+    font-size: 1rem;
+    line-height: 1.3;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .altitude-advisory__card p {
+    margin: 0;
+    color: var(--color-text);
+    line-height: 1.5;
+  }
+  .altitude-advisory__card--care {
+    background: rgba(212, 175, 55, 0.12);
+    border-left: 3px solid var(--color-gold);
+  }
+  .altitude-advisory__card--care h3 { color: var(--color-gold-deep); }
+  .altitude-advisory__card--help {
+    background: rgba(237, 28, 36, 0.06);
+    border-left: 3px solid var(--color-ec-red);
+  }
+  .altitude-advisory__card--help h3 { color: #B0181F; }
+
+  @media (max-width: 640px) {
+    .altitude-advisory__stripe { flex-basis: 5px; }
+    .altitude-advisory__body { padding: var(--space-3); }
+    .altitude-advisory__heading { font-size: 1.35rem; }
+    .altitude-advisory__list li { padding-left: 1.3rem; }
+  }
+</style>
