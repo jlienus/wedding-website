@@ -95,6 +95,13 @@ const footnote = isEs ? cocktailsData.footnoteEs : cocktailsData.footnoteEn;
   }
   @media (min-width: 640px) {
     .cocktail-grid { grid-template-columns: 1fr 1fr; }
+    /* If there's an odd number of cocktails, center the last one across both columns. */
+    .cocktail:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+      max-width: 22rem;
+      margin-left: auto;
+      margin-right: auto;
+    }
   }
 
   .cocktail { text-align: center; padding: 0 var(--space-1); }
