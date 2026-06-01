@@ -21,13 +21,15 @@ const data = (locale === 'es' ? es : en).altitude;
     <ul class="altitude-advisory__list">
       {data.items.map((item: string) => <li>{item}</li>)}
     </ul>
-    <div class="altitude-advisory__card altitude-advisory__card--care">
-      <h3><span aria-hidden="true">💛</span> {data.extraCareHeading}</h3>
-      <p>{data.extraCare}</p>
-    </div>
-    <div class="altitude-advisory__card altitude-advisory__card--help">
-      <h3><span aria-hidden="true">🚨</span> {data.helpHeading}</h3>
-      <p>{data.help}</p>
+    <div class="altitude-advisory__cards">
+      <div class="altitude-advisory__card altitude-advisory__card--care">
+        <h3><span aria-hidden="true">💛</span> {data.extraCareHeading}</h3>
+        <p>{data.extraCare}</p>
+      </div>
+      <div class="altitude-advisory__card altitude-advisory__card--help">
+        <h3><span aria-hidden="true">🚨</span> {data.helpHeading}</h3>
+        <p>{data.help}</p>
+      </div>
     </div>
   </div>
 </aside>
@@ -90,7 +92,7 @@ const data = (locale === 'es' ? es : en).altitude;
     margin: 0 0 var(--space-3);
     padding: 0;
     display: grid;
-    gap: 0.65rem;
+    gap: 0.65rem 2rem;
   }
   .altitude-advisory__list li {
     position: relative;
@@ -106,8 +108,12 @@ const data = (locale === 'es' ? es : en).altitude;
     color: var(--color-gold-deep);
     font-size: 0.72rem;
   }
-  .altitude-advisory__card {
+  .altitude-advisory__cards {
+    display: grid;
+    gap: var(--space-2);
     margin-top: var(--space-2);
+  }
+  .altitude-advisory__card {
     padding: var(--space-2) var(--space-3);
     border-radius: var(--radius-sm);
   }
@@ -135,6 +141,13 @@ const data = (locale === 'es' ? es : en).altitude;
   }
   .altitude-advisory__card--help h3 { color: #B0181F; }
 
+  @media (min-width: 760px) {
+    .altitude-advisory__list { grid-template-columns: repeat(2, 1fr); }
+    .altitude-advisory__cards { grid-template-columns: repeat(2, 1fr); gap: var(--space-3); }
+  }
+  @media (min-width: 960px) {
+    .altitude-advisory__body { padding: var(--space-5) var(--space-5) var(--space-4); }
+  }
   @media (max-width: 640px) {
     .altitude-advisory__stripe { flex-basis: 5px; }
     .altitude-advisory__body { padding: var(--space-3); }
