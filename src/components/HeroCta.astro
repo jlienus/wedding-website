@@ -4,14 +4,14 @@ import { t, type Locale } from '../lib/i18n';
 interface Props { locale: Locale }
 const { locale } = Astro.props;
 
-const travelHref = locale === 'es' ? '/es/viajes' : '/travel';
+const venuesHref = locale === 'es' ? '/es/lugares' : '/venues';
 const rsvpHref = locale === 'es' ? '/es/rsvp' : '/rsvp';
 ---
 
 <section class="hero-cta" aria-label={t(locale, 'nav.rsvp')}>
   <div class="hero-cta__inner">
     <a class="btn btn--gold" href={rsvpHref}>{t(locale, 'nav.rsvp')}</a>
-    <a class="btn btn--ghost" href={travelHref}>{t(locale, 'nav.travel')}</a>
+    <a class="btn btn--ghost" href={venuesHref}>{t(locale, 'nav.venues')}</a>
   </div>
 </section>
 
