@@ -12,13 +12,18 @@ const hint = t(locale, 'common.addToCalendarHint');
   download="John-and-Diana-Wedding.ics"
   aria-label={`${label}: ${hint}`}
 >
-  <span class="icon" aria-hidden="true">📅</span>
+  <svg class="icon" aria-hidden="true" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3.5" y="5" width="17" height="15.5" rx="2.2" />
+    <path d="M3.5 9.5h17" />
+    <path d="M8 3.5v3.5" />
+    <path d="M16 3.5v3.5" />
+  </svg>
   <span class="label">{label}</span>
 </a>
 
 <style>
-  .add-to-cal { display: inline-flex; align-items: center; gap: 0.55rem; }
-  .add-to-cal .icon { font-size: 1.05em; }
+  .add-to-cal { display: inline-flex; align-items: center; gap: 0.5rem; }
+  .add-to-cal .icon { width: 1.05em; height: 1.05em; flex-shrink: 0; opacity: 0.9; }
   .add-to-cal--inline {
     color: var(--color-gold-deep);
     text-decoration: underline;
