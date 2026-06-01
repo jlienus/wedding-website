@@ -17,9 +17,9 @@
     {
       "providerKey": "googleflights",
       "providerName": "Google Flights",
-      "url": "https://www.google.com/travel/flights?q=Flights+to+Quito+Ecuador+March+2027",
-      "noteEn": "Searches Google Flights for trips to Quito, Ecuador in March 2027. Add your origin city and preferred dates.",
-      "noteEs": "Busca en Google Flights viajes a Quito, Ecuador, en marzo de 2027. Agreguen su ciudad de origen y fechas preferidas."
+      "url": "https://www.google.com/travel/flights/search?tfs=CBwQAhoeEgoyMDI3LTAzLTA4agcIARIDTUlBcgcIARIDVUlPGh4SCjIwMjctMDMtMTRqBwgBEgNVSU9yBwgBEgNNSUFAAUgBcAGCAQsI____________AZgBAQ",
+      "noteEn": "Pre-filled to Miami (MIA) → Quito (UIO), Mar 8 – Mar 14, 2027. Change the origin to your home airport on the page.",
+      "noteEs": "Prellenado para Miami (MIA) → Quito (UIO), del 8 al 14 de marzo de 2027. Cambien el origen por su aeropuerto de salida en la página."
     }
   ],
   "hotels": [

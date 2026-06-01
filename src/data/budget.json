@@ -41,7 +41,9 @@
     { "regionEn": "Miami / Florida gateways", "regionEs": "Miami / Florida", "range": "$285–325", "noteEn": "Most affordable US gateway to UIO", "noteEs": "La opción más accesible desde EE. UU." },
     { "regionEn": "East Coast (NYC · BOS · DC · ATL)", "regionEs": "Costa Este (NY · BOS · DC · ATL)", "range": "$400–475", "noteEn": null, "noteEs": null },
     { "regionEn": "Central US (CHI · DFW · IAH)", "regionEs": "Centro de EE. UU. (CHI · DFW · IAH)", "range": "$450–575", "noteEn": null, "noteEs": null },
-    { "regionEn": "West Coast (LAX · SFO · SEA)", "regionEs": "Costa Oeste (LAX · SFO · SEA)", "range": "$525–625", "noteEn": "Usually involves a connection", "noteEs": "Suele requerir una conexión" }
+    { "regionEn": "West Coast (LAX · SFO · SEA)", "regionEs": "Costa Oeste (LAX · SFO · SEA)", "range": "$525–625", "noteEn": "Usually involves a connection", "noteEs": "Suele requerir una conexión" },
+    { "regionEn": "Europe (London · Madrid)", "regionEs": "Europa (Londres · Madrid)", "range": "$900–1,300", "noteEn": "Iberia's MAD → UIO direct is the typical European routing", "noteEs": "El vuelo directo MAD → UIO de Iberia es la ruta europea habitual" },
+    { "regionEn": "Asia (Seoul · Tokyo)", "regionEs": "Asia (Seúl · Tokio)", "range": "$1,400–1,900", "noteEn": "Usually routes via LAX, JFK, or ATL — book early for the best fare", "noteEs": "Suele conectar por LAX, JFK o ATL — reserven con anticipación para mejor tarifa" }
   ],
   "tips": [
     {
