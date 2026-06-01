@@ -1,0 +1,102 @@
+---
+import { t, type Locale } from '../lib/i18n';
+import milestones from '../data/our-story-timeline.json';
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+const tbdLabel = locale === 'es' ? 'Por confirmar' : 'TBD';
+---
+
+<section class="story-timeline reveal" aria-labelledby="story-timeline-heading">
+  <h2 id="story-timeline-heading">{t(locale, 'ourStory.timelineHeading')}</h2>
+  <p class="intro">{t(locale, 'ourStory.timelineIntro')}</p>
+  <ol class="timeline" role="list">
+    {milestones.map((m, i) => (
+      <li class="milestone reveal" data-final={i === milestones.length - 1 ? 'true' : 'false'}>
+        <span class="year">{m.year === 'TBD' ? tbdLabel : m.year}</span>
+        <div class="content">
+          <h3>{locale === 'es' ? m.labelEs : m.labelEn}</h3>
+          <p>{locale === 'es' ? m.bodyEs : m.bodyEn}</p>
+        </div>
+      </li>
+    ))}
+  </ol>
+</section>
+
+<style>
+  .story-timeline { max-width: 48rem; margin: 0 auto; padding: var(--space-4) 0; }
+  .story-timeline h2 { text-align: center; color: var(--color-gold-deep); }
+  .intro { text-align: center; color: var(--color-text-muted); margin-bottom: var(--space-4); font-style: italic; }
+  .timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    position: relative;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 4.5rem;
+    top: 0.6rem;
+    bottom: 0.6rem;
+    width: 1px;
+    background: linear-gradient(to bottom, var(--color-gold), var(--color-gold-light), var(--color-rule));
+    opacity: 0.7;
+  }
+  .milestone {
+    position: relative;
+    display: grid;
+    grid-template-columns: 5.5rem 1fr;
+    gap: var(--space-2);
+    padding: var(--space-2) 0;
+    align-items: start;
+  }
+  .milestone::before {
+    content: '';
+    position: absolute;
+    left: 4.05rem;
+    top: 1rem;
+    width: 0.9rem;
+    height: 0.9rem;
+    border-radius: 50%;
+    background: var(--color-bg);
+    border: 2px solid var(--color-gold);
+    box-shadow: 0 0 0 4px var(--color-bg);
+  }
+  .milestone[data-final="true"]::before {
+    background: var(--color-gold);
+    border-color: var(--color-gold-deep);
+  }
+  .year {
+    font-family: var(--font-display);
+    font-style: italic;
+    color: var(--color-gold-deep);
+    font-size: 1rem;
+    padding-top: 0.7rem;
+    text-align: right;
+    padding-right: var(--space-2);
+  }
+  .content {
+    padding: var(--space-2) var(--space-3);
+    padding-left: calc(var(--space-3) + 0.4rem);
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-md);
+    background: rgba(255,255,255,0.55);
+  }
+  .content h3 {
+    margin: 0 0 0.3rem;
+    color: var(--color-text);
+    font-size: 1.05rem;
+    font-family: var(--font-display);
+  }
+  .content p {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--fs-small);
+  }
+  @media (max-width: 540px) {
+    .timeline::before { left: 0.45rem; }
+    .milestone { grid-template-columns: 1fr; gap: var(--space-1); padding-left: 1.6rem; }
+    .milestone::before { left: 0; top: 0.45rem; }
+    .year { text-align: left; padding: 0; }
+  }
+</style>

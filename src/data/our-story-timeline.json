@@ -1,0 +1,42 @@
+[
+  {
+    "id": "we-met",
+    "year": "TBD",
+    "labelEn": "How we met",
+    "labelEs": "Cómo nos conocimos",
+    "bodyEn": "The beginning of our story — to be filled in soon.",
+    "bodyEs": "El comienzo de nuestra historia — pronto añadiremos los detalles."
+  },
+  {
+    "id": "first-trip",
+    "year": "TBD",
+    "labelEn": "Our first trip together",
+    "labelEs": "Nuestro primer viaje juntos",
+    "bodyEn": "Our first adventure as a couple — details coming soon.",
+    "bodyEs": "Nuestra primera aventura como pareja — pronto compartiremos más."
+  },
+  {
+    "id": "meeting-families",
+    "year": "TBD",
+    "labelEn": "Meeting each other's families",
+    "labelEs": "Conocer a nuestras familias",
+    "bodyEn": "Bringing our families together for the first time.",
+    "bodyEs": "Reunir a nuestras familias por primera vez."
+  },
+  {
+    "id": "proposal",
+    "year": "TBD",
+    "labelEn": "The proposal",
+    "labelEs": "La propuesta",
+    "bodyEn": "The day we said yes — story to come.",
+    "bodyEs": "El día que dijimos sí — pronto contaremos la historia."
+  },
+  {
+    "id": "wedding",
+    "year": "2027",
+    "labelEn": "March 13 — We say \"I do\" in Quito",
+    "labelEs": "13 de marzo — Nos casamos en Quito",
+    "bodyEn": "Celebrating in the heart of Ecuador with the people we love most.",
+    "bodyEs": "Celebrando en el corazón del Ecuador con las personas que más queremos."
+  }
+]

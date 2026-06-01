@@ -17,15 +17,29 @@
     "category": "Wedding Day",
     "questionEn": "Are kids welcome?",
     "questionEs": "¿Pueden asistir niños?",
-    "answerEn": "TBD — we will confirm closer to the date. Please reach out if you are planning to bring children.",
-    "answerEs": "Por confirmar; lo comunicaremos más cerca de la fecha. Por favor contáctennos si están pensando asistir con niños."
+    "answerEn": "Yes — children are warmly welcome at both the ceremony and the reception. Please note them when you RSVP so we can plan accordingly.",
+    "answerEs": "Sí; los niños son cordialmente bienvenidos tanto en la ceremonia como en la recepción. Por favor inclúyanlos al confirmar su asistencia para que podamos planificar."
   },
   {
     "category": "Wedding Day",
     "questionEn": "Can I bring a plus-one?",
     "questionEs": "¿Puedo llevar acompañante?",
-    "answerEn": "Please refer to your invitation. If you are uncertain, reach out to us before RSVPing.",
-    "answerEs": "Por favor revisen su invitación. Si tienen dudas, escríbannos antes de confirmar su asistencia."
+    "answerEn": "Yes — everyone is welcome to bring a plus-one. Please add their name when you RSVP so we have an accurate count.",
+    "answerEs": "Sí; todos pueden traer un acompañante. Por favor agreguen su nombre al confirmar la asistencia para tener un conteo exacto."
+  },
+  {
+    "category": "Wedding Day",
+    "questionEn": "Is there a welcome event the night before?",
+    "questionEs": "¿Hay un evento de bienvenida la noche anterior?",
+    "answerEn": "Yes — we are planning an optional welcome gathering on Friday evening, March 12, for guests who have already arrived. Details will be confirmed closer to the date.",
+    "answerEs": "Sí; estamos organizando una reunión opcional de bienvenida el viernes 12 de marzo por la noche para invitados que ya hayan llegado. Confirmaremos los detalles más cerca de la fecha."
+  },
+  {
+    "category": "Wedding Day",
+    "questionEn": "What time zone are wedding times in?",
+    "questionEs": "¿En qué zona horaria son los horarios de la boda?",
+    "answerEn": "All times on this site are Ecuador time (ECT, UTC−5). Ecuador does not observe daylight saving time, so the offset is the same year-round.",
+    "answerEs": "Todos los horarios en este sitio son en hora de Ecuador (ECT, UTC−5). Ecuador no observa horario de verano, por lo que el desfase es el mismo todo el año."
   },
   {
     "category": "Wedding Day",

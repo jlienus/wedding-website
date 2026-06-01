@@ -1,0 +1,42 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//John & Diana//Wedding//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VTIMEZONE
+TZID:America/Guayaquil
+X-LIC-LOCATION:America/Guayaquil
+BEGIN:STANDARD
+DTSTART:19700101T000000
+TZOFFSETFROM:-0500
+TZOFFSETTO:-0500
+TZNAME:ECT
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+UID:wedding-ceremony-20270313@johnanddianaswedding.com
+DTSTAMP:20260601T000000Z
+DTSTART;TZID=America/Guayaquil:20270313T150000
+DTEND;TZID=America/Guayaquil:20270313T163000
+SUMMARY:John & Diana's Wedding Ceremony
+DESCRIPTION:Catholic ceremony at Basílica del Voto Nacional in Quito's historic Old Town. Please plan to arrive 30 minutes early. Dress: formal or cocktail; shoulders and knees covered for the church. Details: https://johnanddianaswedding.com/
+LOCATION:Basílica del Voto Nacional, Carchi y Venezuela, Centro Histórico, Quito, Ecuador
+URL:https://johnanddianaswedding.com/venues
+GEO:-0.214444;-78.510833
+STATUS:CONFIRMED
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:wedding-reception-20270313@johnanddianaswedding.com
+DTSTAMP:20260601T000000Z
+DTSTART;TZID=America/Guayaquil:20270313T170000
+DTEND;TZID=America/Guayaquil:20270314T010000
+SUMMARY:John & Diana's Wedding Reception
+DESCRIPTION:Cocktails at 5:00 PM\, dinner from 7:00 PM\, dancing afterward. About an 8-minute walk from the Basílica through Plaza Grande to Hotel Plaza Grande on Plaza de la Independencia. Details: https://johnanddianaswedding.com/
+LOCATION:Hotel Plaza Grande, García Moreno N5-16 y Chile, Plaza de la Independencia, Centro Histórico, Quito, Ecuador
+URL:https://johnanddianaswedding.com/venues
+GEO:-0.220139;-78.512333
+STATUS:CONFIRMED
+TRANSP:OPAQUE
+END:VEVENT
+END:VCALENDAR

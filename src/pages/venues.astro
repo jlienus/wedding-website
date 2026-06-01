@@ -4,8 +4,10 @@ import VenueCard from '../components/VenueCard.astro';
 import SectionDivider from '../components/SectionDivider.astro';
 import { t, type Locale } from '../lib/i18n';
 import venues from '../data/venues.json';
+import config from '../data/wedding.config.json';
 
 const locale: Locale = 'en';
+const hashtag = config.social.hashtag;
 ---
 
 <Base title={t(locale, 'venues.heading') + ' · John & Diana'} description={t(locale, 'venues.walkingText')} lang={locale}>
@@ -24,7 +26,30 @@ const locale: Locale = 'en';
       <h2>{t(locale, 'venues.receptionHeading')}</h2>
       <VenueCard venue={venues.reception} locale={locale} />
     </section>
+    <section class="section container container--narrow reveal">
+      <aside class="hashtag-callout">
+        <p class="hashtag-label">📸 {t(locale, 'venues.hashtagCalloutHeading')}</p>
+        <p class="hashtag-tag">{hashtag}</p>
+        <p class="hashtag-body">{t(locale, 'venues.hashtagCalloutBody')}</p>
+      </aside>
+    </section>
     <p class="container container--narrow reveal" style="text-align:center; color: var(--color-text-muted);"><em>{t(locale, 'venues.shuttleDisclaimer')}</em></p>
   </main>
 </Base>
+
+<style>
+  .hashtag-callout {
+    margin: 0 auto;
+    padding: var(--space-4) var(--space-3);
+    text-align: center;
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-lg);
+    background: var(--gradient-surface);
+    box-shadow: var(--shadow-sm);
+  }
+  .hashtag-label { font-size: var(--fs-tiny); letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-gold-deep); margin: 0; }
+  .hashtag-tag { font-family: var(--font-display); font-size: clamp(1.5rem, 3.5vw, 2.25rem); color: var(--color-gold-deep); margin: var(--space-2) 0; letter-spacing: 0.02em; }
+  .hashtag-body { color: var(--color-text-muted); margin: 0; font-style: italic; }
+</style>
+
 

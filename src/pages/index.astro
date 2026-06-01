@@ -4,6 +4,7 @@ import Hero from '../components/Hero.astro';
 import HeroCta from '../components/HeroCta.astro';
 import CountdownTimer from '../components/CountdownTimer.astro';
 import WeddingDetailsCard from '../components/WeddingDetailsCard.astro';
+import AddToCalendar from '../components/AddToCalendar.astro';
 import HeritageSection from '../components/HeritageSection.astro';
 import SectionDivider from '../components/SectionDivider.astro';
 import { t, type Locale } from '../lib/i18n';
@@ -28,6 +29,7 @@ const locale: Locale = 'en';
       <h2 class="reveal" style="text-align:center;">{t(locale, 'home.keyDetailsTitle')}</h2>
       <p class="reveal" style="text-align:center;">{t(locale, 'home.keyDetailsIntro')}</p>
       <WeddingDetailsCard locale={locale} />
+      <p class="cal-row reveal"><AddToCalendar locale={locale} /></p>
     </section>
     <SectionDivider ornament="⚭" />
     <HeritageSection locale={locale} />
@@ -44,5 +46,7 @@ const locale: Locale = 'en';
 
 <style>
   .cta-row { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); }
+  .cal-row { text-align: center; margin-top: var(--space-3); }
 </style>
+
 

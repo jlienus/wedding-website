@@ -160,20 +160,20 @@
         "bodyEs": "Disfruten una mañana tranquila con brunch, agua y suficiente tiempo para alistarse. Mantengan el horario sencillo, especialmente si se hospedan en el Centro Histórico. Se sugiere vestimenta formal o tipo cóctel, con hombros y rodillas cubiertos para la ceremonia en la iglesia."
       },
       "afternoon": {
-        "titleEn": "Wedding ceremony",
-        "titleEs": "Ceremonia de boda",
-        "bodyEn": "The ceremony begins at 3:00 PM at Basílica del Voto Nacional. Please plan to arrive about 30 minutes early, since Old Town traffic and parking can be unpredictable. The Basílica is grand and cool inside, so a light layer may be helpful.",
-        "bodyEs": "La ceremonia empieza a las 3:00 PM en la Basílica del Voto Nacional. Por favor planeen llegar unos 30 minutos antes, ya que el tráfico y el estacionamiento en el Centro Histórico pueden ser impredecibles. La Basílica es amplia y fresca por dentro, así que una capa ligera puede ser útil."
+        "titleEn": "Ceremony at Basílica del Voto Nacional",
+        "titleEs": "Ceremonia en la Basílica del Voto Nacional",
+        "bodyEn": "All times are Ecuador time (UTC−5). 2:30 PM — guests arrive at the Basílica; 3:00 PM — Catholic ceremony begins; 4:30 PM — ceremony ends and the wedding party walks together (about 8 minutes through Plaza Grande) to Hotel Plaza Grande. The Basílica is grand and cool inside, so a light layer may be helpful.",
+        "bodyEs": "Todos los horarios son en hora de Ecuador (UTC−5). 2:30 PM — los invitados llegan a la Basílica; 3:00 PM — comienza la ceremonia católica; 4:30 PM — termina la ceremonia y caminamos juntos (unos 8 minutos por la Plaza Grande) hasta el Hotel Plaza Grande. La Basílica es amplia y fresca por dentro, así que una capa ligera puede ser útil."
       },
       "evening": {
         "titleEn": "Reception at Hotel Plaza Grande",
         "titleEs": "Recepción en el Hotel Plaza Grande",
-        "bodyEn": "The reception begins at 6:00 PM at Hotel Plaza Grande, about an 8-minute walk from the Basílica. Guests may stroll together if the afternoon is calm, or take a short taxi if preferred. We cannot wait to celebrate with dinner, music, and joy in the heart of Quito.",
-        "bodyEs": "La recepción empieza a las 6:00 PM en el Hotel Plaza Grande, a unos 8 minutos a pie desde la Basílica. Si la tarde está tranquila, pueden caminar en grupo; si prefieren, pueden tomar un taxi corto. Nos emociona celebrar con cena, música y alegría en el corazón de Quito."
+        "bodyEn": "5:00 PM — cocktail hour begins at Hotel Plaza Grande; 7:00 PM — reception dinner; 9:30 PM — first dance and dancing through the night; about 12:30 AM — send-off. Share your photos with #LienGuajan2027 so we can relive every moment together.",
+        "bodyEs": "5:00 PM — comienza la hora de cóctel en el Hotel Plaza Grande; 7:00 PM — cena de recepción; 9:30 PM — primer baile y pista de baile abierta; aproximadamente 12:30 AM — despedida. Compartan sus fotos con #LienGuajan2027 para revivir cada momento juntos."
       },
       "notes": {
-        "en": "Wedding day: ceremony at 3:00 PM, reception at 6:00 PM.",
-        "es": "Día de boda: ceremonia a las 3:00 PM, recepción a las 6:00 PM."
+        "en": "Wedding day: ceremony 3:00 PM · cocktails 5:00 PM · dinner 7:00 PM · all times Ecuador time.",
+        "es": "Día de boda: ceremonia 3:00 PM · cóctel 5:00 PM · cena 7:00 PM · hora de Ecuador."
       },
       "labelEn": "Saturday · March 13",
       "labelEs": "Sábado · 13 de marzo"

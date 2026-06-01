@@ -4,8 +4,12 @@ import TravelDeepLinks from '../components/TravelDeepLinks.astro';
 import SectionDivider from '../components/SectionDivider.astro';
 import { t, type Locale } from '../lib/i18n';
 import hotels from '../data/hotels.json';
+import en from '../i18n/en.json';
+import es from '../i18n/es.json';
 
 const locale: Locale = 'en';
+const sightseeing = (locale === 'es' ? es : en).travel.sightseeing;
+const connectivity = (locale === 'es' ? es : en).travel.connectivity;
 const meterText = (meters: number) => locale === 'es' ? `A ${meters} metros de la Basílica` : `${meters} m from the Basílica`;
 const visitText = locale === 'es' ? `${t(locale, 'common.learnMore')} ↗` : 'Visit website ↗';
 const receptionText = locale === 'es' ? 'Lugar de la recepción' : 'Reception venue';
@@ -51,23 +55,56 @@ const receptionText = locale === 'es' ? 'Lugar de la recepción' : 'Reception ve
         ))}
       </div>
     </section>
+    <SectionDivider />
+    <section class="section container reveal">
+      <h2>{t(locale, 'travel.sightseeingHeading')}</h2>
+      <p>{t(locale, 'travel.sightseeingIntro')}</p>
+      <div class="info-grid">
+        {sightseeing.map((s) => (
+          <article class="info-card reveal">
+            <h3>{s.name}</h3>
+            <p>{s.details}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+    <SectionDivider />
+    <section class="section container reveal">
+      <h2>{t(locale, 'travel.healthHeading')}</h2>
+      <p>{t(locale, 'travel.healthBody')}</p>
+    </section>
+    <SectionDivider />
+    <section class="section container reveal">
+      <h2>{t(locale, 'travel.connectivityHeading')}</h2>
+      <p>{t(locale, 'travel.connectivityIntro')}</p>
+      <div class="info-grid info-grid--narrow">
+        {connectivity.map((c) => (
+          <article class="info-card reveal">
+            <h3>{c.name}</h3>
+            <p>{c.details}</p>
+          </article>
+        ))}
+      </div>
+    </section>
   </main>
 </Base>
 
 <style>
   .travel-tips { display: grid; gap: var(--space-2); margin: var(--space-3) 0 0; }
-  .travel-tips div, .hotel-card { padding: var(--space-3); border: 1px solid var(--color-rule); border-radius: var(--radius-lg); background: rgba(255,255,255,0.58); box-shadow: var(--shadow-sm); }
+  .travel-tips div, .hotel-card, .info-card { padding: var(--space-3); border: 1px solid var(--color-rule); border-radius: var(--radius-lg); background: rgba(255,255,255,0.58); box-shadow: var(--shadow-sm); }
   .travel-tips dt { font-weight: 700; color: var(--color-gold-deep); }
   .travel-tips dd { margin: 0.35rem 0 0; color: var(--color-text-muted); }
-  .hotel-grid { display: grid; gap: var(--space-3); margin-top: var(--space-3); }
+  .hotel-grid, .info-grid { display: grid; gap: var(--space-3); margin-top: var(--space-3); }
   .hotel-card { position: relative; display: grid; align-content: start; gap: var(--space-1); }
-  .hotel-card h3 { color: var(--color-gold-deep); margin-bottom: 0; }
+  .hotel-card h3, .info-card h3 { color: var(--color-gold-deep); margin-bottom: 0.35rem; }
+  .info-card p { margin: 0; color: var(--color-text-muted); }
   .tag, .badge { display: inline-flex; width: fit-content; padding: 0.25rem 0.65rem; border-radius: 999px; font-size: var(--fs-tiny); font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; }
   .tag { background: rgba(16,68,130,0.08); color: var(--color-text); }
   .badge { background: rgba(201,169,97,0.22); color: var(--color-gold-deep); }
   .meta { color: var(--color-text-muted); font-size: var(--fs-small); margin-bottom: 0; }
   .hotel-card .btn { margin-top: var(--space-2); justify-self: start; }
-  @media (min-width: 760px) { .travel-tips { grid-template-columns: repeat(2, 1fr); } }
-  @media (min-width: 960px) { .hotel-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (min-width: 760px) { .travel-tips, .info-grid { grid-template-columns: repeat(2, 1fr); } .info-grid--narrow { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 960px) { .hotel-grid, .info-grid { grid-template-columns: repeat(3, 1fr); } .info-grid--narrow { grid-template-columns: repeat(2, 1fr); max-width: 56rem; margin-inline: auto; } }
 </style>
+
 

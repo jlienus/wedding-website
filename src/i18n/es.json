@@ -18,7 +18,7 @@
     "primaryCta": "Confirmar asistencia",
     "secondaryCta": "Ver itinerario",
     "dateLine": "Sábado, 13 de marzo de 2027",
-    "ceremonyLine": "Ceremonia a las 3:00 PM · Recepción a las 6:00 PM",
+    "ceremonyLine": "Ceremonia a las 3:00 PM · Recepción a las 6:00 PM · Hora de Ecuador (UTC−5)",
     "imageAlt": "John y Diana, con la Basílica del Voto Nacional en Quito"
   },
   "home": {
@@ -39,7 +39,9 @@
     "howWeMetBody": "[La historia de John y Diana irá aquí.]",
     "galleryHeading": "Momentos juntos",
     "heritageSubheading": "Sobre nuestras raíces",
-    "heritageBody": "Imanalla, bienvenidos. Las raíces de Diana están en Otavalo, una comunidad andina reconocida por su lengua kichwa, su música y su extraordinaria tradición textil. Los tejidos otavaleños guardan generaciones de arte, paciencia e identidad; y los valores andinos honran la familia, la reciprocidad y la Pachamama, la Madre Tierra. Al iniciar su vida de casados, John y Diana llevan esas raíces con gratitud. Esta celebración también honra el kuyay, palabra kichwa para amor: amor a la familia, a la tierra y al encuentro que nos reúne en Quito."
+    "heritageBody": "Imanalla, bienvenidos. Las raíces de Diana están en Otavalo, una comunidad andina reconocida por su lengua kichwa, su música y su extraordinaria tradición textil. Los tejidos otavaleños guardan generaciones de arte, paciencia e identidad; y los valores andinos honran la familia, la reciprocidad y la Pachamama, la Madre Tierra. Al iniciar su vida de casados, John y Diana llevan esas raíces con gratitud. Esta celebración también honra el kuyay, palabra kichwa para amor: amor a la familia, a la tierra y al encuentro que nos reúne en Quito.",
+    "timelineHeading": "Nuestro camino juntos",
+    "timelineIntro": "Algunos momentos del camino — las fechas marcadas Por confirmar se completarán a medida que crezca la página."
   },
   "venues": {
     "heading": "Lugares",
@@ -47,7 +49,9 @@
     "receptionHeading": "Recepción",
     "walkingText": "La Basílica y el Hotel Plaza Grande están a unos 8 minutos a pie en una tarde tranquila del Centro Histórico.",
     "shuttleDisclaimer": "Los traslados desde el aeropuerto y servicios privados deben coordinarse directamente con el hotel y confirmarse al reservar.",
-    "unnamed": "Lugar"
+    "unnamed": "Lugar",
+    "hashtagCalloutHeading": "Compartan sus fotos",
+    "hashtagCalloutBody": "Usen #LienGuajan2027 en redes sociales para que podamos revivir el día con todos ustedes."
   },
   "itinerary": {
     "heading": "Itinerario sugerido",
@@ -66,7 +70,8 @@
     "alternateArrivalsHeading": "Planes para llegadas alternativas",
     "alternateArrivalsIntro": "¿Llegan más tarde en la semana? Estas opciones más cortas mantienen un ritmo tranquilo para que disfruten el día de la boda.",
     "weddingDay": "Día de la boda",
-    "day": "Día"
+    "day": "Día",
+    "timeZoneNote": "Todos los horarios están en hora de Ecuador (ECT, UTC−5). Ecuador no observa horario de verano."
   },
   "travel": {
     "heading": "Viaje",
@@ -81,7 +86,27 @@
     "flights": "Vuelos",
     "hotels": "Hoteles",
     "stayHeading": "Dónde hospedarse",
-    "stayIntro": "Algunos hoteles 4★ y 5★ del Centro Histórico de Quito, a poca distancia a pie de la Basílica y del Hotel Plaza Grande. Las tarifas son aproximadas; por favor verifiquen para marzo de 2027."
+    "stayIntro": "Algunos hoteles 4★ y 5★ del Centro Histórico de Quito, a poca distancia a pie de la Basílica y del Hotel Plaza Grande. Las tarifas son aproximadas; por favor verifiquen para marzo de 2027.",
+    "sightseeingHeading": "Qué visitar en Quito y alrededores",
+    "sightseeingIntro": "Si extienden su viaje, estas son algunas de las experiencias más memorables en y alrededor de Quito.",
+    "sightseeing": [
+      { "name": "Caminata por el Centro Histórico", "details": "Plaza Grande, La Compañía (interior con pan de oro), San Francisco y Calle La Ronda — todo a poca distancia caminando desde la Plaza." },
+      { "name": "TelefériQo", "details": "El teleférico sube a unos 3.945 m con vistas amplias de la ciudad y los Andes; boleto ida y vuelta alrededor de $8,50. Vayan temprano antes de que suban las nubes." },
+      { "name": "Mitad del Mundo", "details": "El monumento ecuatorial está a unos 45 minutos al norte de Quito; entrada cerca de $5. Pueden combinarlo con el Museo Solar Inti Ñan para divertidas demostraciones de gravedad." },
+      { "name": "Bosque nublado de Mindo", "details": "Aves y cascadas a unas 2 horas al noroeste. Más de 450 especies registradas — un guía local hace que la mañana sea inolvidable." },
+      { "name": "Mercado de Otavalo (sábados)", "details": "Famoso mercado textil andino a unas 2 horas al norte — la mejor experiencia es la mañana del sábado." },
+      { "name": "Galápagos · Cuenca · Amazonía", "details": "Extensiones de varios días. Galápagos y Cuenca requieren vuelos internos; a la Amazonía se llega vía Coca. Planeen tiempo extra y revisen recomendaciones de vacunas para la selva." }
+    ],
+    "healthHeading": "Salud y bienestar",
+    "healthBody": "Quito no requiere vacunas especiales. La vacuna contra la fiebre amarilla se recomienda si extienden el viaje a la Amazonía y es exigida por algunos países al regresar. Tomen agua embotellada o filtrada (los hoteles suelen proveerla), empaquen protector solar SPF 30+ y un sombrero por la intensidad del sol en la altura, y denle a su cuerpo 24–48 horas para aclimatarse antes de actividades exigentes. Hay farmacias en todo Quito para medicamentos básicos.",
+    "connectivityHeading": "Mantenerse conectados",
+    "connectivityIntro": "Varias opciones fáciles para datos y llamadas mientras están en Ecuador.",
+    "connectivity": [
+      { "name": "Roaming con operador EE. UU.", "details": "Los planes de T-Mobile, Verizon y AT&T usualmente incluyen datos en Ecuador, aunque las velocidades pueden ser más lentas. Verifiquen su plan antes de volar." },
+      { "name": "eSIM (recomendado)", "details": "Airalo y Holafly venden eSIMs para Ecuador desde unos $5–15 por 1–2 GB. Instálenla antes de volar y actívenla al llegar — sin cambiar de chip físico." },
+      { "name": "SIM local", "details": "Claro y Movistar venden SIMs prepago en el aeropuerto UIO por unos $10 con varios GB de datos. Lleven un teléfono liberado." },
+      { "name": "WiFi", "details": "La mayoría de hoteles, cafés y restaurantes de Quito ofrecen WiFi gratis a sus clientes." }
+    ]
   },
   "rsvp": {
     "heading": "Confirmar asistencia",
@@ -134,6 +159,8 @@
     "seconds": "Segundos",
     "weddingPast": "Por fin juntos",
     "moreSoon": "Próximamente",
+    "addToCalendar": "Agregar al calendario",
+    "addToCalendarHint": "Descarga un archivo .ics con la ceremonia y la recepción en hora de Ecuador.",
     "search": "Buscar",
     "comingSoon": "Próximamente"
   },

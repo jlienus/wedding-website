@@ -53,10 +53,64 @@
   },
   "dayOf": {
     "dressCode": "Formal or cocktail attire. For the church ceremony, please choose respectful coverage (shoulders and knees covered).",
-    "kidsPolicy": "TBD — we will confirm closer to the date. Please reach out if you are planning to bring children.",
-    "plusOnes": "Please refer to your invitation. If uncertain, reach out before RSVPing.",
+    "kidsPolicy": "Children are warmly welcome at both the ceremony and the reception. Guests should note kids on their RSVP so planning is accurate.",
+    "plusOnes": "Plus-ones are welcome — every invited guest is encouraged to bring whoever they would like to celebrate with. Please add the plus-one's name on the RSVP.",
     "meals": "Multiple options will be available. Please indicate dietary needs on your RSVP.",
-    "photography": "Personal photos welcome during cocktails and reception. Please respect the officiant's request to refrain from flash photography during the ceremony itself."
+    "photography": "Personal photos welcome during cocktails and reception. Please respect the officiant's request to refrain from flash photography during the ceremony itself.",
+    "timeline": {
+      "introEn": "All times below are Ecuador time (ECT, UTC-5).",
+      "events": [
+        { "time": "2:30 PM", "event": "Guests arrive at Basílica del Voto Nacional" },
+        { "time": "3:00 PM", "event": "Catholic ceremony begins" },
+        { "time": "4:30 PM", "event": "Ceremony ends; short walk (about 8 minutes) through Plaza Grande to Hotel Plaza Grande" },
+        { "time": "5:00 PM", "event": "Cocktail hour at Hotel Plaza Grande" },
+        { "time": "7:00 PM", "event": "Reception dinner" },
+        { "time": "9:30 PM", "event": "First dance and dancing" },
+        { "time": "12:30 AM", "event": "Send-off" }
+      ]
+    }
+  },
+  "events": {
+    "welcomeGathering": {
+      "when": "Friday, March 12, 2027 (evening, exact time TBD)",
+      "where": "Likely Hotel Plaza Grande or another Old Town venue — to be confirmed closer to the date",
+      "description": "Optional welcome drinks / rehearsal-dinner-style gathering for guests who have already arrived. All invited guests are welcome; details will be confirmed closer to the date."
+    }
+  },
+  "timeZone": {
+    "name": "Ecuador Time",
+    "abbreviation": "ECT",
+    "utcOffset": "UTC-5",
+    "observesDst": false,
+    "note": "Ecuador does not observe daylight saving time. All published wedding times are Ecuador time (ECT, UTC-5) year-round."
+  },
+  "sightseeing": {
+    "intro": "Quito and the surrounding area offer many memorable sightseeing options for guests extending their trip.",
+    "options": [
+      { "name": "Old Town walking tour", "details": "Plaza Grande, Iglesia de La Compañía (dazzling gold-leaf interior, small entry fee), San Francisco church (free), and Calle La Ronda for cafes and shops." },
+      { "name": "TelefériQo cable car", "details": "Cable car to about 3,945 m above the city for sweeping views; round-trip about $8.50. Go early before clouds build." },
+      { "name": "Mitad del Mundo", "details": "Equator monument about 45 minutes north of Quito; entry around $5. Nearby Museo Solar Inti Ñan offers playful gravity demonstrations." },
+      { "name": "Mindo Cloud Forest", "details": "Birding and waterfalls about 2 hours northwest. 450+ species recorded. Best with a local guide in the morning." },
+      { "name": "Otavalo Market (Saturday)", "details": "Famous Andean textile market about 2 hours north of Quito. Best on Saturdays." },
+      { "name": "Galápagos extension", "details": "Multi-day add-on requiring a domestic flight from UIO. Plan additional yellow-fever-vaccine guidance if extending." },
+      { "name": "Cuenca or Amazon extensions", "details": "Cuenca is a colonial UNESCO city; Amazon lodges via Coca. Both need flights and extra days." }
+    ]
+  },
+  "health": {
+    "vaccinesNote": "No special vaccines are required for Quito itself. Yellow fever vaccine is recommended if extending to the Amazon (and required by some countries on re-entry).",
+    "waterNote": "Most travelers drink bottled or filtered water in Ecuador. Hotels typically provide bottled water in rooms.",
+    "sunNote": "UV is intense at altitude — use SPF 30+ even on cloudy days, and bring sunglasses and a hat.",
+    "altitudeReminder": "Quito sits at about 2,850 m / 9,350 ft. Arrive a day or two early if possible, hydrate, eat lightly, and avoid alcohol the first night.",
+    "pharmaciesNote": "Pharmacies (\"farmacias\") are common in Quito. Many staff speak basic English and can help with common over-the-counter needs."
+  },
+  "connectivity": {
+    "intro": "Staying connected in Ecuador is easy with several options.",
+    "options": [
+      { "name": "US carrier roaming", "details": "Most US plans (T-Mobile, Verizon, AT&T) include Ecuador data, though speeds may be slower than at home. Check your specific plan before traveling." },
+      { "name": "eSIM (recommended)", "details": "Airalo and Holafly offer Ecuador eSIMs from about $5-15 for 1-2 GB. Install before flying and activate on arrival." },
+      { "name": "Local SIM", "details": "Claro and Movistar sell prepaid SIMs at UIO airport for around $10 with a few GB of data. Bring an unlocked phone." },
+      { "name": "WiFi", "details": "Most hotels, cafés, and restaurants in Quito have free WiFi available to customers." }
+    ]
   },
   "registry": {
     "page": "/registry",
@@ -71,7 +125,9 @@
     "cancellationOrConcerns": "Please reach out to John or Diana directly as early as possible so we can update counts."
   },
   "social": {
-    "hashtag": "#LienGuajan2027"
+    "hashtag": "#LienGuajan2027",
+    "hashtagPromptEn": "Please share your photos using #LienGuajan2027 so we can relive the day with all of you.",
+    "hashtagPromptEs": "Por favor compartan sus fotos con #LienGuajan2027 para que podamos revivir el día con todos ustedes."
   },
   "pages": {
     "en": {

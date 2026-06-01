@@ -2,6 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import PhotoGallery from '../../components/PhotoGallery.astro';
 import HeritageSection from '../../components/HeritageSection.astro';
+import OurStoryTimeline from '../../components/OurStoryTimeline.astro';
 import SectionDivider from '../../components/SectionDivider.astro';
 import { t, type Locale } from '../../lib/i18n';
 
@@ -17,6 +18,10 @@ const locale: Locale = 'es';
     <section class="section container container--narrow reveal">
       <h2>{t(locale, 'ourStory.howWeMetHeading')}</h2>
       <p>{t(locale, 'ourStory.howWeMetBody')}</p>
+    </section>
+    <SectionDivider />
+    <section class="section container">
+      <OurStoryTimeline locale={locale} />
     </section>
     <SectionDivider />
     <section class="section container reveal">

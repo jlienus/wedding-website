@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import ItineraryDay from '../components/ItineraryDay.astro';
+import AddToCalendar from '../components/AddToCalendar.astro';
 import SectionDivider from '../components/SectionDivider.astro';
 import { t, type Locale } from '../lib/i18n';
 import itinerary from '../data/itinerary.json';
@@ -15,6 +16,8 @@ const alternateItineraries = Object.values(itinerary.alternateItineraries);
       <p class="eyebrow">{t(locale, 'nav.itinerary')}</p>
       <h1>{t(locale, 'itinerary.heading')}</h1>
       <p>{t(locale, 'itinerary.intro')}</p>
+      <p class="tz-note">🕒 {t(locale, 'itinerary.timeZoneNote')}</p>
+      <p class="cal-row"><AddToCalendar locale={locale} /></p>
     </section>
     <section class="section container reveal">
       <div style="display:grid; gap: var(--space-3);">
@@ -38,9 +41,12 @@ const alternateItineraries = Object.values(itinerary.alternateItineraries);
 </Base>
 
 <style>
+  .tz-note { color: var(--color-text-muted); font-size: var(--fs-small); margin-top: var(--space-2); }
+  .cal-row { margin-top: var(--space-2); }
   .alternate-grid { display: grid; gap: var(--space-2); margin-top: var(--space-3); }
   .alternate-card { padding: var(--space-3); border: 1px solid var(--color-rule); border-radius: var(--radius-lg); background: rgba(255,255,255,0.58); box-shadow: var(--shadow-sm); }
   .alternate-card h3 { color: var(--color-gold-deep); }
   @media (min-width: 760px) { .alternate-grid { grid-template-columns: repeat(3, 1fr); } }
 </style>
+
 

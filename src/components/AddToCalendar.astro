@@ -1,0 +1,28 @@
+---
+import { t, type Locale } from '../lib/i18n';
+interface Props { locale: Locale; variant?: 'button' | 'inline' }
+const { locale, variant = 'button' } = Astro.props;
+const label = t(locale, 'common.addToCalendar');
+const hint = t(locale, 'common.addToCalendarHint');
+---
+
+<a
+  class={`add-to-cal${variant === 'inline' ? ' add-to-cal--inline' : ' btn'}`}
+  href="/wedding.ics"
+  download="John-and-Diana-Wedding.ics"
+  aria-label={`${label}: ${hint}`}
+>
+  <span class="icon" aria-hidden="true">📅</span>
+  <span class="label">{label}</span>
+</a>
+
+<style>
+  .add-to-cal { display: inline-flex; align-items: center; gap: 0.55rem; }
+  .add-to-cal .icon { font-size: 1.05em; }
+  .add-to-cal--inline {
+    color: var(--color-gold-deep);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    font-weight: 600;
+  }
+</style>
