@@ -840,7 +840,7 @@ Grounding behavior:
 
 - The system prompt is rebuilt per request and embeds `api/chat/wedding-facts.json` verbatim.
 - `wedding-facts.json` is a curated subset of `src/data/wedding.config.json` content, deliberately duplicated because the SWA Functions build is separate from the Astro build. The file is kept loosely in sync by hand.
-- The system prompt instructs the model to answer only from facts it contains, decline speculation, and direct users to `rsvp@johnanddianaswedding.com` for anything not covered.
+- The system prompt instructs the model to answer only from facts it contains, decline speculation, and tell guests to reach out to John or Diana directly for anything not covered. There is no public wedding email address; the bot is explicitly instructed never to invent one.
 - The model preserves John and Diana's names, the wedding date, and venue names exactly.
 
 Refusal patterns (enforced by system prompt):

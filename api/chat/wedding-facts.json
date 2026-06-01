@@ -25,7 +25,6 @@
   "rsvp": {
     "deadline": "Sunday, November 15, 2026",
     "deadlineEs": "Domingo, 15 de noviembre de 2026",
-    "contactEmail": "rsvp@johnanddianaswedding.com",
     "pageUrl": "/rsvp",
     "pageUrlEs": "/es/rsvp"
   },
@@ -69,7 +68,7 @@
     "greetingsKichwa": "Imanalla = 'Hello/welcome' in Kichwa. Pachamama = 'Mother Earth.'"
   },
   "contact": {
-    "cancellationOrConcerns": "Email rsvp@johnanddianaswedding.com as early as possible so we can update counts."
+    "cancellationOrConcerns": "Please reach out to John or Diana directly as early as possible so we can update counts."
   },
   "social": {
     "hashtag": "#LienGuajan2027"
