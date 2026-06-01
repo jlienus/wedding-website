@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Hero from '../../components/Hero.astro';
+import HeroCta from '../../components/HeroCta.astro';
 import CountdownTimer from '../../components/CountdownTimer.astro';
 import WeddingDetailsCard from '../../components/WeddingDetailsCard.astro';
 import HeritageSection from '../../components/HeritageSection.astro';
@@ -12,6 +13,7 @@ const locale: Locale = 'es';
 
 <Base title="John & Diana · March 13, 2027" description={t(locale, 'home.welcomeBlurb')} lang={locale}>
   <Hero locale={locale} />
+  <HeroCta locale={locale} />
   <main>
     <section class="section container container--narrow reveal">
       <CountdownTimer locale={locale} />

@@ -8,8 +8,6 @@ const date = locale === 'es' ? config.wedding.dateDisplayEs : config.wedding.dat
 const savedate = t(locale, 'hero.savedate');
 const savedateLine = savedate === 'hero.savedate' ? date : `${savedate} ${date}`;
 const cityVenue = `${config.venues.reception.city}, ${config.venues.reception.country} · ${config.venues.reception.name}`;
-const travelHref = locale === 'es' ? '/es/viajes' : '/travel';
-const rsvpHref = locale === 'es' ? '/es/rsvp' : '/rsvp';
 ---
 
 <section class="hero" aria-label={config.couple.displayCombined}>
@@ -23,10 +21,6 @@ const rsvpHref = locale === 'es' ? '/es/rsvp' : '/rsvp';
     <h1>{config.couple.monogram}</h1>
     <p class="save-date">{savedateLine}</p>
     <p class="subtitle">{cityVenue}</p>
-    <div class="actions">
-      <a class="btn btn--gold" href={rsvpHref}>{t(locale, 'nav.rsvp')}</a>
-      <a class="btn btn--ghost" href={travelHref}>{t(locale, 'nav.travel')}</a>
-    </div>
   </div>
 </section>
 
@@ -100,5 +94,4 @@ const rsvpHref = locale === 'es' ? '/es/rsvp' : '/rsvp';
     color: var(--color-text-muted);
     margin-top: var(--space-2);
   }
-  .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); margin-top: var(--space-4); }
 </style>
