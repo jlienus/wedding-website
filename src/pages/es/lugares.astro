@@ -60,19 +60,28 @@ const receptionPhotos = [
       <p class="eyebrow">{t(locale, 'home.detailsEyebrow')}</p>
       <h1>{t(locale, 'venues.heading')}</h1>
       <p>{t(locale, 'venues.walkingText')}</p>
+      <nav class="page-anchors" aria-label={t(locale, 'venues.onThisPage')}>
+        <a href="#ceremony">{t(locale, 'venues.ceremonyHeading')}</a>
+        <span class="page-anchors__sep" aria-hidden="true">·</span>
+        <a href="#reception">{t(locale, 'venues.receptionHeading')}</a>
+        <span class="page-anchors__sep" aria-hidden="true">·</span>
+        <a href="#dining">{t(locale, 'venues.anchorDining')}</a>
+      </nav>
     </section>
-    <section class="section container reveal">
+    <section id="ceremony" class="section container reveal">
       <h2>{t(locale, 'venues.ceremonyHeading')}</h2>
       <VenueCard venue={venues.ceremony} locale={locale} />
       <PhotoPair photos={ceremonyPhotos} locale={locale} />
     </section>
     <SectionDivider />
-    <section class="section container reveal">
+    <section id="reception" class="section container reveal">
       <h2>{t(locale, 'venues.receptionHeading')}</h2>
       <VenueCard venue={venues.reception} locale={locale} />
       <PhotoPair photos={receptionPhotos} locale={locale} />
-      <CocktailMenu locale={locale} />
-      <MenuSection locale={locale} />
+      <div id="dining">
+        <CocktailMenu locale={locale} />
+        <MenuSection locale={locale} />
+      </div>
     </section>
     <section class="section container container--narrow reveal">
       <aside class="hashtag-callout">
@@ -98,6 +107,33 @@ const receptionPhotos = [
   .hashtag-label { font-size: var(--fs-tiny); letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-gold-deep); margin: 0; }
   .hashtag-tag { font-family: var(--font-display); font-size: clamp(1.5rem, 3.5vw, 2.25rem); color: var(--color-gold-deep); margin: var(--space-2) 0; letter-spacing: 0.02em; }
   .hashtag-body { color: var(--color-text-muted); margin: 0; font-style: italic; }
+
+  .page-anchors {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: baseline;
+    gap: 0.65rem;
+    margin: var(--space-3) auto 0;
+    padding: 0.65rem 1.25rem;
+    border-top: 1px solid var(--color-rule);
+    border-bottom: 1px solid var(--color-rule);
+  }
+  .page-anchors a {
+    border: 0;
+    font-size: var(--fs-tiny);
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-text);
+    padding: 0.1rem 0;
+    transition: color var(--transition);
+  }
+  .page-anchors a:hover, .page-anchors a:focus-visible { color: var(--color-gold-deep); }
+  .page-anchors__sep { color: var(--color-gold); opacity: 0.7; font-size: var(--fs-tiny); }
+
+  /* Anchor targets — leave room for the sticky header on jump */
+  #ceremony, #reception, #dining { scroll-margin-top: 5.5rem; }
 </style>
 
 
