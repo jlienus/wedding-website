@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import VenueCard from '../../components/VenueCard.astro';
-import ReceptionGallery from '../../components/ReceptionGallery.astro';
+import PhotoPair from '../../components/PhotoPair.astro';
 import MenuSection from '../../components/MenuSection.astro';
 import SectionDivider from '../../components/SectionDivider.astro';
 import { t, type Locale } from '../../lib/i18n';
@@ -10,6 +10,23 @@ import config from '../../data/wedding.config.json';
 
 const locale: Locale = 'es';
 const hashtag = config.social.hashtag;
+
+const ceremonyPhotos = [
+  {
+    src: '/images/basilica-nave.jpg',
+    altEn: t('en', 'venues.naveAlt'),
+    altEs: t(locale, 'venues.naveAlt'),
+    captionEn: t('en', 'venues.naveCaption'),
+    captionEs: t(locale, 'venues.naveCaption'),
+  },
+  {
+    src: '/images/basilica-rose-window.jpg',
+    altEn: t('en', 'venues.roseWindowAlt'),
+    altEs: t(locale, 'venues.roseWindowAlt'),
+    captionEn: t('en', 'venues.roseWindowCaption'),
+    captionEs: t(locale, 'venues.roseWindowCaption'),
+  },
+];
 
 const receptionPhotos = [
   {
@@ -39,12 +56,13 @@ const receptionPhotos = [
     <section class="section container reveal">
       <h2>{t(locale, 'venues.ceremonyHeading')}</h2>
       <VenueCard venue={venues.ceremony} locale={locale} />
+      <PhotoPair photos={ceremonyPhotos} locale={locale} />
     </section>
     <SectionDivider />
     <section class="section container reveal">
       <h2>{t(locale, 'venues.receptionHeading')}</h2>
       <VenueCard venue={venues.reception} locale={locale} />
-      <ReceptionGallery photos={receptionPhotos} locale={locale} />
+      <PhotoPair photos={receptionPhotos} locale={locale} />
       <MenuSection locale={locale} />
     </section>
     <section class="section container container--narrow reveal">

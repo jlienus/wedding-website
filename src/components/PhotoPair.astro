@@ -13,9 +13,9 @@ interface Props { photos: Photo[]; locale?: Locale }
 const { photos = [], locale = 'en' } = Astro.props;
 ---
 
-<div class="reception-gallery">
+<div class="photo-pair">
   {photos.map((photo) => (
-    <figure class="reception-gallery__item reveal">
+    <figure class="photo-pair__item reveal">
       <img
         src={photo.src}
         alt={locale === 'es' ? photo.altEs : photo.altEn}
@@ -30,13 +30,13 @@ const { photos = [], locale = 'en' } = Astro.props;
 </div>
 
 <style>
-  .reception-gallery {
+  .photo-pair {
     display: grid;
     grid-template-columns: 1fr;
     gap: var(--space-3);
     margin-top: var(--space-3);
   }
-  .reception-gallery__item {
+  .photo-pair__item {
     margin: 0;
     overflow: hidden;
     border-radius: var(--radius-lg);
@@ -44,25 +44,25 @@ const { photos = [], locale = 'en' } = Astro.props;
     background: var(--gradient-surface);
     box-shadow: var(--shadow-sm);
   }
-  .reception-gallery__item img {
+  .photo-pair__item img {
     display: block;
     width: 100%;
     height: auto;
     aspect-ratio: 16 / 9;
     object-fit: cover;
   }
-  .reception-gallery__item figcaption {
+  .photo-pair__item figcaption {
     padding: var(--space-2) var(--space-3);
     color: var(--color-text-muted);
     font-size: var(--fs-small);
     font-style: italic;
     text-align: center;
   }
-  .reception-gallery__item.image-missing {
+  .photo-pair__item.image-missing {
     aspect-ratio: 16 / 9;
     background: linear-gradient(135deg, var(--color-silver-light) 0%, var(--color-bg) 50%, var(--color-gold-light) 100%);
   }
   @media (min-width: 720px) {
-    .reception-gallery { grid-template-columns: 1fr 1fr; }
+    .photo-pair { grid-template-columns: 1fr 1fr; }
   }
 </style>

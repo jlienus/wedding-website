@@ -55,7 +55,11 @@
     "ballroomCaption": "The ballroom, with the dance floor at the far end",
     "tableCaption": "A table setting under the coffered ceiling",
     "ballroomAlt": "The Hotel Plaza Grande ballroom with round tables, gold candelabras with floral arrangements, and a wooden dance floor",
-    "tableAlt": "A round table at Hotel Plaza Grande with gold linens, a tall floral candelabra, fine crystal, and the ballroom's stone fireplace in the background"
+    "tableAlt": "A round table at Hotel Plaza Grande with gold linens, a tall floral candelabra, fine crystal, and the ballroom's stone fireplace in the background",
+    "naveCaption": "The nave, looking toward the high altar",
+    "naveAlt": "The Gothic nave of the Basílica del Voto Nacional seen from the choir loft, with soaring red-stone arches and stained-glass windows on both sides leading to the altar",
+    "roseWindowCaption": "The basilica's rose window",
+    "roseWindowAlt": "Detail of the basilica's rose window with vibrant red, blue, and yellow floral patterns set within circular Gothic tracery"
   },
   "menu": {
     "eyebrow": "Saturday evening",
