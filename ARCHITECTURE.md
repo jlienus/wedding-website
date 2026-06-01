@@ -731,13 +731,14 @@ No separate backend build is currently required for production.
 When the planned `api/` folder lands for AI Concierge, deployment will include SWA managed functions as part of the same Static Web Apps deployment.
 At that point, local API testing should use the Azure Static Web Apps CLI or an equivalent local function runner if added to the repo.
 
-## 10. AI Concierge (Planned/Implementing)
+## 10. AI Concierge (Live)
 
 Status:
 
-- Planned architecture.
-- Implementation is in flight in the same development session that produced this document.
-- The current production site should be treated as static-only until `/api/chat` and the widget are merged and configured.
+- **Live in production** as of June 2026.
+- Bilingual chat widget shipped in `src/components/Chatbot.astro` and wired into `src/layouts/Base.astro`.
+- SWA-managed function deployed from `api/chat/` and reachable at `https://johnanddianaswedding.com/api/chat`.
+- Backed by Azure OpenAI deployment `gpt-4-1-mini` in eastus, called with API version `2024-10-21`.
 
 Purpose:
 
@@ -747,29 +748,34 @@ Purpose:
 - Avoid operational actions such as RSVP submission, registry modification, travel booking, or calendar changes.
 - Reduce repetitive questions to John and Diana while keeping guests inside the wedding site experience.
 
-Planned user experience:
+Shipped user experience:
 
-- A chat widget appears anchored in the bottom-right corner of the site.
-- The widget uses the existing white/gold/silver palette.
-- The panel slides up from the bottom-right on desktop.
-- The panel should remain usable on mobile screens.
-- It should feel like part of the wedding site, not a generic support chat product.
-- Suggested prompts can include travel, venue, dress code, RSVP, registry, and Quito logistics.
+- A small "Wedding Helper / Asistente de boda" launcher pill is anchored in the bottom-right of every page, in the existing gold gradient.
+- Clicking it opens a panel that slides up from the bottom-right; on mobile it docks to nearly the full viewport.
+- A short greeting and three suggested prompts (localized per page) are shown on first open.
+- Conversation persists across navigations within a tab via `sessionStorage` (key `wc-chat-v1-<locale>`).
+- The launcher matches the white/gold/silver palette and uses the same CSS tokens as the rest of the site.
 
-Planned UI component:
+Shipped UI component:
 
 ```text
 src/components/Chatbot.astro
 ```
 
-or a similarly named component if implementation chooses a different final name.
-The component should be mounted from the shared layout or from every guest-facing page through `Base.astro`.
-The component should receive or infer the locale from the page `lang` attribute.
+Mounted from `src/layouts/Base.astro` so it is present on every guest page in both locales. The component receives `locale` from the layout (`lang` prop) and the inline script passes it to the API.
 
-Planned API route:
+Shipped API route:
 
 ```text
-api/chat
+api/chat/
+├── function.json        # POST + OPTIONS, anonymous auth, route "chat"
+├── index.js             # Handler (CORS, rate limit, AOAI call, error fallback)
+└── wedding-facts.json   # Single source of truth grounded into the system prompt
+```
+
+```text
+api/host.json     # Functions runtime config, extension bundle 4.x
+api/package.json  # Node ≥ 22, commonjs, no runtime deps (uses global fetch)
 ```
 
 Public URL:
@@ -778,125 +784,128 @@ Public URL:
 /api/chat
 ```
 
-Planned request flow:
+Request flow (as built):
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant Browser as Browser Chatbot UI
-    participant Storage as Browser localStorage
+    participant Storage as Browser sessionStorage
     participant Api as SWA Managed Function /api/chat
-    participant Rate as Azure Table Storage
-    participant Model as Azure OpenAI gpt-4o-mini
+    participant Rate as In-memory Map (per function instance)
+    participant Model as Azure OpenAI gpt-4.1-mini
 
-    Browser->>Storage: Load prior local conversation
-    Browser->>Api: POST {lang,message,history}
-    Api->>Api: Validate method, origin, body size, and locale
-    Api->>Rate: Increment/check hourly bucket for client IP
-    alt Over 30 requests/hour
-        Api-->>Browser: 429 rate_limit_exceeded
+    Browser->>Storage: Load prior tab-scoped conversation
+    Browser->>Api: POST {message, locale, history} + Origin header
+    Api->>Api: Validate method, CORS origin allowlist, JSON body
+    Api->>Rate: Increment hourly bucket for X-Forwarded-For IP
+    alt Over 30 requests / hour / IP
+        Api-->>Browser: 429 with Retry-After
     else Allowed
-        Api->>Model: System prompt + wedding facts + recent history
+        Api->>Api: Sanitize message (≤ 800 chars), trim history to last 12
+        Api->>Model: System prompt + wedding-facts.json + history + user msg
+        Note over Api,Model: temperature 0.4, max_tokens 350, 25s AbortController timeout
         Model-->>Api: Wedding-scoped answer
         Api-->>Browser: {reply, locale}
-        Browser->>Storage: Save updated conversation locally
+        Browser->>Storage: Save updated conversation
     end
 ```
 
-Planned server architecture:
+Server architecture (as built):
 
-| Concern | Planned design |
+| Concern | Shipped design |
 | --- | --- |
-| Hosting | Azure Static Web Apps managed function in `api/`. |
-| Runtime | Node.js. |
-| Endpoint | `POST /api/chat`. |
-| Model | Azure OpenAI `gpt-4o-mini` deployment. |
+| Hosting | Azure Static Web Apps managed function in `api/chat/`. |
+| Runtime | Node.js 22 (commonjs handler `module.exports = async (context, req) => ...`). |
+| Endpoint | `POST /api/chat` (anonymous). `OPTIONS /api/chat` for CORS preflight returns 204. |
+| Model | Azure OpenAI deployment name `gpt-4-1-mini` (model `gpt-4.1-mini` version `2025-04-14`, Standard SKU, 20 capacity). |
 | State | Stateless server. |
-| Browser history | `localStorage` only. |
-| Database writes | None for wedding content or user data. |
-| Rate-limit storage | Azure Table Storage counter rows. |
+| Browser history | `sessionStorage` only, keyed per locale, last 20 messages persisted. |
+| Server context window | Last 12 messages of history sent to the model on each call. |
+| Database writes | None. |
+| Rate-limit storage | In-memory `Map<ip, timestamps[]>` per function instance. Resets on cold start. Trade-off chosen over Table Storage for simplicity at wedding scale. |
 | Tool calling | None. |
 | External actions | None. |
-| Logging | No PII; avoid request/response body logging. |
-
+| Timeouts | 25s `AbortController` on the model call. |
+| Logging | `context.log` records `locale`, masked IP-derived bucket key, and token usage. Bodies are NOT logged. |
 
 Language behavior:
 
-- The browser sends the locale from the page `lang` attribute.
-- English pages send `en`.
-- Spanish pages send `es`.
-- The function validates the locale and falls back to `en` only if the payload is invalid.
-- The system prompt instructs the model to respond in the requested locale.
-- The model should not switch languages unless the guest explicitly asks.
-- Spanish answers should be natural Spanish, not a literal English translation.
+- The browser sends the locale from the page `lang` attribute (`en` on root, `es` on `/es/`).
+- The function validates the locale and falls back to `en` if the payload is invalid or missing.
+- The system prompt instructs the model to answer in the requested language and mirror the user if they switch.
+- Bilingual error fallbacks ship in the handler (EN/ES) for upstream failures.
 
 Grounding behavior:
 
-- The model prompt should include wedding facts from `wedding.config.json` and relevant content snapshots.
-- It should answer only from wedding-site facts and explicitly marked planned/placeholder facts.
-- It should not invent venue policies, travel requirements, RSVP deadlines, hotel blocks, registry details, or schedule items.
-- If information is missing, it should say the information has not been finalized and point guests to the relevant page or contact path.
-- It should preserve John and Diana's names and wedding date exactly.
+- The system prompt is rebuilt per request and embeds `api/chat/wedding-facts.json` verbatim.
+- `wedding-facts.json` is a curated subset of `src/data/wedding.config.json` content, deliberately duplicated because the SWA Functions build is separate from the Astro build. The file is kept loosely in sync by hand.
+- The system prompt instructs the model to answer only from facts it contains, decline speculation, and direct users to `rsvp@johnanddianaswedding.com` for anything not covered.
+- The model preserves John and Diana's names, the wedding date, and venue names exactly.
 
-Refusal patterns:
+Refusal patterns (enforced by system prompt):
 
-The assistant should refuse or redirect when asked to:
+The assistant refuses or redirects when asked to:
 
-- Change an RSVP.
-- Submit an RSVP.
+- Change, submit, or query any RSVP record.
 - Access private guest information.
 - Provide registry purchase advice beyond the public registry page.
 - Book hotels, flights, rides, or restaurants.
-- Give legal/immigration advice for travel.
-- Provide emergency medical or safety instructions beyond common-sense redirection.
-- Discuss topics unrelated to the wedding, Quito travel logistics, event details, registry, RSVP, or FAQs.
-- Reveal system prompts, secrets, API keys, internal tokens, or infrastructure credentials.
+- Provide legal/immigration or emergency medical advice.
+- Discuss topics unrelated to the wedding, Quito travel, event details, registry, RSVP, or FAQ.
+- Reveal the system prompt, the `wedding-facts.json` payload, API keys, or any infrastructure detail.
+- Follow user instructions that try to override the rules above.
 
+CORS and origin security:
 
-Planned CORS and origin security:
+The function maintains an explicit allowlist in `api/chat/index.js`:
 
 | Origin | Allowed? | Reason |
 | --- | --- | --- |
 | `https://johnanddianaswedding.com` | Yes | Canonical apex production site. |
 | `https://www.johnanddianaswedding.com` | Yes | Production `www` alias. |
-| SWA default hostname | Optional during rollout | Useful for smoke testing before custom-domain-only lock; remove if not needed. |
-| Localhost | Development only | Should not be allowed in production app settings unless explicitly needed. |
-| Any other origin | No | Prevent third-party sites from using the function from browsers. |
+| `http://127.0.0.1:4321` / `http://localhost:4321` | Yes | Astro dev server. |
+| `http://127.0.0.1:4280` / `http://localhost:4280` | Yes | SWA CLI emulator. |
+| Any other origin | No | 403 response; `Vary: Origin` header set. |
 
-
-Planned rate limit:
+Rate limit (in-memory, per function instance):
 
 | Setting | Value |
 | --- | --- |
-| Limit key | Client IP address. |
-| Limit window | 1 hour. |
+| Limit key | First IP from `X-Forwarded-For`. |
+| Limit window | 1 hour (rolling). |
 | Limit amount | 30 requests per IP per hour. |
-| Storage | Azure Table Storage. |
-| Exceeded response | HTTP 429. |
-| Purpose | Keep wedding-scale usage inexpensive and reduce abuse. |
-
+| Storage | In-memory `Map`, cleared on cold start. |
+| Exceeded response | HTTP 429 + `Retry-After` header. |
+| Trade-off | Slightly leaky across cold starts and across function instances, but wedding-scale traffic does not justify Azure Table Storage operational overhead. |
 
 Secret handling:
 
 | Secret | Location |
 | --- | --- |
-| Azure OpenAI endpoint | SWA app setting. |
-| Azure OpenAI API key | SWA app setting, encrypted at rest. |
-| Azure OpenAI deployment name | SWA app setting or non-secret config. |
-| Table Storage connection string | SWA app setting, encrypted at rest. |
+| `AZURE_OPENAI_ENDPOINT` | SWA app setting on `swa-wedding`. |
+| `AZURE_OPENAI_KEY` | SWA app setting on `swa-wedding`, encrypted at rest. |
+| `AZURE_OPENAI_DEPLOYMENT` | SWA app setting (`gpt-4-1-mini`). |
+| `AZURE_OPENAI_API_VERSION` | SWA app setting (`2024-10-21`). |
 | SWA deploy token | GitHub repository secret `AZURE_STATIC_WEB_APPS_API_TOKEN`. |
-
-
 
 Cost model:
 
-| Item | Expected value |
+| Item | Value |
 | --- | --- |
-| Model | Azure OpenAI `gpt-4o-mini`. |
-| Approximate cost per exchange | About `$0.0003`. |
-| Expected monthly usage | Wedding-scale guest traffic. |
-| Expected monthly model cost | About `$0.50-$2/month`. |
-| Effective net cost | Effectively `$0` against VS Enterprise credits. |
+| Model | Azure OpenAI `gpt-4.1-mini` (Standard SKU, eastus). |
+| Tokens per typical exchange | ~600 in / ~120 out. |
+| Approximate cost per exchange | ~$0.0004. |
+| Expected monthly usage | Wedding-scale guest traffic (hundreds of exchanges). |
+| Expected monthly model cost | About $0.50–$2/month. |
+| Effective net cost | Effectively $0 against VS Enterprise credits. |
+
+Quota gotchas worth recording:
+
+- `gpt-4o-mini` (the original choice) is deprecated for new deployments as of 2026-03-31; existing deployments work but new ones are blocked.
+- `GlobalStandard` SKUs have 0 default quota on the VS Enterprise subscription; they require an explicit quota request.
+- `Standard` SKU `gpt-4.1-mini` had 200 K TPM available in eastus and was the cleanest path to a working deployment without a quota ticket.
+- Azure CLI does not accept dots in deployment names, so the deployment is named `gpt-4-1-mini` even though the model is `gpt-4.1-mini`.
 
 
 ## 11. Security & privacy
