@@ -1,0 +1,34 @@
+{
+  "service": {
+    "introEn": "Choose any of the four signature cocktails below — they will be served throughout the welcome hour. A full open bar of soft drinks, wine, beer, and spirits follows during dinner and reception.",
+    "introEs": "Elige cualquiera de los cuatro cocteles de autor a continuación; se servirán durante la hora de bienvenida. Durante la cena y la recepción habrá barra libre completa de gaseosas, vinos, cervezas y destilados."
+  },
+  "cocktails": [
+    {
+      "id": "mimosa",
+      "name": "Mimosa",
+      "ingredientsEn": ["Champagne", "Orange juice", "Grenadine", "Maraschino cherries"],
+      "ingredientsEs": ["Champagne", "Jugo de naranja", "Granadina", "Cerezas al marrasquino"]
+    },
+    {
+      "id": "mojito",
+      "name": "Mojito",
+      "ingredientsEn": ["Lime juice", "Mint", "Rum", "Soda"],
+      "ingredientsEs": ["Zumo de lima", "Hierbabuena", "Ron", "Soda"]
+    },
+    {
+      "id": "pina-colada",
+      "name": "Piña colada",
+      "ingredientsEn": ["Pineapple juice", "Rum", "Coconut cream", "Pineapple", "Maraschino cherries"],
+      "ingredientsEs": ["Jugo de piña", "Ron", "Crema de coco", "Trozos de piña", "Cerezas al marrasquino"]
+    },
+    {
+      "id": "blushing-bride",
+      "name": "Blushing Bride",
+      "ingredientsEn": ["Vodka", "Cherry liqueur", "Lime juice", "Orange curaçao", "Simple syrup"],
+      "ingredientsEs": ["Vodka", "Licor de cereza", "Zumo de lima", "Curaçao de naranja", "Almíbar"]
+    }
+  ],
+  "footnoteEn": "Non-alcoholic versions of every cocktail are available on request.",
+  "footnoteEs": "Versiones sin alcohol de cada coctel disponibles a pedido."
+}

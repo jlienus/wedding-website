@@ -3,6 +3,7 @@ import Base from '../../layouts/Base.astro';
 import VenueCard from '../../components/VenueCard.astro';
 import PhotoPair from '../../components/PhotoPair.astro';
 import MenuSection from '../../components/MenuSection.astro';
+import CocktailMenu from '../../components/CocktailMenu.astro';
 import SectionDivider from '../../components/SectionDivider.astro';
 import { t, type Locale } from '../../lib/i18n';
 import venues from '../../data/venues.json';
@@ -70,6 +71,7 @@ const receptionPhotos = [
       <h2>{t(locale, 'venues.receptionHeading')}</h2>
       <VenueCard venue={venues.reception} locale={locale} />
       <PhotoPair photos={receptionPhotos} locale={locale} />
+      <CocktailMenu locale={locale} />
       <MenuSection locale={locale} />
     </section>
     <section class="section container container--narrow reveal">

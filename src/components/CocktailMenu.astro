@@ -1,0 +1,143 @@
+---
+import cocktailsData from '../data/cocktails.json';
+import { t, type Locale } from '../lib/i18n';
+
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+const isEs = locale === 'es';
+const intro = isEs ? cocktailsData.service.introEs : cocktailsData.service.introEn;
+const footnote = isEs ? cocktailsData.footnoteEs : cocktailsData.footnoteEn;
+---
+
+<article class="cocktail-card reveal" aria-labelledby="cocktails-heading">
+  <header class="cocktail-card__header">
+    <p class="eyebrow">{t(locale, 'cocktails.eyebrow')}</p>
+    <h3 id="cocktails-heading">{t(locale, 'cocktails.heading')}</h3>
+    <p class="intro">{intro}</p>
+  </header>
+
+  <div class="cocktail-ornament" aria-hidden="true">⊹</div>
+
+  <ul class="cocktail-grid">
+    {cocktailsData.cocktails.map((c) => {
+      const ingredients = isEs ? c.ingredientsEs : c.ingredientsEn;
+      return (
+        <li class="cocktail">
+          <p class="cocktail__name">{c.name}</p>
+          <span class="cocktail__rule" aria-hidden="true"></span>
+          <p class="cocktail__ingredients">
+            {ingredients.map((line, i) => (
+              <>
+                {i > 0 && <span class="cocktail__sep" aria-hidden="true"> · </span>}
+                <span>{line}</span>
+              </>
+            ))}
+          </p>
+        </li>
+      );
+    })}
+  </ul>
+
+  <p class="cocktail-footnote"><em>{footnote}</em></p>
+</article>
+
+<style>
+  .cocktail-card {
+    position: relative;
+    margin: var(--space-5) auto 0;
+    max-width: 52rem;
+    padding: var(--space-5) var(--space-4) var(--space-5);
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-lg);
+    background: var(--gradient-surface);
+    box-shadow: var(--shadow-soft);
+  }
+  .cocktail-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    background: var(--gradient-gold-fill);
+  }
+
+  .cocktail-card__header { text-align: center; }
+  .cocktail-card__header .eyebrow { margin-bottom: var(--space-1); }
+  .cocktail-card__header h3 {
+    color: var(--color-gold-deep);
+    font-family: var(--font-display);
+    font-size: clamp(1.75rem, 3.4vw, 2.45rem);
+    margin: 0 0 var(--space-3);
+    letter-spacing: 0.01em;
+  }
+  .cocktail-card__header .intro {
+    max-width: 36rem;
+    margin: 0 auto;
+    color: var(--color-text);
+  }
+
+  .cocktail-ornament {
+    text-align: center;
+    color: var(--color-gold);
+    font-size: 1.1rem;
+    margin: var(--space-4) 0 var(--space-3);
+    letter-spacing: 0.4em;
+    opacity: 0.85;
+  }
+
+  .cocktail-grid {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-5) var(--space-4);
+  }
+  @media (min-width: 640px) {
+    .cocktail-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  .cocktail { text-align: center; padding: 0 var(--space-1); }
+
+  .cocktail__name {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: clamp(1.4rem, 2.4vw, 1.75rem);
+    color: var(--color-gold-deep);
+    margin: 0;
+    line-height: 1.15;
+  }
+
+  .cocktail__rule {
+    display: block;
+    width: 2.5rem;
+    height: 1px;
+    margin: var(--space-2) auto var(--space-2);
+    background: linear-gradient(to right, transparent, var(--color-gold) 50%, transparent);
+    opacity: 0.75;
+  }
+
+  .cocktail__ingredients {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--fs-small);
+    line-height: 1.6;
+    max-width: 22rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .cocktail__sep { color: var(--color-gold); opacity: 0.7; }
+
+  .cocktail-footnote {
+    margin: var(--space-5) 0 0;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--color-rule);
+    color: var(--color-text-muted);
+    font-size: var(--fs-small);
+    text-align: center;
+  }
+
+  @media (min-width: 760px) {
+    .cocktail-card { padding: var(--space-6) var(--space-5) var(--space-5); }
+  }
+</style>
