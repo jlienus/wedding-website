@@ -23,9 +23,45 @@ const date = locale === 'es' ? config.wedding.dateDisplayEs : config.wedding.dat
 </script>
 
 <style>
-  .site-footer { text-align: center; padding: 5rem var(--space-3); color: var(--color-text-muted); }
-  .back-to-top { display: inline-block; margin-bottom: var(--space-3); border: 0; font-size: var(--fs-tiny); letter-spacing: 0.1em; text-transform: uppercase; }
-  .monogram { font-family: var(--font-display); font-size: 2rem; letter-spacing: 0.16em; color: var(--color-gold-deep); margin-bottom: var(--space-2); }
+  .site-footer {
+    position: relative;
+    text-align: center;
+    padding: 5rem var(--space-3) 4rem;
+    color: var(--color-text-muted);
+    background: linear-gradient(180deg, transparent 0%, rgba(247, 244, 237, 0.6) 100%);
+  }
+  .site-footer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(28rem, 70%);
+    height: 1px;
+    background: var(--gradient-gold-line);
+  }
+  .back-to-top {
+    display: inline-block;
+    margin-bottom: var(--space-3);
+    border: 0;
+    font-size: var(--fs-tiny);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+  .back-to-top:hover { color: var(--color-gold-deep); }
+  .monogram {
+    font-family: var(--font-display);
+    font-size: 2.4rem;
+    letter-spacing: 0.22em;
+    margin-bottom: var(--space-2);
+    background: linear-gradient(135deg, var(--color-gold-deep) 0%, var(--color-gold) 50%, var(--color-gold-deep) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: var(--color-gold-deep);
+  }
   .meta, .hashtag { font-size: var(--fs-small); margin-bottom: 0.35rem; }
-  .hashtag { color: var(--color-gold-deep); }
+  .meta { color: var(--color-text-muted); font-style: italic; font-family: var(--font-display); font-size: 1.05rem; letter-spacing: 0.04em; }
+  .hashtag { color: var(--color-gold-deep); letter-spacing: 0.05em; font-weight: 500; }
 </style>

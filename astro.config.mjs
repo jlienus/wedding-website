@@ -1,7 +1,7 @@
 import { defineConfig } from 'astro/config';
 
 export default defineConfig({
-  site: 'https://johnanddianawedding.com',
+  site: 'https://johnanddianaswedding.com',
   i18n: {
     defaultLocale: 'en',
     locales: ['en', 'es'],

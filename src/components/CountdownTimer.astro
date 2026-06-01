@@ -39,8 +39,43 @@ const labels = {
 
 <style>
   .countdown { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); max-width: 42rem; margin: var(--space-4) auto; }
-  .unit { padding: var(--space-2); text-align: center; border: 1px solid var(--color-rule); border-radius: var(--radius-lg); background: rgba(255,255,255,0.58); box-shadow: var(--shadow-sm); }
-  strong { display: block; font-family: var(--font-display); font-size: clamp(2.2rem, 7vw, 4rem); color: var(--color-gold-deep); line-height: 1; }
-  span { display: block; margin-top: 0.4rem; font-size: var(--fs-tiny); letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-muted); }
+  .unit {
+    position: relative;
+    padding: var(--space-3) var(--space-2);
+    text-align: center;
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-lg);
+    background: var(--gradient-surface);
+    box-shadow: var(--shadow-soft);
+    overflow: hidden;
+  }
+  .unit::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--gradient-gold-line);
+  }
+  strong {
+    display: block;
+    font-family: var(--font-display);
+    font-size: clamp(2.4rem, 7vw, 4.25rem);
+    line-height: 1;
+    font-weight: 500;
+    background: linear-gradient(135deg, var(--color-gold-deep) 0%, var(--color-gold) 50%, var(--color-gold-deep) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: var(--color-gold-deep);
+  }
+  span {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: var(--fs-tiny);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    font-weight: 500;
+  }
   @media (min-width: 640px) { .countdown { grid-template-columns: repeat(4, 1fr); } }
 </style>

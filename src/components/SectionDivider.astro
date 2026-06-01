@@ -10,7 +10,24 @@ const { ornament = '✦' } = Astro.props;
 </div>
 
 <style>
-  .section-divider { display: grid; grid-template-columns: minmax(2rem, 1fr) auto minmax(2rem, 1fr); align-items: center; gap: var(--space-2); max-width: 34rem; margin: var(--space-5) auto; color: var(--color-gold-deep); }
-  span { height: 1px; background: linear-gradient(90deg, transparent, var(--color-gold), transparent); opacity: 0.65; }
-  strong { font-family: var(--font-display); font-size: 1.2rem; font-weight: 400; }
+  .section-divider {
+    display: grid;
+    grid-template-columns: minmax(2rem, 1fr) auto minmax(2rem, 1fr);
+    align-items: center;
+    gap: var(--space-3);
+    max-width: 34rem;
+    margin: var(--space-5) auto;
+    color: var(--color-gold-deep);
+  }
+  span { height: 1px; background: var(--gradient-gold-line); }
+  strong {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 400;
+    background: linear-gradient(135deg, var(--color-gold-deep) 0%, var(--color-gold) 50%, var(--color-gold-deep) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: var(--color-gold-deep);
+  }
 </style>

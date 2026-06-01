@@ -19,28 +19,86 @@ const rsvpHref = locale === 'es' ? '/es/rsvp' : '/rsvp';
   <noscript><img src={`/images/${photoSlot}`} alt={t(locale, 'hero.imageAlt')} /></noscript>
   <div class="hero-overlay reveal">
     <p class="eyebrow">{t(locale, 'heritage.header')}</p>
+    <span class="hero-rule" aria-hidden="true"></span>
     <h1>{config.couple.monogram}</h1>
     <p class="save-date">{savedateLine}</p>
     <p class="subtitle">{cityVenue}</p>
     <div class="actions">
       <a class="btn btn--gold" href={rsvpHref}>{t(locale, 'nav.rsvp')}</a>
-      <a class="btn" href={travelHref}>{t(locale, 'nav.travel')}</a>
+      <a class="btn btn--ghost" href={travelHref}>{t(locale, 'nav.travel')}</a>
     </div>
   </div>
 </section>
 
 <style>
-  .hero { position: relative; left: 50%; right: 50%; width: 100vw; min-height: 88vh; margin-left: -50vw; margin-right: -50vw; display: grid; place-items: center; overflow: hidden; background: linear-gradient(135deg, var(--color-bg), rgba(201,169,97,0.34)); }
+  .hero {
+    position: relative;
+    left: 50%;
+    right: 50%;
+    width: 100vw;
+    min-height: 88vh;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse at 50% 30%, var(--color-bg-shimmer) 0%, var(--color-bg) 45%, var(--color-surface-pearl) 100%);
+  }
   picture, .hero > picture img { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; }
-  .hero > picture img { object-fit: cover; filter: saturate(0.95) brightness(0.82); }
-  .hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.22), rgba(0,0,0,0.38)); }
-  .hero-overlay { position: relative; z-index: 1; max-width: 56rem; padding: var(--space-5) var(--space-3); text-align: center; color: white; text-shadow: 0 2px 18px rgba(0,0,0,0.42); }
-  .eyebrow { color: rgba(255,255,255,0.86); }
-  h1 { font-size: clamp(4rem, 10vw, 6rem); letter-spacing: 0.18em; margin-bottom: var(--space-2); }
-  .save-date { font-family: var(--font-display); font-size: clamp(1.6rem, 3vw, 2.25rem); line-height: var(--lh-snug); }
-  .subtitle { font-size: var(--fs-small); letter-spacing: 0.08em; text-transform: uppercase; }
+  .hero > picture img { object-fit: cover; opacity: 0.42; filter: saturate(0.85) brightness(1.18) contrast(0.92); mix-blend-mode: luminosity; }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 50% 40%, transparent 0%, transparent 35%, rgba(252, 251, 247, 0.45) 75%, rgba(252, 251, 247, 0.85) 100%),
+      linear-gradient(180deg, rgba(255, 254, 251, 0.55) 0%, transparent 25%, transparent 75%, rgba(252, 251, 247, 0.7) 100%);
+    pointer-events: none;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, transparent 0%, transparent 60%, rgba(212, 175, 55, 0.05) 100%);
+    pointer-events: none;
+  }
+  .hero-overlay {
+    position: relative;
+    z-index: 1;
+    max-width: 56rem;
+    padding: var(--space-5) var(--space-3);
+    text-align: center;
+    color: var(--color-text);
+  }
+  .eyebrow { color: var(--color-gold-deep); letter-spacing: 0.22em; }
+  .hero-rule { display: block; width: 4.5rem; height: 1px; margin: var(--space-2) auto var(--space-3); background: var(--gradient-gold-line); }
+  h1 {
+    font-size: clamp(4rem, 10vw, 6rem);
+    letter-spacing: 0.22em;
+    margin-bottom: var(--space-2);
+    background: linear-gradient(135deg, var(--color-gold-deep) 0%, var(--color-gold) 35%, var(--color-gold-shimmer) 50%, var(--color-gold) 65%, var(--color-gold-deep) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: var(--color-gold-deep);
+    font-weight: 500;
+  }
+  .save-date {
+    font-family: var(--font-display);
+    font-size: clamp(1.6rem, 3vw, 2.25rem);
+    line-height: var(--lh-snug);
+    color: var(--color-text);
+    font-style: italic;
+    font-weight: 400;
+  }
+  .subtitle {
+    font-size: var(--fs-small);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-top: var(--space-2);
+  }
   .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); margin-top: var(--space-4); }
-  .actions .btn { color: white; border-color: white; text-shadow: none; }
-  .actions .btn:hover { background: white; color: var(--color-text); }
-  .actions .btn--gold { color: white; background: var(--color-gold-deep); border-color: var(--color-gold-deep); }
 </style>

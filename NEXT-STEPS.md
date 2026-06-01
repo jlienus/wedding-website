@@ -1,6 +1,6 @@
-# Next Steps: Go Live at johnanddianawedding.com
+# Next Steps: Go Live at johnanddianaswedding.com
 
-Follow this walkthrough to go from "code on my laptop" to a live wedding website at `johnanddianawedding.com`.
+Follow this walkthrough to go from "code on my laptop" to a live wedding website at `johnanddianaswedding.com`.
 
 > **Two-subscription setup.** Visual Studio / MSDN Azure subscriptions (the monthly-credit kind) are blocked from Marketplace purchases, including Azure App Service Domains. To stay fully inside Azure, this guide uses **two of your Azure subscriptions**:
 >
@@ -21,7 +21,7 @@ Follow this walkthrough to go from "code on my laptop" to a live wedding website
 4. Fill in:
    - Subscription: **Pay-As-You-Go**
    - Resource group: create new, name `rg-wedding-domain`
-   - Domain name: search for `johnanddianawedding.com`
+   - Domain name: search for `johnanddianaswedding.com`
    - Privacy protection: **enable** (free, hides your personal info from WHOIS)
    - Auto-renew: **enable** (so you don't lose the domain mid-event-planning)
    - Hostname assignment: skip / "Configure later" — we'll point it at the SWA in Phase 4
@@ -29,7 +29,7 @@ Follow this walkthrough to go from "code on my laptop" to a live wedding website
 6. Review + create. Confirm the ~$11.99/yr charge to your credit card.
 7. After purchase (~2-5 minutes), check `rg-wedding-domain`. It will contain two resources:
    - The **App Service Domain** registration record
-   - An **Azure DNS zone** named `johnanddianawedding.com` with four assigned Azure nameservers
+   - An **Azure DNS zone** named `johnanddianaswedding.com` with four assigned Azure nameservers
 
 That's it for the PAYG side until Phase 4.
 
@@ -70,21 +70,21 @@ This is where the two subscriptions meet: the DNS zone lives in PAYG, the SWA li
 ### 4a. Add the www subdomain
 
 1. In Azure portal → switch to **Visual Studio** sub → open your Static Web App → **Custom domains** → **Add** → choose **Custom domain on other DNS**.
-2. Enter `www.johnanddianawedding.com` first (subdomains validate faster than apex).
+2. Enter `www.johnanddianaswedding.com` first (subdomains validate faster than apex).
 3. Azure shows you a CNAME target (like `polite-sea-123456.1.azurestaticapps.net`) and a TXT validation token. Leave this tab open.
-4. In a new tab, switch portal context to **Pay-As-You-Go** sub → open the **DNS zone** `johnanddianawedding.com` (in `rg-wedding-domain`) → **+ Record set**:
+4. In a new tab, switch portal context to **Pay-As-You-Go** sub → open the **DNS zone** `johnanddianaswedding.com` (in `rg-wedding-domain`) → **+ Record set**:
    - **CNAME** record: name = `www`, alias = the SWA target, TTL = 3600.
    - **TXT** record: name = `_dnsauth.www` (or whatever Azure's prompt shows), value = the validation token.
 5. Back on the VS-sub SWA Custom-domains blade, click **Validate**. Usually takes 1-5 minutes. Once validated, Azure issues a free managed TLS certificate automatically.
 
 ### 4b. Add the apex domain
 
-1. In VS sub → SWA → **Custom domains** → **Add** → repeat with `johnanddianawedding.com` (no `www`).
+1. In VS sub → SWA → **Custom domains** → **Add** → repeat with `johnanddianaswedding.com` (no `www`).
 2. Azure prompts for an apex record. In the PAYG DNS zone:
    - Add an **A record** with the **Alias record set toggle ON** → point it at your Static Web App resource (use the resource picker — it will let you pick the SWA from the VS subscription). This is Azure DNS's native way to handle apex → SWA without CNAME-flattening workarounds.
    - Add the second TXT validation record as Azure instructs.
 3. Validate in the SWA blade.
-4. Site is now live at both `https://johnanddianawedding.com` and `https://www.johnanddianawedding.com` with TLS.
+4. Site is now live at both `https://johnanddianaswedding.com` and `https://www.johnanddianaswedding.com` with TLS.
 
 ### 4c. (Optional) Move the DNS zone to VS sub to bill it against credits
 
@@ -129,7 +129,7 @@ Quickest start: save your engagement photo as `public\images\hero.jpg` at about 
 For your "fully public" model, the same RSVP URL works for everyone, so one QR code is enough.
 
 1. Go to a free QR generator like https://www.qr-code-generator.com/.
-2. Enter your RSVP URL: `https://johnanddianawedding.com/rsvp`.
+2. Enter your RSVP URL: `https://johnanddianaswedding.com/rsvp`.
 3. Download as SVG. SVG is vector format, so it stays sharp at any print size.
 4. Send the SVG to your invitation designer.
 

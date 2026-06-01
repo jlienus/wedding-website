@@ -1,20 +1,39 @@
 :root {
-  /* Palette */
-  --color-bg: #FAF8F4;
+  /* Palette — White / Gold / Silver elegance */
+  --color-bg: #FCFBF7;              /* bright pearl ivory (was #FAF8F4 — cooler & brighter) */
+  --color-bg-shimmer: #FFFEFB;       /* near-white for radial glow */
   --color-surface: #FFFFFF;
-  --color-text: #1A1A1A;
-  --color-text-muted: #5C5C5C;
-  --color-text-soft: #8A8A8A;
-  --color-gold: #C9A961;
-  --color-gold-light: #E5D4A1;
-  --color-gold-deep: #8B6914;
-  --color-silver: #B8B8B8;
-  --color-rule: #E8E2D5;
+  --color-surface-pearl: #F7F4ED;    /* warm pearl for elevated cards */
+  --color-text: #2A2520;             /* warm charcoal (was #1A1A1A — softer) */
+  --color-text-muted: #6B6259;       /* warm taupe (was #5C5C5C) */
+  --color-text-soft: #9A938A;        /* warm soft (was #8A8A8A) */
+
+  /* Gold — classic champagne / wedding gold */
+  --color-gold: #D4AF37;             /* true champagne gold (was #C9A961) */
+  --color-gold-light: #EBD7A1;       /* light champagne (unchanged) */
+  --color-gold-shimmer: #F1D87E;     /* highlight for shimmer gradients */
+  --color-gold-deep: #A8842F;        /* refined deep gold (was #8B6914 brown) — passes WCAG AA on ivory */
+
+  /* Silver — secondary metallic */
+  --color-silver: #C5C7CC;           /* true silver */
+  --color-silver-light: #ECEDF0;     /* pearl silver — soft surface tint */
+  --color-silver-deep: #8B8E94;      /* dimensional silver (decorative only — 3.7:1 large text) */
+
+  /* Rules / borders — silver-tinted for elegance */
+  --color-rule: #EDE8DB;             /* soft warm rule */
+  --color-rule-silver: #E4E5E8;      /* silver-tinted rule */
 
   /* Ecuadorian flag accents (used sparingly in itinerary day cards) */
   --color-ec-yellow: #FFD100;
   --color-ec-blue: #034EA2;
   --color-ec-red: #ED1C24;
+
+  /* Gradients */
+  --gradient-bg: radial-gradient(circle at 50% 0%, var(--color-bg-shimmer) 0%, var(--color-bg) 55%, var(--color-surface-pearl) 100%);
+  --gradient-gold-line: linear-gradient(90deg, transparent 0%, var(--color-silver-light) 15%, var(--color-gold) 38%, var(--color-gold-shimmer) 50%, var(--color-gold) 62%, var(--color-silver-light) 85%, transparent 100%);
+  --gradient-silver-line: linear-gradient(90deg, transparent 0%, var(--color-silver) 50%, transparent 100%);
+  --gradient-gold-fill: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-shimmer) 50%, var(--color-gold-deep) 100%);
+  --gradient-surface: linear-gradient(180deg, var(--color-surface) 0%, var(--color-bg-shimmer) 100%);
 
   /* Typography */
   --font-display: 'Cormorant Garamond', 'Cormorant', Georgia, 'Times New Roman', serif;
@@ -51,7 +70,8 @@
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
-  --shadow-sm: 0 1px 2px rgba(26, 26, 26, 0.04), 0 1px 3px rgba(26, 26, 26, 0.06);
-  --shadow-md: 0 4px 12px rgba(26, 26, 26, 0.08);
+  --shadow-sm: 0 1px 2px rgba(168, 132, 47, 0.06), 0 1px 3px rgba(42, 37, 32, 0.05);
+  --shadow-md: 0 4px 18px rgba(168, 132, 47, 0.10), 0 2px 6px rgba(42, 37, 32, 0.06);
+  --shadow-soft: 0 8px 32px rgba(168, 132, 47, 0.08);
   --transition: 280ms cubic-bezier(0.4, 0, 0.2, 1);
 }

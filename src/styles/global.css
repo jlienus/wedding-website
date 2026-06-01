@@ -13,6 +13,8 @@ body {
   line-height: var(--lh-normal);
   color: var(--color-text);
   background: var(--color-bg);
+  background-image: var(--gradient-bg);
+  background-attachment: fixed;
   font-feature-settings: 'kern', 'liga', 'calt';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -38,7 +40,7 @@ a {
   border-bottom: 1px solid var(--color-gold);
   transition: color var(--transition), border-color var(--transition);
 }
-a:hover { color: var(--color-gold-deep); }
+a:hover { color: var(--color-gold-deep); border-bottom-color: var(--color-gold-deep); }
 
 button {
   font-family: inherit;
@@ -67,23 +69,51 @@ img, picture, svg, video { display: block; max-width: 100%; height: auto; }
   font-family: var(--font-body);
   font-size: var(--fs-small);
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  border: 1px solid var(--color-text);
-  background: transparent;
+  border: 1px solid var(--color-gold-deep);
+  background: var(--color-surface);
   color: var(--color-text);
-  border-bottom: 1px solid var(--color-text);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
   transition: all var(--transition);
 }
 .btn:hover {
+  background: var(--color-gold-deep);
+  color: var(--color-surface);
+  border-color: var(--color-gold-deep);
+  box-shadow: var(--shadow-md);
+}
+.btn--gold {
+  border-color: var(--color-gold-deep);
+  color: var(--color-surface);
+  background: var(--gradient-gold-fill);
+  background-size: 200% 200%;
+  background-position: 0% 50%;
+}
+.btn--gold:hover {
+  background-position: 100% 50%;
+  color: var(--color-surface);
+  border-color: var(--color-gold-deep);
+  box-shadow: var(--shadow-md);
+}
+.btn--primary {
   background: var(--color-text);
-  color: var(--color-bg);
+  color: var(--color-surface);
   border-color: var(--color-text);
 }
-.btn--gold { border-color: var(--color-gold-deep); color: var(--color-gold-deep); }
-.btn--gold:hover { background: var(--color-gold-deep); color: var(--color-bg); border-color: var(--color-gold-deep); }
-.btn--primary { background: var(--color-text); color: var(--color-bg); }
 .btn--primary:hover { background: transparent; color: var(--color-text); }
+.btn--ghost {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(6px);
+  border-color: var(--color-silver);
+  color: var(--color-text);
+}
+.btn--ghost:hover {
+  background: var(--color-surface);
+  border-color: var(--color-gold-deep);
+  color: var(--color-gold-deep);
+}
 
 .eyebrow {
   font-family: var(--font-body);

@@ -28,11 +28,50 @@ const { ceremony, reception } = config.venues;
 </article>
 
 <style>
-  .details-card { max-width: 48rem; margin: 0 auto; padding: var(--space-4); border: 1px solid rgba(201,169,97,0.45); border-radius: var(--radius-lg); background: rgba(255,255,255,0.58); box-shadow: var(--shadow-sm); }
-  h2 { color: var(--color-gold-deep); }
-  .detail-grid { display: grid; gap: var(--space-3); margin-top: var(--space-3); }
-  h3 { font-size: var(--fs-h3); margin-bottom: var(--space-1); }
-  .time { color: var(--color-text-muted); font-weight: 600; }
-  .note { margin: var(--space-3) 0 0; padding-top: var(--space-2); border-top: 1px solid var(--color-rule); color: var(--color-text-muted); font-size: var(--fs-small); }
-  @media (min-width: 700px) { .detail-grid { grid-template-columns: 1fr 1fr; } }
+  .details-card {
+    position: relative;
+    max-width: 48rem;
+    margin: 0 auto;
+    padding: var(--space-5) var(--space-4);
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-lg);
+    background: var(--gradient-surface);
+    box-shadow: var(--shadow-soft);
+    text-align: center;
+  }
+  .details-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    background: var(--gradient-gold-fill);
+  }
+  h2 {
+    color: var(--color-gold-deep);
+    font-size: clamp(1.7rem, 3vw, 2.4rem);
+    margin-top: var(--space-2);
+  }
+  .detail-grid { display: grid; gap: var(--space-3); margin-top: var(--space-4); text-align: left; }
+  h3 {
+    font-size: 0.85rem;
+    margin-bottom: var(--space-1);
+    color: var(--color-gold-deep);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-family: var(--font-body);
+    font-weight: 600;
+  }
+  section p { margin: 0.25rem 0; }
+  section p:first-of-type { font-family: var(--font-display); font-size: 1.25rem; color: var(--color-text); }
+  .time { color: var(--color-text-muted); font-weight: 500; font-style: italic; }
+  .note {
+    margin: var(--space-3) 0 0;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--color-rule);
+    color: var(--color-text-muted);
+    font-size: var(--fs-small);
+    font-style: italic;
+  }
+  @media (min-width: 700px) { .detail-grid { grid-template-columns: 1fr 1fr; } .detail-grid section { padding: 0 var(--space-2); } .detail-grid section + section { border-left: 1px solid var(--color-rule); } }
 </style>

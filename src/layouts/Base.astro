@@ -13,7 +13,7 @@ interface Props {
 }
 
 const { title, description = '', lang = 'en', ogImage = '/og-image.jpg' } = Astro.props;
-const siteUrl = `https://${config.site?.domain ?? 'johnanddianawedding.com'}`;
+const siteUrl = `https://${config.site?.domain ?? 'johnanddianaswedding.com'}`;
 const canonicalUrl = new URL(Astro.url.pathname, siteUrl).toString();
 const absoluteOgImage = ogImage.startsWith('http') ? ogImage : new URL(ogImage, siteUrl).toString();
 ---

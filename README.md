@@ -30,7 +30,7 @@ npm run dev
 | Task | Where to go |
 |---|---|
 | Change wedding details, copy, itinerary, hotels, FAQs, links, or photos | [CONTENT-EDITING-GUIDE.md](CONTENT-EDITING-GUIDE.md) |
-| Get the site live at `johnanddianawedding.com` | [NEXT-STEPS.md](NEXT-STEPS.md) |
+| Get the site live at `johnanddianaswedding.com` | [NEXT-STEPS.md](NEXT-STEPS.md) |
 | Add or replace website photos | [public\images\README.md](public\images\README.md) |
 | Build the site before deployment | Run `npm run build` |
 | Preview the site while editing | Run `npm run dev` |

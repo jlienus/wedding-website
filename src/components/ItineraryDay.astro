@@ -37,13 +37,50 @@ const notes = locale === 'es' ? (day.notesEs ?? day.notes) : (day.notesEn ?? day
 </article>
 
 <style>
-  .itinerary-day { position: relative; display: grid; grid-template-columns: auto 1fr; overflow: hidden; border: 1px solid var(--color-rule); border-radius: var(--radius-lg); background: rgba(255,255,255,0.58); box-shadow: var(--shadow-sm); }
+  .itinerary-day {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    overflow: hidden;
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-lg);
+    background: var(--gradient-surface);
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition), box-shadow var(--transition);
+  }
+  .itinerary-day:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
   .accent { width: 6px; background: var(--accent); }
-  .content { padding: var(--space-3); }
+  .content { padding: var(--space-3) var(--space-4); }
   header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
-  h2 { margin: 0; color: var(--color-gold-deep); }
-  h3 { font-size: 1rem; margin: var(--space-2) 0 0.25rem; letter-spacing: 0.08em; text-transform: uppercase; }
-  .pill { display: inline-flex; padding: 0.28rem 0.7rem; border-radius: 999px; background: rgba(201,169,97,0.15); color: var(--color-text); font-size: var(--fs-tiny); font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; }
-  aside { margin-top: var(--space-2); padding: var(--space-2); border-left: 2px solid var(--accent); background: rgba(201,169,97,0.09); color: var(--color-text-muted); }
-  .empty { color: var(--color-text-muted); }
+  h2 { margin: 0; color: var(--color-gold-deep); font-size: clamp(1.3rem, 2.4vw, 1.75rem); }
+  h3 {
+    font-size: 0.8rem;
+    margin: var(--space-2) 0 0.4rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    font-weight: 600;
+  }
+  .pill {
+    display: inline-flex;
+    padding: 0.3rem 0.85rem;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--color-gold-light), var(--color-gold));
+    color: var(--color-text);
+    font-size: var(--fs-tiny);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    box-shadow: var(--shadow-sm);
+  }
+  aside {
+    margin-top: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-left: 2px solid var(--accent);
+    background: var(--color-surface-pearl);
+    color: var(--color-text-muted);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    font-style: italic;
+  }
+  .empty { color: var(--color-text-muted); font-style: italic; }
 </style>

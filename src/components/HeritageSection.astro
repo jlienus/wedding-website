@@ -20,7 +20,13 @@ const { locale } = Astro.props;
 
 <style>
   .heritage { max-width: 50rem; margin: 0 auto; text-align: center; padding: var(--space-5) var(--space-3); }
-  h2 { color: var(--color-gold-deep); }
+  h2 {
+    background: linear-gradient(135deg, var(--color-gold-deep) 0%, var(--color-gold) 50%, var(--color-gold-deep) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: var(--color-gold-deep);
+  }
   p:not(.eyebrow) { font-size: 1.125rem; color: var(--color-text-muted); line-height: var(--lh-normal); }
-  svg { display: block; margin: var(--space-2) auto; color: var(--color-gold); }
+  svg { display: block; margin: var(--space-2) auto; color: var(--color-gold); filter: drop-shadow(0 1px 2px rgba(168, 132, 47, 0.2)); }
 </style>
