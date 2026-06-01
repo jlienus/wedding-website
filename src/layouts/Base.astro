@@ -1,6 +1,7 @@
 ---
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
+import Chatbot from '../components/Chatbot.astro';
 import '../styles/global.css';
 import config from '../data/wedding.config.json';
 import type { Locale } from '../lib/i18n';
@@ -38,6 +39,7 @@ const absoluteOgImage = ogImage.startsWith('http') ? ogImage : new URL(ogImage, 
     <Nav locale={lang} />
     <slot />
     <Footer locale={lang} />
+    <Chatbot locale={lang} />
     <script is:inline>
       (() => {
         const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;

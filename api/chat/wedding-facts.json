@@ -1,0 +1,99 @@
+{
+  "couple": {
+    "names": "John Michael Lien and Diana Duchicela Guajan",
+    "shortNames": "John & Diana"
+  },
+  "wedding": {
+    "date": "Saturday, March 13, 2027",
+    "dateEs": "Sábado, 13 de marzo de 2027",
+    "timezone": "America/Guayaquil (UTC-5, no DST)",
+    "ceremony": {
+      "time": "3:00 PM",
+      "venue": "Basílica del Voto Nacional",
+      "address": "Carchi y Venezuela, Centro Histórico, Quito, Ecuador",
+      "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Bas%C3%ADlica+del+Voto+Nacional+Quito"
+    },
+    "reception": {
+      "time": "6:00 PM",
+      "venue": "Hotel Plaza Grande",
+      "address": "García Moreno N5-16 y Chile, Plaza de la Independencia, Centro Histórico, Quito, Ecuador",
+      "website": "https://www.plazagrandequito.com/",
+      "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Hotel+Plaza+Grande+Quito"
+    },
+    "walkBetweenVenues": "About 8 minutes on foot — the two venues are both in the historic Old Town."
+  },
+  "rsvp": {
+    "deadline": "Sunday, November 15, 2026",
+    "deadlineEs": "Domingo, 15 de noviembre de 2026",
+    "contactEmail": "rsvp@johnanddianaswedding.com",
+    "pageUrl": "/rsvp",
+    "pageUrlEs": "/es/rsvp"
+  },
+  "travel": {
+    "airport": {
+      "code": "UIO",
+      "name": "Mariscal Sucre International Airport, Quito",
+      "driveTimeToOldTown": "About 45 minutes by car",
+      "taxiCostUsdToOldTown": 26,
+      "expressBusCostUsd": 8
+    },
+    "altitude": "Quito sits at about 9,350 ft / 2,850 m. Mild altitude effects (shortness of breath, fatigue) are common in the first 48 hours. Arrive early if possible, hydrate, eat light, take it easy.",
+    "weatherMarch": "Wet season. Temperatures 50-69 F / 10-21 C. Pack layers, rain jacket, comfortable walking shoes, and sunscreen — UV is intense at altitude.",
+    "currency": "U.S. Dollar. Small bills are useful for taxis, markets, and tips.",
+    "visa": "U.S. citizens generally do not need a visa for tourist stays up to 90 days. Other passports — check the Ecuadorian embassy guidance for your country.",
+    "languageNote": "Many tourism providers and hotels in Quito work with English-speaking guests. Learning hola, gracias, por favor is appreciated.",
+    "suggestedArrival": "Earliest typical arrival 2027-03-08, typical departure 2027-03-14",
+    "guestPageUrl": "/travel",
+    "guestPageUrlEs": "/es/viajes",
+    "itineraryPageUrl": "/itinerary",
+    "itineraryPageUrlEs": "/es/itinerario"
+  },
+  "lodging": {
+    "recommendation": "We recommend staying in or near Old Town for the easiest wedding-day logistics. See the Travel page for suggested 4-star and 5-star options.",
+    "shuttle": "Hotel Plaza Grande can help arrange airport shuttle service; contact the hotel directly when booking. Other hotels may offer similar services."
+  },
+  "dayOf": {
+    "dressCode": "Formal or cocktail attire. For the church ceremony, please choose respectful coverage (shoulders and knees covered).",
+    "kidsPolicy": "TBD — we will confirm closer to the date. Please reach out if you are planning to bring children.",
+    "plusOnes": "Please refer to your invitation. If uncertain, reach out before RSVPing.",
+    "meals": "Multiple options will be available. Please indicate dietary needs on your RSVP.",
+    "photography": "Personal photos welcome during cocktails and reception. Please respect the officiant's request to refrain from flash photography during the ceremony itself."
+  },
+  "registry": {
+    "page": "/registry",
+    "pageEs": "/es/regalos",
+    "note": "Your presence is the greatest gift; any contribution is deeply appreciated."
+  },
+  "heritage": {
+    "summary": "Diana's roots are in Otavalo, an Andean Kichwa community known for music and weaving. The celebration honors kuyay (Kichwa for love) — love of family, place, and the people who join us in Quito.",
+    "greetingsKichwa": "Imanalla = 'Hello/welcome' in Kichwa. Pachamama = 'Mother Earth.'"
+  },
+  "contact": {
+    "cancellationOrConcerns": "Email rsvp@johnanddianaswedding.com as early as possible so we can update counts."
+  },
+  "social": {
+    "hashtag": "#LienGuajan2027"
+  },
+  "pages": {
+    "en": {
+      "home": "/",
+      "ourStory": "/our-story",
+      "venues": "/venues",
+      "itinerary": "/itinerary",
+      "travel": "/travel",
+      "rsvp": "/rsvp",
+      "registry": "/registry",
+      "faq": "/faq"
+    },
+    "es": {
+      "home": "/es/",
+      "ourStory": "/es/nuestra-historia",
+      "venues": "/es/lugares",
+      "itinerary": "/es/itinerario",
+      "travel": "/es/viajes",
+      "rsvp": "/es/rsvp",
+      "registry": "/es/regalos",
+      "faq": "/es/preguntas"
+    }
+  }
+}

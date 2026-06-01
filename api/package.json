@@ -1,0 +1,11 @@
+{
+  "name": "wedding-api",
+  "version": "1.0.0",
+  "description": "Azure Static Web Apps managed functions for John & Diana wedding site",
+  "private": true,
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {}
+}
