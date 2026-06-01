@@ -13,7 +13,7 @@ interface Props { photos: Photo[]; locale?: Locale }
 const { photos = [], locale = 'en' } = Astro.props;
 ---
 
-<div class="photo-pair">
+<div class={`photo-pair photo-pair--count-${photos.length}`}>
   {photos.map((photo) => (
     <figure class="photo-pair__item reveal">
       <img
@@ -63,6 +63,10 @@ const { photos = [], locale = 'en' } = Astro.props;
     background: linear-gradient(135deg, var(--color-silver-light) 0%, var(--color-bg) 50%, var(--color-gold-light) 100%);
   }
   @media (min-width: 720px) {
-    .photo-pair { grid-template-columns: 1fr 1fr; }
+    .photo-pair--count-2 { grid-template-columns: 1fr 1fr; }
+    .photo-pair--count-3 { grid-template-columns: 1fr 1fr; }
+    /* In a 3-photo gallery, the first photo is a hero spanning both columns */
+    .photo-pair--count-3 .photo-pair__item:first-child { grid-column: 1 / -1; }
+    .photo-pair--count-3 .photo-pair__item:first-child img { aspect-ratio: 21 / 9; }
   }
 </style>

@@ -59,7 +59,9 @@
     "naveCaption": "The nave, looking toward the high altar",
     "naveAlt": "The Gothic nave of the Basílica del Voto Nacional seen from the choir loft, with soaring red-stone arches and stained-glass windows on both sides leading to the altar",
     "roseWindowCaption": "The basilica's rose window",
-    "roseWindowAlt": "Detail of the basilica's rose window with vibrant red, blue, and yellow floral patterns set within circular Gothic tracery"
+    "roseWindowAlt": "Detail of the basilica's rose window with vibrant red, blue, and yellow floral patterns set within circular Gothic tracery",
+    "aisleCaption": "Looking down the center aisle toward the altar",
+    "aisleAlt": "View down the center aisle of the Basílica del Voto Nacional from the back of the nave, framed by stone columns and rows of wooden pews leading to the high altar in the distance"
   },
   "menu": {
     "eyebrow": "Saturday evening",

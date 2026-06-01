@@ -14,6 +14,7 @@ to comply with the share-alike terms.
 | `images/reception-table.jpg` | Supplied by Hotel Plaza Grande / Paladar Fino Catering as part of the wedding package proposal (March 2026) | Hotel Plaza Grande | Used with permission for this event website | — |
 | `images/basilica-nave.jpg` | Wikimedia Commons | Alejandro Quintanar | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:Basilica_of_the_National_Vow.jpg |
 | `images/basilica-rose-window.jpg` | Wikimedia Commons | Michael Shade | CC0 1.0 (Public Domain Dedication) | https://commons.wikimedia.org/wiki/File:Bas%C3%ADlica_del_Voto_Nacional_-_stained_glass_window_-_Michael_Shade.jpg |
+| `images/basilica-aisle.jpg` | Wikimedia Commons | Arabsalam | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Bas%C3%ADlica_del_Voto_Nacional_Ecuador_895.jpg |
 
 Photos were cropped and re-encoded for web delivery via `scripts/process-photos.mjs`;
 the underlying images are unchanged in substance and remain available at the
