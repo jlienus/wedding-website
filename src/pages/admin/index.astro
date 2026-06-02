@@ -106,24 +106,49 @@ const locale = 'en';
       }
 
       let LAST_DATA: any = null;
+      let AUTHED = false;
 
-      async function loadUser() {
+      // Construct the login URL in the browser (not via a responseOverride)
+      // so SWA's auth handler reliably sees post_login_redirect_uri and
+      // there's no risk of the OAuth callback hitting a global 401
+      // responseOverride and looping back to the login URL.
+      function loginRedirect() {
+        const target = location.pathname + location.search; // e.g. '/admin'
+        location.href = '/.auth/login/github?post_login_redirect_uri=' + encodeURIComponent(target);
+      }
+
+      async function ensureAuthed(): Promise<boolean> {
         try {
           const res = await fetch('/.auth/me', { credentials: 'same-origin' });
-          if (!res.ok) return;
+          if (!res.ok) {
+            // Treat any /.auth/me failure as unauthenticated. Auto-redirect.
+            loginRedirect();
+            return false;
+          }
           const data = await res.json();
           const principal = data && data.clientPrincipal;
-          if (principal && userLabel) {
+          if (!principal) {
+            loginRedirect();
+            return false;
+          }
+          if (userLabel) {
             userLabel.textContent = `${principal.userDetails || principal.userId} (${principal.identityProvider})`;
           }
-        } catch {}
+          AUTHED = true;
+          return true;
+        } catch {
+          // Network error reading /.auth/me — don't silently kick to login,
+          // surface it so the user can debug.
+          showError('Could not contact /.auth/me. Try reloading.');
+          return false;
+        }
       }
 
       async function loadGuests() {
         clearError();
         try {
           const res = await fetch('/api/admin/guests', { credentials: 'same-origin' });
-          if (res.status === 401) { showError('Not signed in. Redirecting…'); window.location.href = '/.auth/login/github?post_login_redirect_uri=/admin'; return; }
+          if (res.status === 401) { showError('Session expired. Redirecting to login…'); loginRedirect(); return; }
           if (res.status === 403) { showError('Your account is signed in but is not authorized. Only the configured admin GitHub user can use this page.'); return; }
           if (!res.ok) { showError(`Couldn't load guests (HTTP ${res.status}).`); return; }
           const data = await res.json();
@@ -331,8 +356,11 @@ const locale = 'en';
         });
       }
 
-      loadUser();
-      loadGuests();
+      (async () => {
+        const ok = await ensureAuthed();
+        if (!ok) return; // ensureAuthed redirected to /.auth/login or showed an error
+        await loadGuests();
+      })();
     })();
   </script>
 
