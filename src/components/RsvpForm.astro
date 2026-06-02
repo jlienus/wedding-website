@@ -253,6 +253,13 @@ const initData = {
       const node = tpl.content.cloneNode(true) as DocumentFragment;
       const fieldset = node.querySelector('fieldset') as HTMLFieldSetElement;
       fieldset.dataset.memberId = m.memberId;
+      // Scope the radio group name per member so each member's yes/no choice
+      // is independent. Without this, all yes radios share name="attending"
+      // and form a single group across members, so clicking yes on member B
+      // silently clears member A's selection.
+      fieldset.querySelectorAll('input[type="radio"][name="attending"]').forEach((r) => {
+        (r as HTMLInputElement).name = `attending-${m.memberId}`;
+      });
       const nameEl = fieldset.querySelector('.rsvp-member-name') as HTMLElement;
       const nameSuffix = m.role === 'plusone' ? ` ${S['rsvp.memberPlusOneLabel']}` :
                          m.isKid ? ` ${S['rsvp.memberKidLabel']}` : '';
@@ -306,10 +313,10 @@ const initData = {
       const r = responseByMember.get(m.memberId);
       if (r) {
         if (r.attending === true) {
-          const yes = fieldset.querySelector('input[name="attending"][value="yes"]') as HTMLInputElement;
+          const yes = fieldset.querySelector('input[type="radio"][value="yes"]') as HTMLInputElement;
           if (yes) yes.checked = true;
         } else if (r.attending === false) {
-          const no = fieldset.querySelector('input[name="attending"][value="no"]') as HTMLInputElement;
+          const no = fieldset.querySelector('input[type="radio"][value="no"]') as HTMLInputElement;
           if (no) no.checked = true;
         }
         const sel = fieldset.querySelector('select[name="mealChoice"]') as HTMLSelectElement;
@@ -323,10 +330,10 @@ const initData = {
       // Show/hide attendee details based on attending choice
       const updateFieldsVisibility = () => {
         const attendingFields = fieldset.querySelector('.rsvp-attending-fields') as HTMLElement;
-        const yesChecked = (fieldset.querySelector('input[name="attending"][value="yes"]') as HTMLInputElement | null)?.checked;
+        const yesChecked = (fieldset.querySelector('input[type="radio"][value="yes"]') as HTMLInputElement | null)?.checked;
         if (attendingFields) attendingFields.hidden = !yesChecked;
       };
-      fieldset.querySelectorAll('input[name="attending"]').forEach((inp) => {
+      fieldset.querySelectorAll('input[type="radio"][name^="attending"]').forEach((inp) => {
         inp.addEventListener('change', updateFieldsVisibility);
       });
       updateFieldsVisibility();
@@ -421,8 +428,8 @@ const initData = {
       memberFieldsets.forEach((fs) => {
         const f = fs as HTMLFieldSetElement;
         const memberId = f.dataset.memberId || '';
-        const yes = (f.querySelector('input[name="attending"][value="yes"]') as HTMLInputElement | null)?.checked;
-        const no = (f.querySelector('input[name="attending"][value="no"]') as HTMLInputElement | null)?.checked;
+        const yes = (f.querySelector('input[type="radio"][value="yes"]') as HTMLInputElement | null)?.checked;
+        const no = (f.querySelector('input[type="radio"][value="no"]') as HTMLInputElement | null)?.checked;
         let attending: boolean | null = null;
         if (yes) attending = true;
         else if (no) attending = false;
@@ -641,6 +648,11 @@ const initData = {
   }
   .rsvp-field { display: block; }
   .rsvp-field small { display: block; margin-top: 0.2rem; font-size: 0.85rem; }
+  /* Author display rules above beat the user-agent [hidden] { display: none }
+     because attribute selectors in the UA sheet always lose to class selectors
+     in author CSS. Re-assert hidden semantics explicitly for these classes. */
+  .rsvp-attending-fields[hidden],
+  .rsvp-field[hidden] { display: none !important; }
 
   .rsvp-privacy { margin: var(--space-3) 0; font-size: 0.9rem; }
   .rsvp-privacy summary { cursor: pointer; color: var(--color-text-muted, #6b6b6b); }
