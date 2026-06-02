@@ -64,11 +64,6 @@ const locale = 'en';
         </div>
       </section>
 
-      <section class="admin-card">
-        <h2>Drill-down</h2>
-        <p class="admin-muted">Click a row above to see the full RSVP payload + recent SMS log.</p>
-        <div id="admin-drilldown"></div>
-      </section>
     </section>
   </main>
 
@@ -134,7 +129,6 @@ const locale = 'en';
       const settingsStatus = document.getElementById('settings-status') as HTMLDivElement | null;
       const overallEl = document.getElementById('admin-overall') as HTMLDivElement | null;
       const tbody = document.getElementById('admin-tbody') as HTMLTableSectionElement | null;
-      const drilldownEl = document.getElementById('admin-drilldown') as HTMLDivElement | null;
       const remindersStopEl = document.getElementById('reminders-stop') as HTMLSpanElement | null;
       const modalEl = document.getElementById('admin-modal') as HTMLDivElement | null;
       const modalTitleEl = document.getElementById('admin-modal-title') as HTMLHeadingElement | null;
@@ -168,6 +162,7 @@ const locale = 'en';
       }
 
       let LAST_DATA: any = null;
+      let EXPANDED_ID: string | null = null;
 
       function loginRedirect() {
         const target = location.pathname + location.search;
@@ -227,17 +222,21 @@ const locale = 'en';
         if (!tbody) return;
         if (!data.rows || data.rows.length === 0) {
           tbody.innerHTML = '<tr><td colspan="6" class="admin-muted">No invitations yet. Create one with the button above, or run the seed script.</td></tr>';
-          if (drilldownEl) drilldownEl.innerHTML = '';
+          EXPANDED_ID = null;
           return;
         }
         tbody.innerHTML = data.rows.map(renderRow).join('');
+        // Drop stale expanded id if the invite is gone (e.g., after delete).
+        if (EXPANDED_ID && !data.rows.some((r: any) => r.invite.inviteId === EXPANDED_ID)) {
+          EXPANDED_ID = null;
+        }
         tbody.querySelectorAll('button[data-action]').forEach((btn) => {
           btn.addEventListener('click', onActionClick);
         });
-        tbody.querySelectorAll('tr[data-invite-id]').forEach((tr) => {
+        tbody.querySelectorAll('tr.admin-data-row').forEach((tr) => {
           tr.addEventListener('click', (ev) => {
             if ((ev.target as HTMLElement).closest('button')) return;
-            renderDrilldown((tr as HTMLTableRowElement).dataset.inviteId || '');
+            toggleRow((tr as HTMLTableRowElement).dataset.inviteId || '');
           });
         });
       }
@@ -266,22 +265,48 @@ const locale = 'en';
           : '';
         const editBtn = `<button class="btn btn--ghost btn--small" data-action="edit" data-invite-id="${escapeHtml(inv.inviteId)}">Edit</button>`;
         const deleteBtn = `<button class="btn btn--ghost btn--small admin-btn-danger" data-action="delete" data-invite-id="${escapeHtml(inv.inviteId)}">Delete</button>`;
+        const isExpanded = EXPANDED_ID === inv.inviteId;
+        const dataRowClasses = ['admin-data-row'];
+        if (inv.responded) dataRowClasses.push('is-responded');
+        if (isExpanded) dataRowClasses.push('is-expanded');
         return `
-          <tr data-invite-id="${escapeHtml(inv.inviteId)}" class="${inv.responded ? 'is-responded' : ''}">
-            <td>${escapeHtml(idLabel)}${totalCard}${optBadge}${hardBadge}</td>
+          <tr data-invite-id="${escapeHtml(inv.inviteId)}" class="${dataRowClasses.join(' ')}">
+            <td><span class="admin-chevron" aria-hidden="true">▸</span>${escapeHtml(idLabel)}${totalCard}${optBadge}${hardBadge}</td>
             <td>${respondedBadge}</td>
             <td>${headcount}</td>
             <td>${phoneCell}${inv.phone ? ` <span class="admin-muted">${escapeHtml(inv.locale)}</span>` : ''}</td>
             <td>${lastReminder}</td>
             <td>${sendBtn} ${editBtn} ${deleteBtn}</td>
           </tr>
+          <tr class="admin-detail-row" data-detail-for="${escapeHtml(inv.inviteId)}"${isExpanded ? '' : ' hidden'}>
+            <td colspan="6">${buildDetailHtml(row)}</td>
+          </tr>
         `;
       }
 
-      function renderDrilldown(inviteId: string) {
-        if (!LAST_DATA || !drilldownEl) return;
-        const row = LAST_DATA.rows.find((r: any) => r.invite.inviteId === inviteId);
-        if (!row) return;
+      function toggleRow(inviteId: string) {
+        if (!tbody || !inviteId) return;
+        const sel = (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(inviteId) : inviteId.replace(/[^a-zA-Z0-9_-]/g, '');
+        const wasOpen = EXPANDED_ID === inviteId;
+        if (EXPANDED_ID) {
+          const prevSel = (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(EXPANDED_ID) : EXPANDED_ID.replace(/[^a-zA-Z0-9_-]/g, '');
+          const prevData = tbody.querySelector(`tr.admin-data-row[data-invite-id="${prevSel}"]`) as HTMLTableRowElement | null;
+          const prevDetail = tbody.querySelector(`tr.admin-detail-row[data-detail-for="${prevSel}"]`) as HTMLTableRowElement | null;
+          if (prevData) prevData.classList.remove('is-expanded');
+          if (prevDetail) prevDetail.hidden = true;
+        }
+        if (wasOpen) {
+          EXPANDED_ID = null;
+          return;
+        }
+        EXPANDED_ID = inviteId;
+        const dataRow = tbody.querySelector(`tr.admin-data-row[data-invite-id="${sel}"]`) as HTMLTableRowElement | null;
+        const detailRow = tbody.querySelector(`tr.admin-detail-row[data-detail-for="${sel}"]`) as HTMLTableRowElement | null;
+        if (dataRow) dataRow.classList.add('is-expanded');
+        if (detailRow) detailRow.hidden = false;
+      }
+
+      function buildDetailHtml(row: any): string {
         const inv = row.invite;
         const payload = inv.payload || { primary: {}, additionalGuests: [] };
         const renderAttendee = (a: any, label: string) => `
@@ -313,12 +338,13 @@ const locale = 'en';
         if (inv.respondedLate) metaBits.push('<span class="admin-badge admin-badge--warn">late</span>');
         if (inv.adminNotes) metaBits.push(`<em>note:</em> ${escapeHtml(inv.adminNotes)}`);
 
-        drilldownEl.innerHTML = `
-          <h3>${escapeHtml(primaryLabel)}</h3>
-          <p class="admin-muted">${metaBits.join(' · ')}</p>
-          <ul class="admin-list">${primaryItem}${guestItems}</ul>
-          <h4>Recent SMS</h4>
-          <ul class="admin-list admin-list--small">${smsList}</ul>
+        return `
+          <div class="admin-detail-inner">
+            <p class="admin-muted admin-detail-meta">${metaBits.join(' · ')}</p>
+            <ul class="admin-list">${primaryItem}${guestItems}</ul>
+            <h4>Recent SMS</h4>
+            <ul class="admin-list admin-list--small">${smsList}</ul>
+          </div>
         `;
       }
 
@@ -600,9 +626,40 @@ const locale = 'en';
     .admin-table { width:100%; border-collapse: collapse; font-size: 0.95rem; }
     .admin-table th, .admin-table td { padding: 0.5rem 0.6rem; text-align:left; border-bottom: 1px solid var(--color-rule, #eee); vertical-align: top; }
     .admin-table th { background: rgba(201,169,97,0.08); }
-    .admin-table tr { cursor: pointer; }
-    .admin-table tr.is-responded { background: rgba(80, 160, 80, 0.04); }
+    .admin-table tr.admin-data-row { cursor: pointer; }
+    .admin-table tr.admin-data-row.is-responded { background: rgba(80, 160, 80, 0.04); }
+    .admin-table tr.admin-data-row.is-expanded > td {
+      background: rgba(201,169,97,0.14);
+      border-bottom-color: transparent;
+    }
     .admin-table button { margin-right: 0.25rem; margin-bottom: 0.25rem; }
+    .admin-chevron {
+      display: inline-block;
+      width: 0.9em;
+      margin-right: 0.35rem;
+      color: var(--color-text-muted, #888);
+      transition: transform 0.15s ease, color 0.15s ease;
+      font-size: 0.85em;
+      transform-origin: 50% 55%;
+    }
+    .admin-table tr.admin-data-row.is-expanded .admin-chevron {
+      transform: rotate(90deg);
+      color: var(--color-gold-deep, #8a6a2c);
+    }
+    .admin-detail-row[hidden] { display: none; }
+    .admin-detail-row > td {
+      padding: 0;
+      background: rgba(201,169,97,0.06);
+      cursor: default;
+    }
+    .admin-detail-inner { padding: 0.75rem 1.25rem 1rem; }
+    .admin-detail-inner h4 {
+      margin: 0.7rem 0 0.35rem;
+      color: var(--color-gold-deep, #8a6a2c);
+      font-size: 0.95rem;
+    }
+    .admin-detail-inner .admin-list { margin: 0.25rem 0; }
+    .admin-detail-inner .admin-detail-meta { margin: 0 0 0.4rem; }
     .admin-btn-danger { color: #8a2c2c; border-color: rgba(200, 60, 60, 0.4); }
     .admin-muted { color: var(--color-text-muted, #888); font-size: 0.85rem; }
     .admin-loading { text-align:center; padding: var(--space-3); color: var(--color-text-muted, #888); }
