@@ -1,0 +1,61 @@
+name: RSVP Reminders (daily cron)
+
+# SWA Free Functions don't support timer triggers, so we use GitHub Actions
+# as the external scheduler. Runs every day at 16:00 UTC (11 AM ET / noon
+# Brasilia / 11 AM Ecuador). The /api/cron/reminders endpoint itself
+# enforces per-party cadence (>=30 days between sends), so daily runs are
+# safe and cheap — most days nothing actually goes out.
+
+on:
+  schedule:
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run_note:
+        description: 'Optional note for the run log (no functional effect)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+# Prevent concurrent cron runs from racing each other and double-sending. The
+# scheduled and workflow_dispatch flavors share the same group; a new run waits
+# (it does not cancel) until the in-flight run finishes. Combined with the
+# storage-side cadence check (>=30 days), this gives us belt + suspenders.
+concurrency:
+  group: rsvp-reminders
+  cancel-in-progress: false
+
+jobs:
+  send-reminders:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Hit /api/cron/reminders
+        env:
+          CRON_SECRET: ${{ secrets.RSVP_CRON_SECRET }}
+          ENDPOINT: https://johnanddianaswedding.com/api/cron/reminders
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::RSVP_CRON_SECRET repo secret is not set"
+            exit 1
+          fi
+          echo "POST $ENDPOINT"
+          set +e
+          HTTP_CODE=$(curl -sS -o response.json -w "%{http_code}" \
+            -X POST "$ENDPOINT" \
+            -H "X-Cron-Secret: $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            --max-time 60)
+          CURL_RC=$?
+          set -e
+          echo "HTTP $HTTP_CODE (curl rc=$CURL_RC)"
+          echo "--- response body ---"
+          cat response.json || true
+          echo
+          echo "--- end response ---"
+          if [ "$CURL_RC" -ne 0 ] || [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::cron call failed"
+            exit 1
+          fi
