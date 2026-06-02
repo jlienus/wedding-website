@@ -6,6 +6,7 @@ import MenuSection from '../../components/MenuSection.astro';
 import CocktailMenu from '../../components/CocktailMenu.astro';
 import SectionDivider from '../../components/SectionDivider.astro';
 import PageAnchors from '../../components/PageAnchors.astro';
+import PageHero from '../../components/PageHero.astro';
 import { t, type Locale } from '../../lib/i18n';
 import venues from '../../data/venues.json';
 import config from '../../data/wedding.config.json';
@@ -63,12 +64,12 @@ const anchorLinks = [
 
 <Base title={t(locale, 'venues.heading') + ' · John & Diana'} description={t(locale, 'venues.walkingText')} lang={locale}>
   <main>
-    <section class="section container container--narrow reveal" style="text-align:center;">
+    <PageHero photoSlot="basilica-exterior.jpg" imageAlt={t(locale, 'venues.exteriorAlt')}>
       <p class="eyebrow">{t(locale, 'home.detailsEyebrow')}</p>
       <h1>{t(locale, 'venues.heading')}</h1>
       <p>{t(locale, 'venues.walkingText')}</p>
       <PageAnchors locale={locale} links={anchorLinks} ariaLabel={t(locale, 'venues.onThisPage')} />
-    </section>
+    </PageHero>
     <section id="ceremony" class="section container reveal anchor-target">
       <h2>{t(locale, 'venues.ceremonyHeading')}</h2>
       <VenueCard venue={venues.ceremony} locale={locale} />

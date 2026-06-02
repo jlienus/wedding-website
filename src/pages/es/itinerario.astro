@@ -4,6 +4,7 @@ import ItineraryDay from '../../components/ItineraryDay.astro';
 import AddToCalendar from '../../components/AddToCalendar.astro';
 import SectionDivider from '../../components/SectionDivider.astro';
 import AltitudeAdvisory from '../../components/AltitudeAdvisory.astro';
+import PageHero from '../../components/PageHero.astro';
 import { t, type Locale } from '../../lib/i18n';
 import itinerary from '../../data/itinerary.json';
 
@@ -13,13 +14,13 @@ const alternateItineraries = Object.values(itinerary.alternateItineraries);
 
 <Base title={t(locale, 'itinerary.heading') + ' · John & Diana'} description={t(locale, 'itinerary.intro')} lang={locale}>
   <main>
-    <section class="section container container--narrow reveal" style="text-align:center;">
+    <PageHero photoSlot="plaza-grande-hotel.jpg" imageAlt={t(locale, 'itinerary.heroAlt')}>
       <p class="eyebrow">{t(locale, 'nav.itinerary')}</p>
       <h1>{t(locale, 'itinerary.heading')}</h1>
       <p>{t(locale, 'itinerary.intro')}</p>
       <p class="tz-note">🕒 {t(locale, 'itinerary.timeZoneNote')}</p>
       <p class="cal-row"><AddToCalendar locale={locale} /></p>
-    </section>
+    </PageHero>
     <section class="section container reveal" style="padding-top: 0;">
       <AltitudeAdvisory locale={locale} />
     </section>

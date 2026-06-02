@@ -66,6 +66,7 @@
     "roseWindowAlt": "Detail of the basilica's rose window with vibrant red, blue, and yellow floral patterns set within circular Gothic tracery",
     "aisleCaption": "Looking down the center aisle toward the altar",
     "aisleAlt": "View down the center aisle of the Basílica del Voto Nacional from the back of the nave, framed by stone columns and rows of wooden pews leading to the high altar in the distance",
+    "exteriorAlt": "The neo-Gothic spires of the Basílica del Voto Nacional rising above Quito's historic center",
     "onThisPage": "On this page",
     "anchorDining": "Dining"
   },
@@ -123,7 +124,8 @@
     "alternateArrivalsIntro": "Arriving later in the week? These shorter options keep the pace gentle so you can enjoy the wedding day.",
     "weddingDay": "Wedding Day",
     "day": "Day",
-    "timeZoneNote": "All times below are Ecuador time (ECT, UTC−5). Ecuador does not observe daylight saving time."
+    "timeZoneNote": "All times below are Ecuador time (ECT, UTC−5). Ecuador does not observe daylight saving time.",
+    "heroAlt": "The Hotel Plaza Grande's stone façade in Quito's historic center, our hub for the week"
   },
   "travel": {
     "heading": "Travel",
