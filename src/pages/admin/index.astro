@@ -147,7 +147,7 @@ const locale = 'en';
       async function loadGuests() {
         clearError();
         try {
-          const res = await fetch('/api/admin/guests', { credentials: 'same-origin' });
+          const res = await fetch('/api/mgmt/guests', { credentials: 'same-origin' });
           if (res.status === 401) { showError('Session expired. Redirecting to login…'); loginRedirect(); return; }
           if (res.status === 403) { showError('Your account is signed in but is not authorized. Only the configured admin GitHub user can use this page.'); return; }
           if (!res.ok) { showError(`Couldn't load guests (HTTP ${res.status}).`); return; }
@@ -269,7 +269,7 @@ const locale = 'en';
         try {
           if (action === 'send-reminder') {
             if (!confirm('Send an SMS reminder to this party now (bypasses 30-day cadence)?')) return;
-            const res = await fetch('/api/admin/send-reminder', {
+            const res = await fetch('/api/mgmt/send-reminder', {
               method: 'POST', credentials: 'same-origin',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ partyId })
@@ -282,7 +282,7 @@ const locale = 'en';
               setStatus(`Skipped: ${reason}`, 'warn');
             }
           } else if (action === 'clear-optout') {
-            const res = await fetch('/api/admin/update-party', {
+            const res = await fetch('/api/mgmt/update-party', {
               method: 'POST', credentials: 'same-origin',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ partyId, patch: { optedOutOfSms: false } })
@@ -290,7 +290,7 @@ const locale = 'en';
             if (!res.ok) { setStatus(`Update failed (${res.status})`, 'warn'); }
             else { setStatus('Opt-out cleared.', 'ok'); }
           } else if (action === 'clear-hardfail') {
-            const res = await fetch('/api/admin/update-party', {
+            const res = await fetch('/api/mgmt/update-party', {
               method: 'POST', credentials: 'same-origin',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ partyId, patch: { smsHardFailedAt: '' } })
@@ -315,7 +315,7 @@ const locale = 'en';
         if (!phone) return;
         const locale = window.prompt('Locale? "en" or "es" (default en):', 'en') || 'en';
         try {
-          const res = await fetch('/api/admin/send-test', {
+          const res = await fetch('/api/mgmt/send-test', {
             method: 'POST', credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phone, locale })
@@ -336,7 +336,7 @@ const locale = 'en';
           const next = remindersChk.checked;
           remindersChk.disabled = true;
           try {
-            const res = await fetch('/api/admin/toggle-reminders', {
+            const res = await fetch('/api/mgmt/toggle-reminders', {
               method: 'POST', credentials: 'same-origin',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ enabled: next })

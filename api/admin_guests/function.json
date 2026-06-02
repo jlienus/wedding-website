@@ -6,7 +6,7 @@
       "direction": "in",
       "name": "req",
       "methods": ["get", "options"],
-      "route": "admin/guests"
+      "route": "mgmt/guests"
     },
     {
       "type": "http",

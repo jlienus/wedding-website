@@ -6,7 +6,7 @@
       "direction": "in",
       "name": "req",
       "methods": ["post", "options"],
-      "route": "admin/toggle-reminders"
+      "route": "mgmt/toggle-reminders"
     },
     {
       "type": "http",

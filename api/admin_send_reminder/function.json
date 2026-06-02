@@ -6,7 +6,7 @@
       "direction": "in",
       "name": "req",
       "methods": ["post", "options"],
-      "route": "admin/send-reminder"
+      "route": "mgmt/send-reminder"
     },
     {
       "type": "http",
