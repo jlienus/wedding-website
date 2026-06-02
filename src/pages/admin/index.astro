@@ -39,24 +39,26 @@ const locale = 'en';
 
       <section class="admin-card">
         <div class="admin-card-header">
-          <h2>Parties &amp; responses</h2>
-          <button id="btn-refresh" class="btn btn--ghost btn--small">Refresh</button>
+          <h2>Invitations</h2>
+          <div class="admin-card-actions">
+            <button id="btn-create-invite" class="btn btn--gold btn--small">+ New invitation</button>
+            <button id="btn-refresh" class="btn btn--ghost btn--small">Refresh</button>
+          </div>
         </div>
         <div class="admin-table-wrap">
           <table id="admin-table" class="admin-table">
             <thead>
               <tr>
-                <th>Party</th>
-                <th>Members</th>
+                <th>Primary invitee</th>
                 <th>Responded</th>
-                <th>Attending</th>
-                <th>Phone</th>
-                <th>Reminders</th>
+                <th>Headcount</th>
+                <th>Phone · Locale</th>
+                <th>Last reminder</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody id="admin-tbody">
-              <tr><td colspan="7" class="admin-loading">Loading…</td></tr>
+              <tr><td colspan="6" class="admin-loading">Loading…</td></tr>
             </tbody>
           </table>
         </div>
@@ -64,11 +66,65 @@ const locale = 'en';
 
       <section class="admin-card">
         <h2>Drill-down</h2>
-        <p class="admin-muted">Click a row above to see member-level responses.</p>
+        <p class="admin-muted">Click a row above to see the full RSVP payload + recent SMS log.</p>
         <div id="admin-drilldown"></div>
       </section>
     </section>
   </main>
+
+  <!-- Edit / create modal -->
+  <div id="admin-modal" class="admin-modal" hidden>
+    <div class="admin-modal-backdrop" data-modal-close></div>
+    <div class="admin-modal-panel" role="dialog" aria-modal="true" aria-labelledby="admin-modal-title">
+      <header class="admin-modal-header">
+        <h3 id="admin-modal-title">Invitation</h3>
+        <button type="button" class="admin-modal-close" data-modal-close aria-label="Close">×</button>
+      </header>
+      <form id="admin-modal-form" class="admin-modal-body" novalidate>
+        <div class="admin-form-row admin-form-row--two">
+          <label>
+            <span class="admin-label">First name</span>
+            <input type="text" name="primaryFirstName" maxlength="80" required />
+          </label>
+          <label>
+            <span class="admin-label">Last name</span>
+            <input type="text" name="primaryLastName" maxlength="80" required />
+          </label>
+        </div>
+        <div class="admin-form-row admin-form-row--two">
+          <label>
+            <span class="admin-label">Phone (E.164 or 10-digit US)</span>
+            <input type="text" name="phone" maxlength="32" />
+          </label>
+          <label>
+            <span class="admin-label">Locale</span>
+            <select name="locale">
+              <option value="en">English (en)</option>
+              <option value="es">Español (es)</option>
+            </select>
+          </label>
+        </div>
+        <label class="admin-form-row">
+          <span class="admin-label">Admin notes (internal)</span>
+          <textarea name="adminNotes" maxlength="500" rows="2"></textarea>
+        </label>
+        <fieldset class="admin-form-row admin-form-row--checks">
+          <label class="admin-inline"><input type="checkbox" name="optedOutOfSms" /> <span>Opted out of SMS</span></label>
+          <label class="admin-inline"><input type="checkbox" name="clearHardFail" /> <span>Clear SMS hard-fail flag</span></label>
+        </fieldset>
+        <label class="admin-form-row" id="admin-payload-row" hidden>
+          <span class="admin-label">RSVP payload (JSON) — leave alone unless you know what you're doing</span>
+          <textarea name="payload" rows="10" class="admin-payload-json"></textarea>
+          <small class="admin-muted">Must validate against schemaVersion=1. Saving partial state (attending: null) is allowed.</small>
+        </label>
+        <div id="admin-modal-error" class="admin-error" role="alert" hidden></div>
+        <div class="admin-modal-actions">
+          <button type="button" class="btn btn--ghost" data-modal-close>Cancel</button>
+          <button type="submit" class="btn btn--gold" id="admin-modal-save">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <script>
     (() => {
@@ -80,6 +136,12 @@ const locale = 'en';
       const tbody = document.getElementById('admin-tbody') as HTMLTableSectionElement | null;
       const drilldownEl = document.getElementById('admin-drilldown') as HTMLDivElement | null;
       const remindersStopEl = document.getElementById('reminders-stop') as HTMLSpanElement | null;
+      const modalEl = document.getElementById('admin-modal') as HTMLDivElement | null;
+      const modalTitleEl = document.getElementById('admin-modal-title') as HTMLHeadingElement | null;
+      const modalForm = document.getElementById('admin-modal-form') as HTMLFormElement | null;
+      const modalErrorEl = document.getElementById('admin-modal-error') as HTMLDivElement | null;
+      const modalSaveBtn = document.getElementById('admin-modal-save') as HTMLButtonElement | null;
+      const payloadRow = document.getElementById('admin-payload-row') as HTMLLabelElement | null;
 
       function showError(msg: string) {
         if (!errorEl) return;
@@ -106,39 +168,22 @@ const locale = 'en';
       }
 
       let LAST_DATA: any = null;
-      let AUTHED = false;
 
-      // Construct the login URL in the browser (not via a responseOverride)
-      // so SWA's auth handler reliably sees post_login_redirect_uri and
-      // there's no risk of the OAuth callback hitting a global 401
-      // responseOverride and looping back to the login URL.
       function loginRedirect() {
-        const target = location.pathname + location.search; // e.g. '/admin'
+        const target = location.pathname + location.search;
         location.href = '/.auth/login/github?post_login_redirect_uri=' + encodeURIComponent(target);
       }
 
       async function ensureAuthed(): Promise<boolean> {
         try {
           const res = await fetch('/.auth/me', { credentials: 'same-origin' });
-          if (!res.ok) {
-            // Treat any /.auth/me failure as unauthenticated. Auto-redirect.
-            loginRedirect();
-            return false;
-          }
+          if (!res.ok) { loginRedirect(); return false; }
           const data = await res.json();
           const principal = data && data.clientPrincipal;
-          if (!principal) {
-            loginRedirect();
-            return false;
-          }
-          if (userLabel) {
-            userLabel.textContent = `${principal.userDetails || principal.userId} (${principal.identityProvider})`;
-          }
-          AUTHED = true;
+          if (!principal) { loginRedirect(); return false; }
+          if (userLabel) userLabel.textContent = `${principal.userDetails || principal.userId} (${principal.identityProvider})`;
           return true;
         } catch {
-          // Network error reading /.auth/me — don't silently kick to login,
-          // surface it so the user can debug.
           showError('Could not contact /.auth/me. Try reloading.');
           return false;
         }
@@ -150,18 +195,21 @@ const locale = 'en';
           const res = await fetch('/api/mgmt/guests', { credentials: 'same-origin' });
           if (res.status === 401) { showError('Session expired. Redirecting to login…'); loginRedirect(); return; }
           if (res.status === 403) { showError('Your account is signed in but is not authorized. Only the configured admin GitHub user can use this page.'); return; }
-          if (!res.ok) { showError(`Couldn't load guests (HTTP ${res.status}).`); return; }
+          if (!res.ok) { showError(`Couldn't load invites (HTTP ${res.status}).`); return; }
           const data = await res.json();
           LAST_DATA = data;
           render(data);
         } catch (e: any) {
-          showError(`Couldn't load guests: ${e && e.message}`);
+          showError(`Couldn't load invites: ${e && e.message}`);
         }
       }
 
+      function escapeHtml(s: any): string {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c] as string));
+      }
+
       function render(data: any) {
-        if (!remindersChk) return;
-        remindersChk.checked = !!(data.settings && data.settings.remindersEnabled);
+        if (remindersChk) remindersChk.checked = !!(data.settings && data.settings.remindersEnabled);
         if (remindersStopEl && data.settings && data.settings.remindersStopOnUtc) {
           const stop = new Date(data.settings.remindersStopOnUtc);
           remindersStopEl.textContent = `Hard stop: ${isFinite(stop.getTime()) ? stop.toLocaleDateString() : data.settings.remindersStopOnUtc}`;
@@ -169,82 +217,88 @@ const locale = 'en';
         if (overallEl && data.overall) {
           const o = data.overall;
           overallEl.innerHTML = `
-            <div><strong>${o.partyCount}</strong> parties</div>
-            <div><strong>${o.fullyRespondedParties}</strong> fully responded</div>
-            <div><strong>${o.confirmedAttending}</strong> attending / <strong>${o.confirmedNotAttending}</strong> not / <strong>${o.totalGuests}</strong> total</div>
-            <div><strong>${o.optedOutCount}</strong> opted out · <strong>${o.hardFailedCount}</strong> SMS hard-failed</div>
+            <div><strong>${o.inviteCount}</strong> invitations</div>
+            <div><strong>${o.respondedCount}</strong> responded · <strong>${o.pendingCount}</strong> pending</div>
+            <div><strong>${o.totalYes}</strong> yes / <strong>${o.totalNo}</strong> no / <strong>${o.totalPending}</strong> ?</div>
+            <div><strong>${o.totalAdults}</strong> adults · <strong>${o.totalKids}</strong> kids</div>
+            <div><strong>${o.withPhone}</strong> with phone · <strong>${o.optedOutCount}</strong> opted out · <strong>${o.hardFailedCount}</strong> hard-fail</div>
           `;
         }
-        if (tbody) {
-          if (!data.rows || data.rows.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="admin-muted">No parties yet. Run the seed script or import a guest list.</td></tr>';
-          } else {
-            tbody.innerHTML = data.rows.map((row: any) => renderRow(row)).join('');
-            tbody.querySelectorAll('button[data-action]').forEach((btn) => {
-              btn.addEventListener('click', onActionClick);
-            });
-            tbody.querySelectorAll('tr[data-party-id]').forEach((tr) => {
-              tr.addEventListener('click', (ev) => {
-                if ((ev.target as HTMLElement).closest('button')) return;
-                renderDrilldown((tr as HTMLTableRowElement).dataset.partyId || '');
-              });
-            });
-          }
+        if (!tbody) return;
+        if (!data.rows || data.rows.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="admin-muted">No invitations yet. Create one with the button above, or run the seed script.</td></tr>';
+          if (drilldownEl) drilldownEl.innerHTML = '';
+          return;
         }
-      }
-
-      function escapeHtml(s: string): string {
-        return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c] as string));
+        tbody.innerHTML = data.rows.map(renderRow).join('');
+        tbody.querySelectorAll('button[data-action]').forEach((btn) => {
+          btn.addEventListener('click', onActionClick);
+        });
+        tbody.querySelectorAll('tr[data-invite-id]').forEach((tr) => {
+          tr.addEventListener('click', (ev) => {
+            if ((ev.target as HTMLElement).closest('button')) return;
+            renderDrilldown((tr as HTMLTableRowElement).dataset.inviteId || '');
+          });
+        });
       }
 
       function renderRow(row: any): string {
-        const p = row.party;
-        const stats = row.stats;
-        const phoneCell = p.phone ? escapeHtml(p.phone) : '<span class="admin-muted">—</span>';
-        const optBadge = p.optedOutOfSms ? ' <span class="admin-badge admin-badge--warn">opted out</span>' : '';
-        const hardBadge = p.smsHardFailedAt ? ' <span class="admin-badge admin-badge--warn">hard-fail</span>' : '';
-        const lastReminder = p.lastReminderSentAt
-          ? `${escapeHtml(new Date(p.lastReminderSentAt).toLocaleDateString())} (#${p.reminderCount || 0})`
+        const inv = row.invite;
+        const s = row.summary;
+        const phoneCell = inv.phone ? escapeHtml(inv.phone) : '<span class="admin-muted">—</span>';
+        const optBadge = inv.optedOutOfSms ? ' <span class="admin-badge admin-badge--warn">opted out</span>' : '';
+        const hardBadge = inv.smsHardFailedAt ? ' <span class="admin-badge admin-badge--warn">hard-fail</span>' : '';
+        const respondedBadge = inv.responded ? '<span class="admin-badge admin-badge--ok">yes</span>' : '<span class="admin-muted">—</span>';
+        const lastReminder = inv.lastReminderSentAt
+          ? `${escapeHtml(new Date(inv.lastReminderSentAt).toLocaleDateString())} (#${inv.reminderCount || 0})`
           : '<span class="admin-muted">—</span>';
-        const sendBtn = p.phoneNorm
-          ? `<button class="btn btn--ghost btn--small" data-action="send-reminder" data-party-id="${escapeHtml(p.partyId)}">Send reminder</button>`
+        const headcountBits: string[] = [];
+        if (s.yes) headcountBits.push(`<strong>${s.yes}</strong> yes`);
+        if (s.no) headcountBits.push(`${s.no} no`);
+        if (s.pending) headcountBits.push(`<span class="admin-muted">${s.pending} ?</span>`);
+        if (s.kids) headcountBits.push(`<span class="admin-muted">(${s.kids} kid${s.kids === 1 ? '' : 's'})</span>`);
+        const headcount = headcountBits.length ? headcountBits.join(' · ') : '<span class="admin-muted">—</span>';
+        const idLabel = `${inv.primaryFirstName} ${inv.primaryLastName}`.trim() || inv.inviteId;
+        const totalOnInvite = (s.yes || 0) + (s.no || 0) + (s.pending || 0);
+        const totalCard = totalOnInvite > 1 ? ` <span class="admin-muted">(${totalOnInvite} on this invite)</span>` : '';
+        const sendBtn = inv.phoneNorm
+          ? `<button class="btn btn--ghost btn--small" data-action="send-reminder" data-invite-id="${escapeHtml(inv.inviteId)}">Send reminder</button>`
           : '';
-        const optOutBtn = p.optedOutOfSms
-          ? `<button class="btn btn--ghost btn--small" data-action="clear-optout" data-party-id="${escapeHtml(p.partyId)}">Clear opt-out</button>`
-          : '';
-        const hardClearBtn = p.smsHardFailedAt
-          ? `<button class="btn btn--ghost btn--small" data-action="clear-hardfail" data-party-id="${escapeHtml(p.partyId)}">Clear hard-fail</button>`
-          : '';
+        const editBtn = `<button class="btn btn--ghost btn--small" data-action="edit" data-invite-id="${escapeHtml(inv.inviteId)}">Edit</button>`;
+        const deleteBtn = `<button class="btn btn--ghost btn--small admin-btn-danger" data-action="delete" data-invite-id="${escapeHtml(inv.inviteId)}">Delete</button>`;
         return `
-          <tr data-party-id="${escapeHtml(p.partyId)}" class="${stats.fullyResponded ? 'is-responded' : ''}">
-            <td>${escapeHtml(p.displayName || p.partyId)}${optBadge}${hardBadge}</td>
-            <td>${stats.memberCount}</td>
-            <td>${stats.responseCount}/${stats.memberCount}</td>
-            <td>${stats.attendingCount}</td>
-            <td>${phoneCell}${p.phone ? ` <span class="admin-muted">${escapeHtml(p.locale)}</span>` : ''}</td>
+          <tr data-invite-id="${escapeHtml(inv.inviteId)}" class="${inv.responded ? 'is-responded' : ''}">
+            <td>${escapeHtml(idLabel)}${totalCard}${optBadge}${hardBadge}</td>
+            <td>${respondedBadge}</td>
+            <td>${headcount}</td>
+            <td>${phoneCell}${inv.phone ? ` <span class="admin-muted">${escapeHtml(inv.locale)}</span>` : ''}</td>
             <td>${lastReminder}</td>
-            <td>${sendBtn} ${optOutBtn} ${hardClearBtn}</td>
+            <td>${sendBtn} ${editBtn} ${deleteBtn}</td>
           </tr>
         `;
       }
 
-      function renderDrilldown(partyId: string) {
+      function renderDrilldown(inviteId: string) {
         if (!LAST_DATA || !drilldownEl) return;
-        const row = LAST_DATA.rows.find((r: any) => r.party.partyId === partyId);
+        const row = LAST_DATA.rows.find((r: any) => r.invite.inviteId === inviteId);
         if (!row) return;
-        const memberList = row.members.map((m: any) => `
+        const inv = row.invite;
+        const payload = inv.payload || { primary: {}, additionalGuests: [] };
+        const renderAttendee = (a: any, label: string) => `
           <li>
-            <strong>${escapeHtml(m.firstName)} ${escapeHtml(m.lastName)}</strong>
-            <span class="admin-muted">[${escapeHtml(m.role)}${m.isKid ? ', child' : ''}]</span>
-            — attending: <strong>${m.attending === true ? 'YES' : m.attending === false ? 'NO' : '—'}</strong>
-            ${m.attending === true && m.mealChoice ? ` · meal: ${escapeHtml(m.mealChoice)}` : ''}
-            ${m.dietary ? ` · dietary: ${escapeHtml(m.dietary)}` : ''}
-            ${m.songRequest ? ` · song: ${escapeHtml(m.songRequest)}` : ''}
-            ${m.plusOneName ? ` · plus-one: ${escapeHtml(m.plusOneName)}` : ''}
-            ${m.notes ? ` · notes: ${escapeHtml(m.notes)}` : ''}
-            ${m.submittedAt ? `<br><span class="admin-muted">submitted ${escapeHtml(new Date(m.submittedAt).toLocaleString())} via ${escapeHtml(m.submittedByMethod || 'web')}</span>` : ''}
+            <strong>${escapeHtml(label)}</strong>
+            — attending: <strong>${a.attending === true ? 'YES' : a.attending === false ? 'NO' : '—'}</strong>
+            ${a.attending === true && a.mealChoice ? ` · meal: ${escapeHtml(a.mealChoice)}` : ''}
+            ${a.dietary ? ` · dietary: ${escapeHtml(a.dietary)}` : ''}
+            ${a.songRequest ? ` · song: ${escapeHtml(a.songRequest)}` : ''}
+            ${a.notes ? ` · notes: ${escapeHtml(a.notes)}` : ''}
           </li>
-        `).join('');
+        `;
+        const primaryLabel = `${inv.primaryFirstName} ${inv.primaryLastName}`.trim();
+        const primaryItem = renderAttendee(payload.primary || {}, primaryLabel + ' (primary)');
+        const guestItems = (payload.additionalGuests || []).map((g: any) =>
+          renderAttendee(g, `${g.name || '(no name)'}${g.isKid ? ' [child]' : ''}`)
+        ).join('');
         const smsList = (row.recentSms || []).map((s: any) => `
           <li>
             <span class="admin-muted">${escapeHtml(new Date(s.sentAt).toLocaleString())}</span>
@@ -252,65 +306,223 @@ const locale = 'en';
             ${s.bodyLen ? ` · ${s.bodyLen} chars` : ''}
           </li>
         `).join('') || '<li class="admin-muted">No SMS history.</li>';
+
+        const metaBits: string[] = [];
+        metaBits.push(`<code>${escapeHtml(inv.inviteId)}</code>`);
+        if (inv.respondedAt) metaBits.push(`responded ${escapeHtml(new Date(inv.respondedAt).toLocaleString())}`);
+        if (inv.respondedLate) metaBits.push('<span class="admin-badge admin-badge--warn">late</span>');
+        if (inv.adminNotes) metaBits.push(`<em>note:</em> ${escapeHtml(inv.adminNotes)}`);
+
         drilldownEl.innerHTML = `
-          <h3>${escapeHtml(row.party.displayName || row.party.partyId)}</h3>
-          <ul class="admin-list">${memberList}</ul>
+          <h3>${escapeHtml(primaryLabel)}</h3>
+          <p class="admin-muted">${metaBits.join(' · ')}</p>
+          <ul class="admin-list">${primaryItem}${guestItems}</ul>
           <h4>Recent SMS</h4>
           <ul class="admin-list admin-list--small">${smsList}</ul>
         `;
       }
 
+      // ---- Modal ----
+      function openModal(mode: 'create' | 'edit', invite?: any) {
+        if (!modalEl || !modalForm || !modalTitleEl) return;
+        clearModalError();
+        modalForm.reset();
+        modalForm.dataset.mode = mode;
+        modalForm.dataset.inviteId = invite ? invite.inviteId : '';
+        modalTitleEl.textContent = mode === 'create' ? 'New invitation' : `Edit invitation`;
+        const get = (n: string) => modalForm.querySelector(`[name="${n}"]`) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+        if (invite) {
+          (get('primaryFirstName') as HTMLInputElement).value = invite.primaryFirstName || '';
+          (get('primaryLastName') as HTMLInputElement).value = invite.primaryLastName || '';
+          (get('phone') as HTMLInputElement).value = invite.phone || '';
+          (get('locale') as HTMLSelectElement).value = invite.locale === 'es' ? 'es' : 'en';
+          (get('adminNotes') as HTMLTextAreaElement).value = invite.adminNotes || '';
+          (get('optedOutOfSms') as HTMLInputElement).checked = !!invite.optedOutOfSms;
+          (get('clearHardFail') as HTMLInputElement).checked = false;
+          const payloadField = get('payload') as HTMLTextAreaElement;
+          payloadField.value = JSON.stringify(invite.payload || {}, null, 2);
+          // Stash so the submit handler can detect a real change vs no-op.
+          payloadField.dataset.original = payloadField.value;
+          if (payloadRow) payloadRow.hidden = false;
+        } else {
+          (get('locale') as HTMLSelectElement).value = 'en';
+          if (payloadRow) payloadRow.hidden = true;
+        }
+        modalEl.hidden = false;
+        document.body.style.overflow = 'hidden';
+        (get('primaryFirstName') as HTMLInputElement).focus();
+      }
+      function closeModal() {
+        if (!modalEl) return;
+        modalEl.hidden = true;
+        document.body.style.overflow = '';
+      }
+      function showModalError(msg: string) {
+        if (!modalErrorEl) return;
+        modalErrorEl.textContent = msg;
+        modalErrorEl.hidden = false;
+      }
+      function clearModalError() {
+        if (!modalErrorEl) return;
+        modalErrorEl.textContent = '';
+        modalErrorEl.hidden = true;
+      }
+
+      modalEl?.querySelectorAll('[data-modal-close]').forEach((el) => {
+        el.addEventListener('click', closeModal);
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modalEl && !modalEl.hidden) closeModal();
+      });
+
+      modalForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearModalError();
+        if (!modalSaveBtn) return;
+        const mode = modalForm.dataset.mode || 'edit';
+        const inviteId = modalForm.dataset.inviteId || '';
+        const get = (n: string) => modalForm.querySelector(`[name="${n}"]`) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+        const primaryFirstName = (get('primaryFirstName') as HTMLInputElement).value.trim();
+        const primaryLastName = (get('primaryLastName') as HTMLInputElement).value.trim();
+        const phone = (get('phone') as HTMLInputElement).value.trim();
+        const locale = (get('locale') as HTMLSelectElement).value;
+        const adminNotes = (get('adminNotes') as HTMLTextAreaElement).value;
+        const optedOutOfSms = (get('optedOutOfSms') as HTMLInputElement).checked;
+        const clearHardFail = (get('clearHardFail') as HTMLInputElement).checked;
+        if (!primaryFirstName || !primaryLastName) {
+          showModalError('Both first and last name are required.');
+          return;
+        }
+        modalSaveBtn.disabled = true;
+        const saveLabel = modalSaveBtn.textContent;
+        modalSaveBtn.textContent = 'Saving…';
+        try {
+          if (mode === 'create') {
+            const res = await fetch('/api/mgmt/create-invite', {
+              method: 'POST', credentials: 'same-origin',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ primaryFirstName, primaryLastName, phone, locale, adminNotes })
+            });
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}));
+              showModalError(`Create failed (${res.status}): ${data.error || ''}`);
+              return;
+            }
+            closeModal();
+            setStatus('Invitation created.', 'ok');
+          } else {
+            const patch: any = { primaryFirstName, primaryLastName, phone, locale, adminNotes, optedOutOfSms };
+            if (clearHardFail) patch.smsHardFailedAt = '';
+            // Only include payload in the patch if it actually changed vs.
+            // the in-form snapshot. The server treats payload edits as a
+            // "may recompute responded" signal — sending the same payload
+            // on a no-op nudge could flip an already-responded invite.
+            const payloadField = get('payload') as HTMLTextAreaElement;
+            const raw = (payloadField.value || '').trim();
+            const original = (payloadField.dataset.original || '').trim();
+            if (raw && raw !== original) {
+              try {
+                patch.payload = JSON.parse(raw);
+              } catch {
+                showModalError('Payload JSON is not valid. Fix or clear the field to skip the payload update.');
+                return;
+              }
+            }
+            // Warn before changing the primary name — old session cookies
+            // and magic links can no longer be invalidated, and would still
+            // unlock this invitation under the new name. Recommended
+            // workflow: delete + create instead of rename.
+            const editingInvite = LAST_DATA?.rows.find((r: any) => r.invite.inviteId === inviteId)?.invite;
+            if (editingInvite && (editingInvite.primaryFirstName !== primaryFirstName || editingInvite.primaryLastName !== primaryLastName)) {
+              if (!confirm(`You're renaming the primary invitee.\n\nFROM: ${editingInvite.primaryFirstName} ${editingInvite.primaryLastName}\nTO:   ${primaryFirstName} ${primaryLastName}\n\nAny existing session cookie or magic link for this invitation will continue to work and would let the previous primary open the new person's RSVP. If this is a re-assignment to a different real person, click Cancel and use Delete + New invitation instead.\n\nContinue with the rename?`)) {
+                return;
+              }
+            }
+            const res = await fetch('/api/mgmt/update-invite', {
+              method: 'POST', credentials: 'same-origin',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ inviteId, patch })
+            });
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}));
+              showModalError(`Update failed (${res.status}): ${data.error || ''}${data.detail ? ' · ' + data.detail : ''}`);
+              return;
+            }
+            closeModal();
+            setStatus('Invitation updated.', 'ok');
+          }
+          await loadGuests();
+        } catch (err: any) {
+          showModalError(`Request failed: ${err && err.message}`);
+        } finally {
+          modalSaveBtn.disabled = false;
+          if (saveLabel) modalSaveBtn.textContent = saveLabel;
+        }
+      });
+
       async function onActionClick(ev: Event) {
         const btn = ev.currentTarget as HTMLButtonElement;
         const action = btn.dataset.action || '';
-        const partyId = btn.dataset.partyId || '';
-        const original = btn.textContent;
-        btn.disabled = true; btn.textContent = '…';
-        try {
-          if (action === 'send-reminder') {
-            if (!confirm('Send an SMS reminder to this party now (bypasses 30-day cadence)?')) return;
+        const inviteId = btn.dataset.inviteId || '';
+        const inviteRow = LAST_DATA?.rows.find((r: any) => r.invite.inviteId === inviteId);
+        const invite = inviteRow ? inviteRow.invite : null;
+        if (action === 'edit') {
+          if (invite) openModal('edit', invite);
+          return;
+        }
+        if (action === 'delete') {
+          const name = invite ? `${invite.primaryFirstName} ${invite.primaryLastName}`.trim() : inviteId;
+          if (!confirm(`Permanently delete the invitation for "${name}"? This also deletes the SMS log for this invite.`)) return;
+          const original = btn.textContent;
+          btn.disabled = true; btn.textContent = '…';
+          try {
+            const res = await fetch('/api/mgmt/delete-invite', {
+              method: 'POST', credentials: 'same-origin',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ inviteId })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) { setStatus(`Delete failed (${res.status}): ${data.error || ''}`, 'warn'); }
+            else { setStatus(`Deleted (${data.smsRowsDeleted || 0} SMS rows removed).`, 'ok'); }
+          } catch (e: any) {
+            setStatus(`Delete failed: ${e && e.message}`, 'warn');
+          } finally {
+            btn.disabled = false; btn.textContent = original;
+            await loadGuests();
+          }
+          return;
+        }
+        if (action === 'send-reminder') {
+          if (!confirm('Send an SMS reminder to this invite now (bypasses 30-day cadence)?')) return;
+          const original = btn.textContent;
+          btn.disabled = true; btn.textContent = '…';
+          try {
             const res = await fetch('/api/mgmt/send-reminder', {
               method: 'POST', credentials: 'same-origin',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ partyId })
+              body: JSON.stringify({ inviteId, force: true })
             });
-            const data = await res.json();
-            if (res.ok && data.result && data.result.sent) {
-              setStatus(`Sent (${data.result.segmentCount} segments, ${data.result.bodyLen} chars).`, 'ok');
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.sent) {
+              setStatus(`Sent (${data.segmentCount || '?'} segments, ${data.bodyLen || '?'} chars).`, 'ok');
             } else {
-              const reason = (data && data.result && (data.result.skipped || data.result.errorCode)) || `HTTP ${res.status}`;
+              const reason = (data && (data.reason || data.skipped || data.errorCode)) || `HTTP ${res.status}`;
               setStatus(`Skipped: ${reason}`, 'warn');
             }
-          } else if (action === 'clear-optout') {
-            const res = await fetch('/api/mgmt/update-party', {
-              method: 'POST', credentials: 'same-origin',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ partyId, patch: { optedOutOfSms: false } })
-            });
-            if (!res.ok) { setStatus(`Update failed (${res.status})`, 'warn'); }
-            else { setStatus('Opt-out cleared.', 'ok'); }
-          } else if (action === 'clear-hardfail') {
-            const res = await fetch('/api/mgmt/update-party', {
-              method: 'POST', credentials: 'same-origin',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ partyId, patch: { smsHardFailedAt: '' } })
-            });
-            if (!res.ok) { setStatus(`Update failed (${res.status})`, 'warn'); }
-            else { setStatus('Hard-fail flag cleared.', 'ok'); }
+          } catch (e: any) {
+            setStatus(`Send failed: ${e && e.message}`, 'warn');
+          } finally {
+            btn.disabled = false; btn.textContent = original;
+            await loadGuests();
           }
-        } catch (e: any) {
-          setStatus(`Action failed: ${e && e.message}`, 'warn');
-        } finally {
-          btn.disabled = false; btn.textContent = original;
-          loadGuests();
         }
       }
 
-      const refreshBtn = document.getElementById('btn-refresh');
-      if (refreshBtn) refreshBtn.addEventListener('click', loadGuests);
+      document.getElementById('btn-refresh')?.addEventListener('click', loadGuests);
+      document.getElementById('btn-create-invite')?.addEventListener('click', () => openModal('create'));
 
       const sendTestBtn = document.getElementById('btn-send-test');
-      if (sendTestBtn) sendTestBtn.addEventListener('click', async () => {
+      sendTestBtn?.addEventListener('click', async () => {
         const phone = window.prompt('Phone number to text (E.164 or 10 digits US):');
         if (!phone) return;
         const locale = window.prompt('Locale? "en" or "es" (default en):', 'en') || 'en';
@@ -358,7 +570,7 @@ const locale = 'en';
 
       (async () => {
         const ok = await ensureAuthed();
-        if (!ok) return; // ensureAuthed redirected to /.auth/login or showed an error
+        if (!ok) return;
         await loadGuests();
       })();
     })();
@@ -378,41 +590,74 @@ const locale = 'en';
       margin-bottom: var(--space-3);
     }
     .admin-card h2 { margin-top: 0; color: var(--color-gold-deep, #8a6a2c); }
-    .admin-card-header { display:flex; justify-content:space-between; align-items:center; }
+    .admin-card-header { display:flex; justify-content:space-between; align-items:center; gap: 0.75rem; flex-wrap: wrap; }
+    .admin-card-actions { display:flex; gap: 0.5rem; }
     .admin-row { display:flex; align-items:center; gap: 0.75rem; margin: 0.4rem 0; flex-wrap: wrap; }
     .admin-row--actions { margin-top: 0.75rem; }
     .admin-stats { display:flex; gap: var(--space-3); flex-wrap: wrap; }
     .admin-stats > div { padding: 0.4rem 0.6rem; background: rgba(201,169,97,0.08); border-radius: var(--radius-sm, 4px); }
     .admin-table-wrap { overflow-x:auto; }
     .admin-table { width:100%; border-collapse: collapse; font-size: 0.95rem; }
-    .admin-table th, .admin-table td { padding: 0.5rem 0.6rem; text-align:left; border-bottom: 1px solid var(--color-rule, #eee); }
+    .admin-table th, .admin-table td { padding: 0.5rem 0.6rem; text-align:left; border-bottom: 1px solid var(--color-rule, #eee); vertical-align: top; }
     .admin-table th { background: rgba(201,169,97,0.08); }
     .admin-table tr { cursor: pointer; }
     .admin-table tr.is-responded { background: rgba(80, 160, 80, 0.04); }
     .admin-table button { margin-right: 0.25rem; margin-bottom: 0.25rem; }
+    .admin-btn-danger { color: #8a2c2c; border-color: rgba(200, 60, 60, 0.4); }
     .admin-muted { color: var(--color-text-muted, #888); font-size: 0.85rem; }
     .admin-loading { text-align:center; padding: var(--space-3); color: var(--color-text-muted, #888); }
     .admin-badge { display:inline-block; padding: 0.1rem 0.4rem; border-radius: 999px; font-size: 0.75rem; }
     .admin-badge--warn { background: rgba(200,60,60,0.12); color: #8a2c2c; }
+    .admin-badge--ok { background: rgba(80, 160, 80, 0.12); color: #2a6a2c; }
     .admin-error {
-      margin-bottom: var(--space-3);
-      padding: 0.6rem 0.8rem;
+      margin: var(--space-2) 0;
+      padding: 0.5rem 0.75rem;
       background: rgba(200,60,60,0.08);
       border-left: 4px solid #c83c3c;
+      border-radius: var(--radius-sm, 4px);
       color: #8a2c2c;
-      border-radius: 4px;
     }
-    .admin-status {
-      margin-top: var(--space-2);
-      min-height: 1.25rem;
-      font-size: 0.95rem;
-    }
-    .admin-status[data-tone="ok"] { color: #2c8a3c; }
+    .admin-status { font-size: 0.9rem; min-height: 1.2em; margin-top: 0.5rem; }
+    .admin-status[data-tone="ok"] { color: #2a6a2c; }
     .admin-status[data-tone="warn"] { color: #8a2c2c; }
-    .admin-toggle { display:inline-flex; gap: 0.5rem; align-items: center; cursor: pointer; }
-    .admin-list { list-style: none; padding-left: 0; }
-    .admin-list > li { padding: 0.4rem 0; border-bottom: 1px solid var(--color-rule, #f0f0f0); }
-    .admin-list--small > li { padding: 0.2rem 0; font-size: 0.9rem; }
-    .rsvp-link { color: var(--color-gold-deep, #8a6a2c); text-decoration: underline; }
+    .admin-list { padding-left: 1.25rem; }
+    .admin-list li { margin-bottom: 0.4rem; }
+    .admin-list--small li { margin-bottom: 0.2rem; font-size: 0.9rem; }
+    code { background: rgba(0,0,0,0.04); padding: 1px 4px; border-radius: 3px; }
+
+    /* Modal */
+    .admin-modal { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: var(--space-3); }
+    .admin-modal[hidden] { display: none !important; }
+    .admin-modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.5); }
+    .admin-modal-panel {
+      position: relative;
+      background: #fff;
+      border-radius: var(--radius-lg, 12px);
+      max-width: 40rem;
+      width: 100%;
+      max-height: calc(100vh - 4rem);
+      overflow: auto;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+    .admin-modal-header { display:flex; justify-content:space-between; align-items:center; padding: var(--space-3); border-bottom: 1px solid var(--color-rule, #eee); }
+    .admin-modal-header h3 { margin: 0; color: var(--color-gold-deep, #8a6a2c); }
+    .admin-modal-close { background:none; border:0; font-size: 1.6rem; line-height: 1; cursor: pointer; padding: 0 0.5rem; color: #888; }
+    .admin-modal-close:hover { color: #000; }
+    .admin-modal-body { padding: var(--space-3); display:flex; flex-direction: column; gap: var(--space-2); }
+    .admin-modal-actions { display:flex; justify-content: flex-end; gap: 0.5rem; margin-top: var(--space-2); }
+    .admin-form-row { display: block; }
+    .admin-form-row--two { display:grid; grid-template-columns: 1fr; gap: var(--space-2); }
+    @media (min-width: 32rem) { .admin-form-row--two { grid-template-columns: 1fr 1fr; } }
+    .admin-form-row--checks { display:flex; gap: 1rem; flex-wrap: wrap; border: 0; padding: 0; margin: 0; }
+    .admin-inline { display:inline-flex; align-items: center; gap: 0.4rem; font-size: 0.95rem; }
+    .admin-label { display:block; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.2rem; }
+    .admin-modal-body input[type="text"], .admin-modal-body select, .admin-modal-body textarea {
+      width: 100%; box-sizing: border-box;
+      padding: 0.45rem 0.6rem;
+      border: 1px solid var(--color-rule, #d6cdb6);
+      border-radius: var(--radius-sm, 4px);
+      font: inherit;
+    }
+    .admin-payload-json { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.85rem; white-space: pre; min-height: 14rem; }
   </style>
 </Base>

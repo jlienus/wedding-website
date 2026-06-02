@@ -18,21 +18,24 @@ const mealOptions = [
   { value: 'kids', labelKey: 'rsvp.mealKids' }
 ];
 
-// String bundle passed to client script.
 const stringKeys = [
   'rsvp.loading','rsvp.lookupTitle','rsvp.lookupHint','rsvp.firstNameLabel','rsvp.lastNameLabel',
   'rsvp.findMe','rsvp.lookingUp','rsvp.cantFindName','rsvp.cantFindNameHelp',
   'rsvp.lookupNotFound','rsvp.lookupAmbiguous','rsvp.lookupRateLimited','rsvp.lookupNameTooShort','rsvp.lookupError',
   'rsvp.formIntro','rsvp.formHelloPrefix','rsvp.notYou','rsvp.save','rsvp.saving',
-  'rsvp.memberKidLabel','rsvp.memberPlusOneLabel',
+  'rsvp.primaryYourRsvp','rsvp.additionalGuestsTitle','rsvp.additionalGuestsHint',
+  'rsvp.addGuest','rsvp.removeGuest','rsvp.maxGuestsReached',
+  'rsvp.guestNameLabel','rsvp.guestNamePlaceholder','rsvp.isKidLabel',
   'rsvp.attendingQuestion','rsvp.attendingYes','rsvp.attendingNo',
   'rsvp.mealLabel','rsvp.mealHint','rsvp.mealNone',
   'rsvp.mealChicken','rsvp.mealBeef','rsvp.mealVegetarian','rsvp.mealVegan','rsvp.mealKids',
   'rsvp.dietaryLabel','rsvp.dietaryPlaceholder','rsvp.songLabel','rsvp.songPlaceholder',
-  'rsvp.notesLabel','rsvp.notesPlaceholder','rsvp.plusOneNameLabel','rsvp.plusOneNamePlaceholder',
+  'rsvp.notesLabel','rsvp.notesPlaceholder',
   'rsvp.submitError','rsvp.submitRateLimited','rsvp.submitClosed','rsvp.lateNotice',
+  'rsvp.attendingAllRequired','rsvp.guestNameRequired',
   'rsvp.thanks','rsvp.thanksAttending','rsvp.thanksNotAttending','rsvp.thanksMixed','rsvp.edit',
-  'rsvp.magicOk','rsvp.magicInvalid','rsvp.magicError','rsvp.magicMissing'
+  'rsvp.magicOk','rsvp.magicInvalid','rsvp.magicError','rsvp.magicMissing',
+  'rsvp.privacySummary','rsvp.privacyBody','rsvp.heading'
 ];
 const strings: Record<string, string> = {};
 for (const k of stringKeys) {
@@ -44,6 +47,7 @@ const initData = {
   deadlineDisplay,
   guestDeadlineISO,
   permanentLockISO,
+  maxAdditionalGuests: 20,
   mealOptions: mealOptions.map(o => ({ value: o.value, label: t(locale, o.labelKey) })),
   strings
 };
@@ -87,7 +91,24 @@ const initData = {
       <p class="rsvp-muted">{t(locale, 'rsvp.formIntro')}</p>
       <button type="button" id="rsvp-not-you" class="rsvp-link">{t(locale, 'rsvp.notYou')}</button>
     </div>
-    <div id="rsvp-members" class="rsvp-members"></div>
+
+    <h4 class="rsvp-section-heading" data-bind="primaryYourRsvp"></h4>
+    <div id="rsvp-primary-card"></div>
+
+    <div class="rsvp-additional">
+      <div class="rsvp-additional-header">
+        <h4 class="rsvp-section-heading">{t(locale, 'rsvp.additionalGuestsTitle')}</h4>
+        <p class="rsvp-muted rsvp-additional-hint">{t(locale, 'rsvp.additionalGuestsHint')}</p>
+      </div>
+      <div id="rsvp-guests" class="rsvp-guests"></div>
+      <div class="rsvp-add-guest-row">
+        <button type="button" id="rsvp-add-guest" class="btn btn--ghost btn--small">
+          + <span data-bind="addGuest"></span>
+        </button>
+        <span id="rsvp-add-guest-hint" class="rsvp-muted rsvp-add-guest-hint" hidden></span>
+      </div>
+    </div>
+
     <details class="rsvp-privacy">
       <summary>{t(locale, 'rsvp.privacySummary')}</summary>
       <p>{t(locale, 'rsvp.privacyBody')}</p>
@@ -108,8 +129,24 @@ const initData = {
     </div>
   </div>
 
-  <template id="rsvp-member-row">
+  <!--
+    Template for the attendee card (used for both primary and additional guests).
+    Field visibility is toggled at render time:
+      - Primary cards hide the .guest-name-row and .guest-remove-row.
+      - Additional-guest cards show both, and inject a stable guestId in dataset.
+  -->
+  <template id="rsvp-attendee-card">
     <fieldset class="rsvp-member">
+      <div class="guest-name-row" hidden>
+        <label class="rsvp-field rsvp-field--name">
+          <span class="rsvp-label" data-bind="guestNameLabel"></span>
+          <input type="text" name="guestName" maxlength="100" data-placeholder="guestName" required />
+        </label>
+        <label class="rsvp-kid-toggle">
+          <input type="checkbox" name="isKid" />
+          <span data-bind="isKidLabel"></span>
+        </label>
+      </div>
       <legend class="rsvp-member-name"></legend>
       <div class="rsvp-attending">
         <span class="rsvp-label" data-bind="attendingQuestion"></span>
@@ -126,20 +163,19 @@ const initData = {
         </label>
         <label class="rsvp-field">
           <span class="rsvp-label" data-bind="dietaryLabel"></span>
-          <input type="text" name="dietary" maxlength="200" data-placeholder="dietary" />
-        </label>
-        <label class="rsvp-field rsvp-plusone-field" hidden>
-          <span class="rsvp-label" data-bind="plusOneNameLabel"></span>
-          <input type="text" name="plusOneName" maxlength="100" data-placeholder="plusOneName" />
+          <input type="text" name="dietary" maxlength="500" data-placeholder="dietary" />
         </label>
         <label class="rsvp-field">
           <span class="rsvp-label" data-bind="songLabel"></span>
-          <input type="text" name="songRequest" maxlength="200" data-placeholder="song" />
+          <input type="text" name="songRequest" maxlength="500" data-placeholder="song" />
         </label>
-        <label class="rsvp-field">
+        <label class="rsvp-field rsvp-field--notes" hidden>
           <span class="rsvp-label" data-bind="notesLabel"></span>
-          <textarea name="notes" maxlength="500" rows="2" data-placeholder="notes"></textarea>
+          <textarea name="notes" maxlength="800" rows="2" data-placeholder="notes"></textarea>
         </label>
+      </div>
+      <div class="guest-remove-row" hidden>
+        <button type="button" class="rsvp-link rsvp-remove-guest" data-bind="removeGuest"></button>
       </div>
     </fieldset>
   </template>
@@ -149,13 +185,15 @@ const initData = {
 
 <script>
 (() => {
-  const root = document.querySelector('.rsvp-form-wrap');
+  const root = document.querySelector('.rsvp-form-wrap') as HTMLElement | null;
   if (!root) return;
   const dataNode = root.querySelector('#rsvp-init-data');
   if (!dataNode) return;
   const INIT = JSON.parse(dataNode.textContent || '{}');
-  const S = INIT.strings || {};
-  const MEAL_OPTIONS = INIT.mealOptions || [];
+  const S: Record<string, string> = INIT.strings || {};
+  const MEAL_OPTIONS: Array<{ value: string; label: string }> = INIT.mealOptions || [];
+  const MAX_GUESTS: number = INIT.maxAdditionalGuests || 20;
+  const SCHEMA_VERSION = 1;
 
   const $ = (sel: string): HTMLElement | null => root.querySelector(sel);
   const phases = {
@@ -165,7 +203,7 @@ const initData = {
     confirmation: $('#rsvp-confirmation')
   };
 
-  function show(phase: keyof typeof phases) {
+  function show(phase: 'loading' | 'lookup' | 'form' | 'confirmation') {
     for (const [name, el] of Object.entries(phases)) {
       if (!el) continue;
       el.hidden = name !== phase;
@@ -193,7 +231,7 @@ const initData = {
     const params = new URLSearchParams(location.search);
     const magic = params.get('magic');
     if (!magic) return;
-    const banner = $('#rsvp-magic-banner') as HTMLElement | null;
+    const banner = $('#rsvp-magic-banner');
     if (!banner) return;
     const map: Record<string, { msg: string; tone: string }> = {
       ok:       { msg: S['rsvp.magicOk']      || '', tone: 'ok' },
@@ -206,145 +244,214 @@ const initData = {
     banner.textContent = entry.msg;
     banner.dataset.tone = entry.tone;
     banner.hidden = false;
-    // Strip the query param so refresh doesn't keep showing it
     const url = new URL(location.href);
     url.searchParams.delete('magic');
     history.replaceState({}, '', url.pathname + (url.search || '') + url.hash);
   }
 
-  let CURRENT: { party: any; members: any[]; responses: any[] } | null = null;
+  function randomGuestId(): string {
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      const buf = new Uint8Array(6);
+      crypto.getRandomValues(buf);
+      return 'g_' + Array.from(buf).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    return 'g_' + Math.random().toString(16).slice(2, 14);
+  }
+
+  function emptyPrimary() {
+    return { attending: null, mealChoice: '', dietary: '', songRequest: '', notes: '' };
+  }
+
+  type Invite = {
+    inviteId: string;
+    primaryFirstName: string;
+    primaryLastName: string;
+    locale: string;
+    hasPhone: boolean;
+    payload: any;
+    responded: boolean;
+    respondedAt: string;
+  };
+
+  let INVITE: Invite | null = null;
 
   async function init() {
     showMagicBanner();
     show('loading');
     try {
       const res = await fetch('/api/rsvp/get', { credentials: 'same-origin' });
-      if (!res.ok) {
-        show('lookup');
-        return;
-      }
+      if (!res.ok) { show('lookup'); return; }
       const data = await res.json();
-      if (data && data.authenticated && data.party) {
-        CURRENT = { party: data.party, members: data.members || [], responses: data.responses || [] };
+      if (data && data.authenticated && data.invite) {
+        INVITE = data.invite;
         renderForm();
         return;
       }
-    } catch (_e) { /* fall through to lookup */ }
+    } catch (_e) { /* fall through */ }
     show('lookup');
   }
 
-  function renderForm() {
-    if (!CURRENT) { show('lookup'); return; }
-    const greetingEl = $('#rsvp-greeting');
-    if (greetingEl) {
-      const primary = CURRENT.members.find(m => m.role === 'primary') || CURRENT.members[0];
-      const first = primary ? primary.firstName : '';
-      greetingEl.textContent = first
-        ? `${S['rsvp.formHelloPrefix']} ${first}!`
-        : (CURRENT.party.displayName || S['rsvp.heading'] || '');
-    }
-    const membersBox = $('#rsvp-members');
-    if (!membersBox) return;
-    membersBox.innerHTML = '';
-    const tpl = root.querySelector('#rsvp-member-row') as HTMLTemplateElement | null;
-    if (!tpl) return;
-    const responseByMember = new Map(CURRENT.responses.map(r => [r.memberId, r]));
-    for (const m of CURRENT.members) {
-      const node = tpl.content.cloneNode(true) as DocumentFragment;
-      const fieldset = node.querySelector('fieldset') as HTMLFieldSetElement;
-      fieldset.dataset.memberId = m.memberId;
-      // Scope the radio group name per member so each member's yes/no choice
-      // is independent. Without this, all yes radios share name="attending"
-      // and form a single group across members, so clicking yes on member B
-      // silently clears member A's selection.
-      fieldset.querySelectorAll('input[type="radio"][name="attending"]').forEach((r) => {
-        (r as HTMLInputElement).name = `attending-${m.memberId}`;
-      });
-      const nameEl = fieldset.querySelector('.rsvp-member-name') as HTMLElement;
-      const nameSuffix = m.role === 'plusone' ? ` ${S['rsvp.memberPlusOneLabel']}` :
-                         m.isKid ? ` ${S['rsvp.memberKidLabel']}` : '';
-      nameEl.textContent = `${m.firstName || ''} ${m.lastName || ''}`.trim() + nameSuffix;
-      // Bind static strings
-      fieldset.querySelectorAll('[data-bind]').forEach((el) => {
-        const key = (el as HTMLElement).dataset.bind || '';
-        if (key.startsWith('attending')) {
-          (el as HTMLElement).textContent = S[`rsvp.${key}`] || '';
-        } else if (key === 'mealLabel') {
-          (el as HTMLElement).textContent = S['rsvp.mealLabel'] || '';
-        } else if (key === 'mealHint') {
-          (el as HTMLElement).textContent = S['rsvp.mealHint'] || '';
-        } else if (key === 'mealSelect') {
-          const sel = el as HTMLSelectElement;
-          for (const opt of MEAL_OPTIONS) {
-            const o = document.createElement('option');
-            o.value = opt.value;
-            o.textContent = opt.label;
-            sel.appendChild(o);
-          }
-        } else if (key === 'dietaryLabel') {
-          (el as HTMLElement).textContent = S['rsvp.dietaryLabel'] || '';
-        } else if (key === 'songLabel') {
-          (el as HTMLElement).textContent = S['rsvp.songLabel'] || '';
-        } else if (key === 'notesLabel') {
-          (el as HTMLElement).textContent = S['rsvp.notesLabel'] || '';
-        } else if (key === 'plusOneNameLabel') {
-          (el as HTMLElement).textContent = S['rsvp.plusOneNameLabel'] || '';
+  // Bind static label text (data-bind="X" -> S['rsvp.X']) on a node.
+  function bindStaticLabels(node: ParentNode) {
+    node.querySelectorAll('[data-bind]').forEach((el) => {
+      const key = (el as HTMLElement).dataset.bind || '';
+      if (!key) return;
+      if (key === 'mealSelect') {
+        const sel = el as HTMLSelectElement;
+        sel.innerHTML = '';
+        for (const opt of MEAL_OPTIONS) {
+          const o = document.createElement('option');
+          o.value = opt.value;
+          o.textContent = opt.label;
+          sel.appendChild(o);
         }
-      });
-      // Placeholders
-      fieldset.querySelectorAll('[data-placeholder]').forEach((el) => {
-        const key = (el as HTMLElement).dataset.placeholder || '';
-        const map: Record<string, string> = {
-          dietary: S['rsvp.dietaryPlaceholder'] || '',
-          song: S['rsvp.songPlaceholder'] || '',
-          notes: S['rsvp.notesPlaceholder'] || '',
-          plusOneName: S['rsvp.plusOneNamePlaceholder'] || ''
-        };
-        (el as HTMLInputElement | HTMLTextAreaElement).placeholder = map[key] || '';
-      });
-
-      // Plus-one field visibility — only show on the actual plus-one slot
-      const plusOneField = fieldset.querySelector('.rsvp-plusone-field') as HTMLElement;
-      if (m.role === 'plusone' && CURRENT!.party.plusOneAllowed) {
-        plusOneField.hidden = false;
+      } else {
+        (el as HTMLElement).textContent = S[`rsvp.${key}`] || '';
       }
-
-      // Pre-fill from saved response
-      const r = responseByMember.get(m.memberId);
-      if (r) {
-        if (r.attending === true) {
-          const yes = fieldset.querySelector('input[type="radio"][value="yes"]') as HTMLInputElement;
-          if (yes) yes.checked = true;
-        } else if (r.attending === false) {
-          const no = fieldset.querySelector('input[type="radio"][value="no"]') as HTMLInputElement;
-          if (no) no.checked = true;
-        }
-        const sel = fieldset.querySelector('select[name="mealChoice"]') as HTMLSelectElement;
-        if (sel && r.mealChoice) sel.value = r.mealChoice;
-        const fld = (n: string) => fieldset.querySelector(`[name="${n}"]`) as HTMLInputElement | HTMLTextAreaElement | null;
-        const dietary = fld('dietary'); if (dietary && r.dietary) dietary.value = r.dietary;
-        const song = fld('songRequest'); if (song && r.songRequest) song.value = r.songRequest;
-        const notes = fld('notes'); if (notes && r.notes) notes.value = r.notes;
-        const plus = fld('plusOneName'); if (plus && r.plusOneName) plus.value = r.plusOneName;
-      }
-      // Show/hide attendee details based on attending choice
-      const updateFieldsVisibility = () => {
-        const attendingFields = fieldset.querySelector('.rsvp-attending-fields') as HTMLElement;
-        const yesChecked = (fieldset.querySelector('input[type="radio"][value="yes"]') as HTMLInputElement | null)?.checked;
-        if (attendingFields) attendingFields.hidden = !yesChecked;
+    });
+    node.querySelectorAll('[data-placeholder]').forEach((el) => {
+      const key = (el as HTMLElement).dataset.placeholder || '';
+      const map: Record<string, string> = {
+        dietary: S['rsvp.dietaryPlaceholder'] || '',
+        song: S['rsvp.songPlaceholder'] || '',
+        notes: S['rsvp.notesPlaceholder'] || '',
+        guestName: S['rsvp.guestNamePlaceholder'] || ''
       };
-      fieldset.querySelectorAll('input[type="radio"][name^="attending"]').forEach((inp) => {
-        inp.addEventListener('change', updateFieldsVisibility);
-      });
-      updateFieldsVisibility();
-
-      membersBox.appendChild(node);
-    }
-    show('form');
-    clearError($('#rsvp-submit-error'));
+      (el as HTMLInputElement | HTMLTextAreaElement).placeholder = map[key] || '';
+    });
   }
 
-  // --- Lookup form ---
+  // Build one attendee card (primary or additional guest). `kind` controls
+  // whether the name input + remove button + isKid toggle are shown.
+  function buildAttendeeCard(
+    kind: 'primary' | 'guest',
+    data: any,
+    opts: { guestId?: string; primaryName?: string } = {}
+  ): HTMLFieldSetElement {
+    const tpl = root!.querySelector('#rsvp-attendee-card') as HTMLTemplateElement;
+    const node = tpl.content.cloneNode(true) as DocumentFragment;
+    const fieldset = node.querySelector('fieldset') as HTMLFieldSetElement;
+    fieldset.classList.add(`rsvp-member--${kind}`);
+
+    bindStaticLabels(fieldset);
+
+    // Scope radio names so each attendee's yes/no is independent.
+    const scope = kind === 'primary' ? 'primary' : (opts.guestId || randomGuestId());
+    fieldset.dataset.scope = scope;
+    if (kind === 'guest') fieldset.dataset.guestId = scope;
+    fieldset.querySelectorAll('input[type="radio"][name="attending"]').forEach((r) => {
+      (r as HTMLInputElement).name = `attending-${scope}`;
+    });
+    // Notes field is only shown on the primary card.
+    const notesField = fieldset.querySelector('.rsvp-field--notes') as HTMLElement | null;
+    if (notesField && kind === 'primary') notesField.hidden = false;
+
+    if (kind === 'primary') {
+      // Hide name row + remove row, show display name in the legend.
+      const nameEl = fieldset.querySelector('.rsvp-member-name') as HTMLElement;
+      nameEl.textContent = opts.primaryName || '';
+    } else {
+      // Additional guest: show name input + remove button, hide legend.
+      (fieldset.querySelector('.guest-name-row') as HTMLElement).hidden = false;
+      (fieldset.querySelector('.guest-remove-row') as HTMLElement).hidden = false;
+      (fieldset.querySelector('.rsvp-member-name') as HTMLElement).hidden = true;
+      const nameInput = fieldset.querySelector('input[name="guestName"]') as HTMLInputElement;
+      if (data && typeof data.name === 'string') nameInput.value = data.name;
+      const isKidInput = fieldset.querySelector('input[name="isKid"]') as HTMLInputElement;
+      if (data && data.isKid) isKidInput.checked = true;
+      const removeBtn = fieldset.querySelector('.rsvp-remove-guest') as HTMLButtonElement;
+      removeBtn.addEventListener('click', () => {
+        fieldset.remove();
+        updateAddGuestButton();
+      });
+    }
+
+    // Pre-fill attendee fields from saved data.
+    if (data) {
+      if (data.attending === true) {
+        const yes = fieldset.querySelector('input[type="radio"][value="yes"]') as HTMLInputElement;
+        if (yes) yes.checked = true;
+      } else if (data.attending === false) {
+        const no = fieldset.querySelector('input[type="radio"][value="no"]') as HTMLInputElement;
+        if (no) no.checked = true;
+      }
+      const sel = fieldset.querySelector('select[name="mealChoice"]') as HTMLSelectElement;
+      if (sel && data.mealChoice) sel.value = data.mealChoice;
+      const fld = (n: string) => fieldset.querySelector(`[name="${n}"]`) as HTMLInputElement | HTMLTextAreaElement | null;
+      const dietary = fld('dietary'); if (dietary && data.dietary) dietary.value = data.dietary;
+      const song = fld('songRequest'); if (song && data.songRequest) song.value = data.songRequest;
+      if (kind === 'primary') {
+        const notes = fld('notes'); if (notes && data.notes) notes.value = data.notes;
+      }
+    }
+
+    // Toggle attending-only fields based on radio state.
+    const updateFieldsVisibility = () => {
+      const attendingFields = fieldset.querySelector('.rsvp-attending-fields') as HTMLElement;
+      const yesChecked = (fieldset.querySelector('input[type="radio"][value="yes"]') as HTMLInputElement | null)?.checked;
+      if (attendingFields) attendingFields.hidden = !yesChecked;
+    };
+    fieldset.querySelectorAll('input[type="radio"][name^="attending-"]').forEach((inp) => {
+      inp.addEventListener('change', updateFieldsVisibility);
+    });
+    updateFieldsVisibility();
+
+    return fieldset;
+  }
+
+  function updateAddGuestButton() {
+    const btn = $('#rsvp-add-guest') as HTMLButtonElement | null;
+    const hint = $('#rsvp-add-guest-hint');
+    const guestsBox = $('#rsvp-guests');
+    if (!btn || !guestsBox) return;
+    const count = guestsBox.querySelectorAll('.rsvp-member--guest').length;
+    if (count >= MAX_GUESTS) {
+      btn.disabled = true;
+      if (hint) {
+        hint.textContent = (S['rsvp.maxGuestsReached'] || '').replace('{n}', String(MAX_GUESTS));
+        hint.hidden = false;
+      }
+    } else {
+      btn.disabled = false;
+      if (hint) hint.hidden = true;
+    }
+  }
+
+  function renderForm() {
+    if (!INVITE) { show('lookup'); return; }
+    const greetingEl = $('#rsvp-greeting');
+    if (greetingEl) {
+      const first = INVITE.primaryFirstName || '';
+      greetingEl.textContent = first
+        ? `${S['rsvp.formHelloPrefix']} ${first}!`
+        : (S['rsvp.heading'] || '');
+    }
+    // Bind static labels in the form chrome (section headings, add-guest btn).
+    const formNode = phases.form;
+    if (formNode) bindStaticLabels(formNode);
+
+    const payload = INVITE.payload || { primary: emptyPrimary(), additionalGuests: [] };
+    const primary = payload.primary || emptyPrimary();
+    const guests = Array.isArray(payload.additionalGuests) ? payload.additionalGuests : [];
+
+    const primaryBox = $('#rsvp-primary-card');
+    const guestsBox = $('#rsvp-guests');
+    if (!primaryBox || !guestsBox) return;
+    primaryBox.innerHTML = '';
+    guestsBox.innerHTML = '';
+
+    const primaryName = `${INVITE.primaryFirstName || ''} ${INVITE.primaryLastName || ''}`.trim();
+    primaryBox.appendChild(buildAttendeeCard('primary', primary, { primaryName }));
+
+    for (const g of guests) {
+      guestsBox.appendChild(buildAttendeeCard('guest', g, { guestId: g.id || randomGuestId() }));
+    }
+    updateAddGuestButton();
+    clearError($('#rsvp-submit-error'));
+    show('form');
+  }
+
+  // --- Lookup ---
   const lookupForm = phases.lookup as HTMLFormElement | null;
   if (lookupForm) {
     lookupForm.addEventListener('submit', async (e) => {
@@ -366,21 +473,15 @@ const initData = {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ firstName, lastName })
         });
-        if (res.status === 429) {
-          showError($('#rsvp-lookup-error'), S['rsvp.lookupRateLimited']);
-          return;
-        }
-        if (!res.ok) {
-          showError($('#rsvp-lookup-error'), S['rsvp.lookupError']);
-          return;
-        }
+        if (res.status === 429) { showError($('#rsvp-lookup-error'), S['rsvp.lookupRateLimited']); return; }
+        if (!res.ok) { showError($('#rsvp-lookup-error'), S['rsvp.lookupError']); return; }
         const data = await res.json();
         if (!data.found) {
           const msg = data.ambiguous ? S['rsvp.lookupAmbiguous'] : S['rsvp.lookupNotFound'];
           showError($('#rsvp-lookup-error'), msg);
           return;
         }
-        CURRENT = { party: data.party, members: data.members || [], responses: data.responses || [] };
+        INVITE = data.invite;
         try { localStorage.setItem('rsvp.lastFirst', firstName); } catch {}
         renderForm();
       } catch (_e) {
@@ -391,101 +492,133 @@ const initData = {
     });
   }
 
-  // --- Not-you button ---
+  // --- Not you ---
   const notYouBtn = $('#rsvp-not-you');
   if (notYouBtn) {
     notYouBtn.addEventListener('click', async () => {
-      try {
-        await fetch('/api/rsvp/logout', { method: 'POST', credentials: 'same-origin' });
-      } catch {}
+      try { await fetch('/api/rsvp/logout', { method: 'POST', credentials: 'same-origin' }); } catch {}
       try { localStorage.removeItem('rsvp.lastFirst'); } catch {}
-      CURRENT = null;
+      INVITE = null;
       (lookupForm as HTMLFormElement | null)?.reset();
       show('lookup');
     });
   }
 
-  // --- Edit button ---
+  // --- Edit ---
   const editBtn = $('#rsvp-edit');
   if (editBtn) {
     editBtn.addEventListener('click', () => {
-      if (CURRENT) renderForm();
+      if (INVITE) renderForm();
       else show('lookup');
     });
   }
 
-  // --- Submit form ---
+  // --- Add guest ---
+  const addGuestBtn = $('#rsvp-add-guest') as HTMLButtonElement | null;
+  if (addGuestBtn) {
+    addGuestBtn.addEventListener('click', () => {
+      const guestsBox = $('#rsvp-guests');
+      if (!guestsBox) return;
+      const count = guestsBox.querySelectorAll('.rsvp-member--guest').length;
+      if (count >= MAX_GUESTS) return;
+      const newGuest = { id: randomGuestId(), name: '', isKid: false, attending: null, mealChoice: '', dietary: '', songRequest: '' };
+      guestsBox.appendChild(buildAttendeeCard('guest', newGuest, { guestId: newGuest.id }));
+      updateAddGuestButton();
+      // Focus the new name input for snappy entry
+      const last = guestsBox.querySelector('.rsvp-member--guest:last-child input[name="guestName"]') as HTMLInputElement | null;
+      if (last) last.focus();
+    });
+  }
+
+  // --- Submit ---
+  function collectAttendee(fs: HTMLFieldSetElement, kind: 'primary' | 'guest'): any {
+    const yes = (fs.querySelector('input[type="radio"][value="yes"]') as HTMLInputElement | null)?.checked;
+    const no = (fs.querySelector('input[type="radio"][value="no"]') as HTMLInputElement | null)?.checked;
+    let attending: boolean | null = null;
+    if (yes) attending = true; else if (no) attending = false;
+    const get = (n: string): string => (fs.querySelector(`[name="${n}"]`) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null)?.value || '';
+    const out: any = {
+      attending,
+      mealChoice: attending === true ? get('mealChoice') : '',
+      dietary: attending === true ? get('dietary') : '',
+      songRequest: attending === true ? get('songRequest') : ''
+    };
+    if (kind === 'primary') {
+      out.notes = get('notes');
+    } else {
+      out.id = fs.dataset.guestId || randomGuestId();
+      out.name = get('guestName').trim();
+      out.isKid = !!(fs.querySelector('input[name="isKid"]') as HTMLInputElement | null)?.checked;
+    }
+    return out;
+  }
+
   const submitForm = phases.form as HTMLFormElement | null;
   if (submitForm) {
     submitForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       clearError($('#rsvp-submit-error'));
       const btn = submitForm.querySelector('button[type="submit"]') as HTMLButtonElement;
-      if (!CURRENT) return;
-      const memberFieldsets = submitForm.querySelectorAll('.rsvp-member');
-      const payload = { members: [] as any[] };
-      let invalid = false;
-      memberFieldsets.forEach((fs) => {
-        const f = fs as HTMLFieldSetElement;
-        const memberId = f.dataset.memberId || '';
-        const yes = (f.querySelector('input[type="radio"][value="yes"]') as HTMLInputElement | null)?.checked;
-        const no = (f.querySelector('input[type="radio"][value="no"]') as HTMLInputElement | null)?.checked;
-        let attending: boolean | null = null;
-        if (yes) attending = true;
-        else if (no) attending = false;
-        else invalid = true;
-        const get = (n: string): string => (f.querySelector(`[name="${n}"]`) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null)?.value || '';
-        payload.members.push({
-          memberId,
-          attending,
-          mealChoice: attending === true ? get('mealChoice') : '',
-          dietary: attending === true ? get('dietary') : '',
-          songRequest: attending === true ? get('songRequest') : '',
-          notes: get('notes'),
-          plusOneName: attending === true ? get('plusOneName') : ''
-        });
-      });
-      if (invalid) {
-        showError($('#rsvp-submit-error'), S['rsvp.submitError']);
+      if (!INVITE) return;
+
+      const primaryFs = $('#rsvp-primary-card')!.querySelector('fieldset') as HTMLFieldSetElement | null;
+      if (!primaryFs) return;
+      const primary = collectAttendee(primaryFs, 'primary');
+
+      const guestFieldsets = Array.from($('#rsvp-guests')!.querySelectorAll('fieldset')) as HTMLFieldSetElement[];
+      const additionalGuests = guestFieldsets.map(fs => collectAttendee(fs, 'guest'));
+
+      // Client-side guards
+      const missingNames = additionalGuests.filter(g => !g.name);
+      if (missingNames.length) {
+        showError($('#rsvp-submit-error'), S['rsvp.guestNameRequired']);
         return;
       }
+      const everyone = [primary, ...additionalGuests];
+      if (everyone.some(a => a.attending !== true && a.attending !== false)) {
+        showError($('#rsvp-submit-error'), S['rsvp.attendingAllRequired']);
+        return;
+      }
+
+      const payload = {
+        schemaVersion: SCHEMA_VERSION,
+        primary,
+        additionalGuests
+      };
+
       setBusy(btn, true);
       try {
         const res = await fetch('/api/rsvp/submit', {
           method: 'POST',
           credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({ payload })
         });
-        if (res.status === 429) {
-          showError($('#rsvp-submit-error'), S['rsvp.submitRateLimited']);
-          return;
-        }
+        if (res.status === 429) { showError($('#rsvp-submit-error'), S['rsvp.submitRateLimited']); return; }
         if (res.status === 410) {
+          // Distinguish "permanently closed" from "invite vanished" — body has
+          // { error: 'rsvp_closed' } vs { error: 'invite_not_found' }.
+          let body: any = null;
+          try { body = await res.json(); } catch {}
+          if (body && body.error === 'invite_not_found') {
+            INVITE = null;
+            try { localStorage.removeItem('rsvp.lastFirst'); } catch {}
+            (lookupForm as HTMLFormElement | null)?.reset();
+            show('lookup');
+            showError($('#rsvp-lookup-error'), S['rsvp.lookupNotFound']);
+            return;
+          }
           showError($('#rsvp-submit-error'), S['rsvp.submitClosed']);
           return;
         }
-        if (!res.ok) {
-          showError($('#rsvp-submit-error'), S['rsvp.submitError']);
-          return;
-        }
+        if (!res.ok) { showError($('#rsvp-submit-error'), S['rsvp.submitError']); return; }
         const data = await res.json();
-        // Update local responses snapshot so edit shows current data
-        if (CURRENT) {
-          const byId = new Map(CURRENT.responses.map((r: any) => [r.memberId, r]));
-          for (const m of payload.members) {
-            const r = byId.get(m.memberId) || { memberId: m.memberId };
-            (r as any).attending = m.attending;
-            (r as any).mealChoice = m.mealChoice;
-            (r as any).dietary = m.dietary;
-            (r as any).songRequest = m.songRequest;
-            (r as any).notes = m.notes;
-            (r as any).plusOneName = m.plusOneName;
-            byId.set(m.memberId, r);
-          }
-          CURRENT.responses = Array.from(byId.values());
+        // Update local snapshot so Edit shows fresh values.
+        if (INVITE && data && data.payload) {
+          INVITE.payload = data.payload;
+          INVITE.responded = true;
         }
-        renderConfirmation(data && data.late);
+        renderConfirmation(!!(data && data.late), additionalGuests.length, primary, additionalGuests);
       } catch (_e) {
         showError($('#rsvp-submit-error'), S['rsvp.submitError']);
       } finally {
@@ -494,13 +627,12 @@ const initData = {
     });
   }
 
-  function renderConfirmation(late: boolean) {
-    if (!CURRENT) { show('lookup'); return; }
+  function renderConfirmation(late: boolean, _guestCount: number, primary: any, guests: any[]) {
     const summaryEl = $('#rsvp-confirm-summary');
     if (summaryEl) {
-      const responses = CURRENT.responses || [];
-      const attendingCount = responses.filter((r: any) => r.attending === true).length;
-      const total = CURRENT.members.length;
+      const all = [primary, ...guests];
+      const total = all.length;
+      const attendingCount = all.filter(a => a.attending === true).length;
       let summaryText = '';
       if (attendingCount === total && total > 0) summaryText = S['rsvp.thanksAttending'];
       else if (attendingCount === 0) summaryText = S['rsvp.thanksNotAttending'];
@@ -533,9 +665,7 @@ const initData = {
     background: rgba(200, 100, 60, 0.08);
     border-left-color: #c8643c;
   }
-  .rsvp-phase {
-    margin: 0;
-  }
+  .rsvp-phase { margin: 0; }
   .rsvp-phase[hidden] { display: none !important; }
   .rsvp-phase--loading { text-align: center; padding: var(--space-5) 0; opacity: 0.7; }
   .rsvp-loading-text { font-style: italic; }
@@ -553,11 +683,17 @@ const initData = {
   }
   .rsvp-muted { color: var(--color-text-muted, #6b6b6b); }
 
-  .rsvp-fields {
-    display: grid;
-    gap: var(--space-3);
-    margin: var(--space-3) 0;
+  .rsvp-section-heading {
+    margin: var(--space-4) 0 var(--space-2);
+    font-family: var(--font-display, 'Cormorant Garamond', serif);
+    font-size: 1.35rem;
+    color: var(--color-gold-deep, #8a6a2c);
+    letter-spacing: 0.02em;
   }
+  #rsvp-primary-card .rsvp-section-heading,
+  .rsvp-form > .rsvp-section-heading:first-of-type { margin-top: 0; }
+
+  .rsvp-fields { display: grid; gap: var(--space-3); margin: var(--space-3) 0; }
   .rsvp-fields--two { grid-template-columns: 1fr; }
   @media (min-width: 28rem) {
     .rsvp-fields--two { grid-template-columns: 1fr 1fr; }
@@ -588,13 +724,9 @@ const initData = {
   }
   .rsvp-form-wrap textarea { resize: vertical; min-height: 3.5rem; }
 
-  .rsvp-form-header {
-    margin-bottom: var(--space-3);
-    position: relative;
-  }
+  .rsvp-form-header { margin-bottom: var(--space-3); position: relative; }
   .rsvp-link {
-    background: none;
-    border: 0;
+    background: none; border: 0;
     color: var(--color-gold-deep, #8a6a2c);
     text-decoration: underline;
     cursor: pointer;
@@ -602,26 +734,61 @@ const initData = {
     font-size: 0.9rem;
   }
 
-  .rsvp-members {
+  .rsvp-additional { margin: var(--space-3) 0; }
+  .rsvp-additional-header { margin-bottom: var(--space-2); }
+  .rsvp-additional-hint { margin: 0; font-size: 0.9rem; }
+  .rsvp-guests {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
-    margin: var(--space-3) 0;
+    margin: var(--space-2) 0;
   }
+  .rsvp-add-guest-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+    flex-wrap: wrap;
+  }
+  .rsvp-add-guest-hint { font-size: 0.85rem; }
+  .btn--small { padding: 0.35rem 0.8rem; font-size: 0.9rem; }
+
   .rsvp-member {
     border: 1px solid var(--color-rule, #e8e0c8);
     border-radius: var(--radius-md, 8px);
     padding: var(--space-3);
     background: rgba(255, 255, 255, 0.6);
   }
+  .rsvp-member--primary {
+    background: rgba(201, 169, 97, 0.06);
+    border-color: rgba(201, 169, 97, 0.35);
+  }
   .rsvp-member-name {
     padding: 0 0.5rem;
     font-weight: 700;
     font-size: 1.05rem;
   }
-  .rsvp-attending {
-    margin-top: 0.5rem;
+  .guest-name-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+    align-items: end;
+    margin-bottom: var(--space-2);
   }
+  @media (min-width: 32rem) {
+    .guest-name-row { grid-template-columns: 1fr auto; }
+  }
+  .rsvp-kid-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.25rem;
+    font-size: 0.95rem;
+    white-space: nowrap;
+  }
+  .rsvp-kid-toggle input { margin: 0; }
+
+  .rsvp-attending { margin-top: 0.5rem; }
   .rsvp-radio-group {
     display: flex;
     gap: 1rem;
@@ -648,11 +815,18 @@ const initData = {
   }
   .rsvp-field { display: block; }
   .rsvp-field small { display: block; margin-top: 0.2rem; font-size: 0.85rem; }
-  /* Author display rules above beat the user-agent [hidden] { display: none }
-     because attribute selectors in the UA sheet always lose to class selectors
-     in author CSS. Re-assert hidden semantics explicitly for these classes. */
+  /* Re-assert hidden semantics so author display rules don't beat [hidden]. */
   .rsvp-attending-fields[hidden],
-  .rsvp-field[hidden] { display: none !important; }
+  .rsvp-field[hidden],
+  .guest-name-row[hidden],
+  .guest-remove-row[hidden],
+  .rsvp-member-name[hidden] { display: none !important; }
+
+  .guest-remove-row {
+    margin-top: var(--space-2);
+    text-align: right;
+  }
+  .rsvp-remove-guest { color: #8a2c2c; font-size: 0.85rem; }
 
   .rsvp-privacy { margin: var(--space-3) 0; font-size: 0.9rem; }
   .rsvp-privacy summary { cursor: pointer; color: var(--color-text-muted, #6b6b6b); }
@@ -661,11 +835,7 @@ const initData = {
   .rsvp-help { margin-top: var(--space-2); font-size: 0.9rem; }
   .rsvp-help summary { cursor: pointer; color: var(--color-text-muted, #6b6b6b); }
 
-  .rsvp-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: var(--space-3);
-  }
+  .rsvp-actions { display: flex; justify-content: flex-end; margin-top: var(--space-3); }
   .rsvp-actions .btn { min-width: 12rem; }
 
   .rsvp-error {
