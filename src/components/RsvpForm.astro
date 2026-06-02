@@ -16,9 +16,13 @@ const mealOptions = [
 ];
 
 const stringKeys = [
-  'rsvp.loading','rsvp.lookupTitle','rsvp.lookupHint','rsvp.firstNameLabel','rsvp.lastNameLabel',
-  'rsvp.findMe','rsvp.lookingUp','rsvp.cantFindName','rsvp.cantFindNameHelp',
+  'rsvp.loading','rsvp.lookupTitle','rsvp.lookupHint','rsvp.lastNameLabel',
+  'rsvp.findMe','rsvp.lookingUp',
   'rsvp.lookupNotFound','rsvp.lookupAmbiguous','rsvp.lookupRateLimited','rsvp.lookupNameTooShort','rsvp.lookupError',
+  'rsvp.phoneLast4Label','rsvp.phoneLast4Hint','rsvp.phoneLast4Mismatch','rsvp.phoneLast4Invalid',
+  'rsvp.lookupByPhoneLink','rsvp.phoneLookupTitle','rsvp.phoneLookupHint',
+  'rsvp.phoneLabel','rsvp.phonePlaceholder','rsvp.phoneInvalid','rsvp.phoneNotFound','rsvp.phoneAmbiguous',
+  'rsvp.backToNameLookup',
   'rsvp.formIntro','rsvp.formHelloPrefix','rsvp.notYou','rsvp.save','rsvp.saving',
   'rsvp.primaryYourRsvp','rsvp.additionalGuestsTitle','rsvp.additionalGuestsHint',
   'rsvp.addGuest','rsvp.removeGuest','rsvp.maxGuestsReached',
@@ -60,26 +64,35 @@ const initData = {
   </div>
 
   <form id="rsvp-lookup-form" class="rsvp-phase rsvp-lookup" hidden novalidate>
-    <h3>{t(locale, 'rsvp.lookupTitle')}</h3>
-    <p class="rsvp-muted">{t(locale, 'rsvp.lookupHint')}</p>
-    <div class="rsvp-fields rsvp-fields--two">
-      <label>
-        <span class="rsvp-label">{t(locale, 'rsvp.firstNameLabel')}</span>
-        <input name="firstName" type="text" required minlength="2" maxlength="50" autocomplete="given-name" />
-      </label>
+    <h3 id="rsvp-lookup-heading">{t(locale, 'rsvp.lookupTitle')}</h3>
+    <p class="rsvp-muted" id="rsvp-lookup-hint">{t(locale, 'rsvp.lookupHint')}</p>
+
+    <div id="rsvp-lookup-name-fields" class="rsvp-fields">
       <label>
         <span class="rsvp-label">{t(locale, 'rsvp.lastNameLabel')}</span>
         <input name="lastName" type="text" required minlength="2" maxlength="50" autocomplete="family-name" />
       </label>
+      <label id="rsvp-phone-last4-row" hidden>
+        <span class="rsvp-label">{t(locale, 'rsvp.phoneLast4Label')}</span>
+        <input name="phoneLast4" type="text" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" />
+        <small class="rsvp-muted">{t(locale, 'rsvp.phoneLast4Hint')}</small>
+      </label>
     </div>
+
+    <div id="rsvp-lookup-phone-fields" class="rsvp-fields" hidden>
+      <label>
+        <span class="rsvp-label">{t(locale, 'rsvp.phoneLabel')}</span>
+        <input name="phone" type="tel" inputmode="tel" maxlength="20" autocomplete="tel" placeholder={t(locale, 'rsvp.phonePlaceholder')} />
+      </label>
+    </div>
+
     <div class="rsvp-actions">
       <button type="submit" class="btn btn--gold" data-label-default={t(locale, 'rsvp.findMe')} data-label-busy={t(locale, 'rsvp.lookingUp')}>{t(locale, 'rsvp.findMe')}</button>
     </div>
     <div id="rsvp-lookup-error" class="rsvp-error" role="alert" aria-live="polite" hidden></div>
-    <details class="rsvp-help">
-      <summary>{t(locale, 'rsvp.cantFindName')}</summary>
-      <p>{t(locale, 'rsvp.cantFindNameHelp')}</p>
-    </details>
+    <div class="rsvp-lookup-toggle">
+      <button type="button" id="rsvp-lookup-toggle-btn" class="rsvp-link">{t(locale, 'rsvp.lookupByPhoneLink')}</button>
+    </div>
   </form>
 
   <form id="rsvp-form" class="rsvp-phase rsvp-form" hidden novalidate>
@@ -460,53 +473,191 @@ const initData = {
   }
 
   // --- Lookup ---
+  // The lookup phase supports two top-level modes (name vs. phone) and one
+  // sub-state (last-name + phone-4 disambiguation, revealed only when the
+  // server tells us multiple invites share a surname).
+  type LookupMode = 'name' | 'phone';
+  let lookupMode: LookupMode = 'name';
+  let phone4Required = false;
+
   const lookupForm = phases.lookup as HTMLFormElement | null;
+  const lookupNameFields = $('#rsvp-lookup-name-fields') as HTMLElement | null;
+  const lookupPhoneFields = $('#rsvp-lookup-phone-fields') as HTMLElement | null;
+  const phone4Row = $('#rsvp-phone-last4-row') as HTMLElement | null;
+  const lookupHeading = $('#rsvp-lookup-heading') as HTMLElement | null;
+  const lookupHint = $('#rsvp-lookup-hint') as HTMLElement | null;
+  const lookupToggleBtn = $('#rsvp-lookup-toggle-btn') as HTMLButtonElement | null;
+  const lastNameInput = lookupForm?.querySelector('input[name="lastName"]') as HTMLInputElement | null;
+  const phone4Input = lookupForm?.querySelector('input[name="phoneLast4"]') as HTMLInputElement | null;
+  const phoneInput = lookupForm?.querySelector('input[name="phone"]') as HTMLInputElement | null;
+
+  function setPhone4Required(required: boolean) {
+    phone4Required = required;
+    if (!phone4Row) return;
+    phone4Row.hidden = !required;
+    if (!required && phone4Input) phone4Input.value = '';
+    if (required && phone4Input) {
+      // Defer focus a tick so the layout reveal doesn't fight the focus.
+      requestAnimationFrame(() => phone4Input.focus());
+    }
+  }
+
+  function setLookupMode(mode: LookupMode) {
+    lookupMode = mode;
+    clearError($('#rsvp-lookup-error'));
+    setPhone4Required(false);
+    if (lookupNameFields) lookupNameFields.hidden = (mode === 'phone');
+    if (lookupPhoneFields) lookupPhoneFields.hidden = (mode === 'name');
+    if (lookupHeading) {
+      lookupHeading.textContent = mode === 'phone'
+        ? (S['rsvp.phoneLookupTitle'] || '')
+        : (S['rsvp.lookupTitle'] || '');
+    }
+    if (lookupHint) {
+      lookupHint.textContent = mode === 'phone'
+        ? (S['rsvp.phoneLookupHint'] || '')
+        : (S['rsvp.lookupHint'] || '');
+    }
+    if (lookupToggleBtn) {
+      lookupToggleBtn.textContent = mode === 'phone'
+        ? (S['rsvp.backToNameLookup'] || '')
+        : (S['rsvp.lookupByPhoneLink'] || '');
+    }
+    const focusEl = mode === 'phone' ? phoneInput : lastNameInput;
+    if (focusEl) requestAnimationFrame(() => focusEl.focus());
+  }
+
+  // Changing the last name invalidates any prior disambig context — drop it
+  // so the next submit goes back to a fresh name-only lookup.
+  if (lastNameInput) {
+    lastNameInput.addEventListener('input', () => {
+      if (phone4Required) {
+        setPhone4Required(false);
+        clearError($('#rsvp-lookup-error'));
+      }
+    });
+  }
+
+  if (lookupToggleBtn) {
+    lookupToggleBtn.addEventListener('click', () => {
+      const next: LookupMode = lookupMode === 'name' ? 'phone' : 'name';
+      window.appTelemetry?.trackEvent('rsvp_lookup_mode_switched', { to: next });
+      setLookupMode(next);
+    });
+  }
+
   if (lookupForm) {
     lookupForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       clearError($('#rsvp-lookup-error'));
       const btn = lookupForm.querySelector('button[type="submit"]') as HTMLButtonElement;
       const fd = new FormData(lookupForm);
-      const firstName = String(fd.get('firstName') || '').trim();
-      const lastName = String(fd.get('lastName') || '').trim();
-      if (firstName.length < 2 || lastName.length < 2) {
-        showError($('#rsvp-lookup-error'), S['rsvp.lookupNameTooShort']);
-        window.appTelemetry?.trackEvent('rsvp_lookup_validation_failed', { reason: 'name_too_short' });
+
+      let body: Record<string, string> | null = null;
+      let validationError: string | null = null;
+      const submitMode: 'lastName' | 'lastName+phone4' | 'phone' =
+        lookupMode === 'phone'
+          ? 'phone'
+          : (phone4Required ? 'lastName+phone4' : 'lastName');
+
+      if (lookupMode === 'phone') {
+        const phone = String(fd.get('phone') || '').trim();
+        const digits = phone.replace(/\D/g, '');
+        if (digits.length < 10) {
+          validationError = S['rsvp.phoneInvalid'] || '';
+        } else {
+          body = { phone };
+        }
+      } else {
+        const lastName = String(fd.get('lastName') || '').trim();
+        if (lastName.length < 2) {
+          validationError = S['rsvp.lookupNameTooShort'] || '';
+        } else {
+          body = { lastName };
+          if (phone4Required) {
+            const phone4 = String(fd.get('phoneLast4') || '').replace(/\D/g, '');
+            if (phone4.length !== 4) {
+              validationError = S['rsvp.phoneLast4Invalid'] || '';
+            } else {
+              body.phoneLast4 = phone4;
+            }
+          }
+        }
+      }
+
+      if (validationError || !body) {
+        showError($('#rsvp-lookup-error'), validationError || (S['rsvp.lookupError'] || ''));
+        window.appTelemetry?.trackEvent('rsvp_lookup_validation_failed', { mode: submitMode });
         return;
       }
-      window.appTelemetry?.trackEvent('rsvp_lookup_submitted', { locale });
+
+      window.appTelemetry?.trackEvent('rsvp_lookup_submitted', { locale, mode: submitMode });
       setBusy(btn, true);
       try {
         const res = await fetch('/api/rsvp/lookup', {
           method: 'POST',
           credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ firstName, lastName })
+          body: JSON.stringify(body)
         });
         if (res.status === 429) {
           showError($('#rsvp-lookup-error'), S['rsvp.lookupRateLimited']);
-          window.appTelemetry?.trackEvent('rsvp_lookup_failed', { reason: 'rate_limited', status: 429 });
+          window.appTelemetry?.trackEvent('rsvp_lookup_failed', { reason: 'rate_limited', status: 429, mode: submitMode });
           return;
         }
         if (!res.ok) {
           showError($('#rsvp-lookup-error'), S['rsvp.lookupError']);
-          window.appTelemetry?.trackEvent('rsvp_lookup_failed', { reason: 'http_error', status: res.status });
+          window.appTelemetry?.trackEvent('rsvp_lookup_failed', { reason: 'http_error', status: res.status, mode: submitMode });
           return;
         }
         const data = await res.json();
         if (!data.found) {
-          const msg = data.ambiguous ? S['rsvp.lookupAmbiguous'] : S['rsvp.lookupNotFound'];
+          if (data.ambiguous && data.requiresPhoneLast4 && lookupMode === 'name') {
+            // The server is asking us to disambiguate via phone-4.
+            const wasAlreadyAsking = phone4Required;
+            if (!wasAlreadyAsking) {
+              // First-time prompt: reveal the input, let the inline hint do
+              // the talking — no banner error needed.
+              window.appTelemetry?.trackEvent('rsvp_lookup_disambig_requested', { mode: submitMode });
+              setPhone4Required(true);
+            } else {
+              // Re-prompt after a wrong phone-4: the inline hint stays but
+              // we explicitly tell the user the phone didn't match.
+              window.appTelemetry?.trackEvent('rsvp_lookup_failed', { reason: 'phone4_mismatch', mode: submitMode });
+              if (phone4Input) phone4Input.value = '';
+              showError($('#rsvp-lookup-error'), S['rsvp.phoneLast4Mismatch']);
+              if (phone4Input) requestAnimationFrame(() => phone4Input.focus());
+            }
+            return;
+          }
+          if (data.ambiguous) {
+            const msg = lookupMode === 'phone' ? S['rsvp.phoneAmbiguous'] : S['rsvp.lookupAmbiguous'];
+            showError($('#rsvp-lookup-error'), msg);
+            window.appTelemetry?.trackEvent('rsvp_lookup_failed', { reason: 'ambiguous', mode: submitMode });
+            return;
+          }
+          const msg = lookupMode === 'phone' ? S['rsvp.phoneNotFound'] : S['rsvp.lookupNotFound'];
           showError($('#rsvp-lookup-error'), msg);
-          window.appTelemetry?.trackEvent('rsvp_lookup_failed', { reason: data.ambiguous ? 'ambiguous' : 'not_found' });
+          window.appTelemetry?.trackEvent('rsvp_lookup_failed', { reason: 'not_found', mode: submitMode });
           return;
         }
-        window.appTelemetry?.trackEvent('rsvp_lookup_success', { partySize: (data.invite?.guests?.length ?? 0) + 1 });
+        window.appTelemetry?.trackEvent('rsvp_lookup_success', {
+          mode: submitMode,
+          partySize: (data.invite?.guests?.length ?? 0) + 1
+        });
         INVITE = data.invite;
-        try { localStorage.setItem('rsvp.lastFirst', firstName); } catch {}
-        renderForm();
+        try { localStorage.setItem('rsvp.lastFirst', INVITE?.primaryFirstName || ''); } catch {}
+        if (INVITE && INVITE.responded) {
+          const payload = INVITE.payload || { primary: emptyPrimary(), additionalGuests: [] };
+          const primary = payload.primary || emptyPrimary();
+          const guests = Array.isArray(payload.additionalGuests) ? payload.additionalGuests : [];
+          renderConfirmation(!!INVITE.respondedLate, guests.length, primary, guests);
+        } else {
+          renderForm();
+        }
       } catch (_e) {
         showError($('#rsvp-lookup-error'), S['rsvp.lookupError']);
-        window.appTelemetry?.trackEvent('rsvp_lookup_failed', { reason: 'network_error' });
+        window.appTelemetry?.trackEvent('rsvp_lookup_failed', { reason: 'network_error', mode: submitMode });
       } finally {
         setBusy(btn, false);
       }
@@ -521,6 +672,8 @@ const initData = {
       try { localStorage.removeItem('rsvp.lastFirst'); } catch {}
       INVITE = null;
       (lookupForm as HTMLFormElement | null)?.reset();
+      clearError($('#rsvp-lookup-error'));
+      setLookupMode('name');
       show('lookup');
     });
   }
@@ -775,6 +928,18 @@ const initData = {
     padding: 0.25rem 0;
     font-size: 0.9rem;
   }
+  .rsvp-lookup-toggle {
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--color-rule, #e8e0c8);
+    text-align: center;
+  }
+  #rsvp-phone-last4-row[hidden] { display: none; }
+  #rsvp-phone-last4-row input[name="phoneLast4"] {
+    max-width: 8rem;
+    letter-spacing: 0.25em;
+    font-variant-numeric: tabular-nums;
+  }
 
   .rsvp-additional { margin: var(--space-3) 0; }
   .rsvp-additional-header { margin-bottom: var(--space-2); }
@@ -873,9 +1038,6 @@ const initData = {
   .rsvp-privacy { margin: var(--space-3) 0; font-size: 0.9rem; }
   .rsvp-privacy summary { cursor: pointer; color: var(--color-text-muted, #6b6b6b); }
   .rsvp-privacy p { margin-top: 0.5rem; color: var(--color-text-muted, #6b6b6b); }
-
-  .rsvp-help { margin-top: var(--space-2); font-size: 0.9rem; }
-  .rsvp-help summary { cursor: pointer; color: var(--color-text-muted, #6b6b6b); }
 
   .rsvp-actions { display: flex; justify-content: flex-end; margin-top: var(--space-3); }
   .rsvp-actions .btn { min-width: 12rem; }

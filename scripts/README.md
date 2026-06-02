@@ -20,6 +20,22 @@ node scripts/seed-rsvp.cjs --reset                  # wipe + reinsert just the s
 node scripts/seed-rsvp.cjs --phone +15551234567     # use a real phone for John (live SMS test)
 ```
 
+## `test-rsvp-lookup.cjs` — Smoke-test the lookup endpoint
+
+In-process test that mocks the storage + auth + ratelimit layers and exercises
+every branch of `api/rsvp_lookup/index.js`: name-only success/miss, ambiguous
+(with and without phones on file), phone-last-4 disambiguation (match,
+mismatch, wrong length), phone-only fallback (match, miss, shared phone),
+legacy `{firstName, lastName}` compat, precedence rules, accent / case
+normalization, and validation errors.
+
+Requires no Azure connection; run before any change to the lookup endpoint.
+
+```powershell
+node scripts/test-rsvp-lookup.cjs    # exit 0 on all pass, 1 on any failure
+```
+
+
 ## `rotate-aoai-key.ps1` — Azure OpenAI key rotation
 
 Two-key (zero-downtime) rotation of the `AZURE_OPENAI_KEY` consumed by the `/api/chat` Static Web App function.

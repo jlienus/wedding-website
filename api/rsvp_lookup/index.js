@@ -78,56 +78,47 @@ module.exports = async function (context, req) {
     return;
   }
 
-  const firstName = sanitizeName(body.firstName);
-  const lastName = sanitizeName(body.lastName);
-  if (storage.normalizeName(firstName).length < MIN_NAME_CHARS
-      || storage.normalizeName(lastName).length < MIN_NAME_CHARS) {
-    context.res = { status: 400, headers: cors, body: { error: 'name_too_short' } };
-    return;
-  }
-
-  let match;
-  try {
-    match = await storage.findInviteByPrimaryName(firstName, lastName);
-  } catch (err) {
-    context.log.error(`rsvp_lookup storage err: ${err && err.message}`);
-    context.res = { status: 503, headers: cors, body: { error: 'storage_unavailable' } };
-    return;
-  }
-
-  if (!match) {
-    context.log(`rsvp_lookup miss ipHash=${ipHash}`);
-    context.res = {
-      status: 200,
-      headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-      body: { found: false }
-    };
-    return;
-  }
-
-  if (match.ambiguous) {
-    // Two invites have the same primary first+last name. Don't pick one —
-    // we'd authenticate the wrong household. Tell the user to contact us.
-    context.log(`rsvp_lookup AMBIGUOUS ipHash=${ipHash} matchCount=${match.matchCount}`);
-    context.res = {
-      status: 200,
-      headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-      body: { found: false, ambiguous: true }
-    };
-    return;
-  }
+  // The endpoint supports three request shapes:
+  //   A) { lastName }                          — primary lookup by last name only.
+  //   B) { lastName, phoneLast4 }              — disambiguation after an A response with requiresPhoneLast4.
+  //   C) { phone }                             — fallback "look me up by phone" when the name lookup failed.
+  //   D) { firstName, lastName }               — legacy shape (older deployed JS). firstName is ignored.
+  //
+  // Phone mode (C) wins precedence — if `phone` is present, we ignore name fields entirely so a stale
+  // client tab can't accidentally double-submit both shapes.
+  const rawLastName = sanitizeName(body.lastName);
+  const rawPhone = typeof body.phone === 'string' ? body.phone.trim().slice(0, 32) : '';
+  const rawPhoneLast4 = typeof body.phoneLast4 === 'string'
+    ? body.phoneLast4.replace(/\D/g, '').slice(0, 4)
+    : '';
 
   let invite;
+  let lookupMode;
   try {
-    invite = await storage.getInvite(match.inviteId);
+    if (rawPhone) {
+      lookupMode = 'phone';
+      invite = await lookupByPhone(rawPhone, context, ipHash, cors);
+    } else if (rawLastName) {
+      lookupMode = rawPhoneLast4 ? 'lastName+phone4' : 'lastName';
+      invite = await lookupByLastName(rawLastName, rawPhoneLast4, context, ipHash, cors);
+    } else {
+      context.res = { status: 400, headers: cors, body: { error: 'missing_lookup_input' } };
+      return;
+    }
   } catch (err) {
-    context.log.error(`rsvp_lookup hydrate err: ${err && err.message}`);
+    if (err && err.responseBody) {
+      // The helper already prepared a response shape (e.g., found:false, ambiguous, etc.).
+      context.res = err.responseBody;
+      return;
+    }
+    context.log.error(`rsvp_lookup storage err mode=${lookupMode}: ${err && err.message}`);
     context.res = { status: 503, headers: cors, body: { error: 'storage_unavailable' } };
     return;
   }
+
   if (!invite) {
-    // Filter returned an id but the row vanished between the two calls.
-    context.res = { status: 200, headers: cors, body: { found: false } };
+    // Defensive — should have been handled by the helper, but guard anyway.
+    context.res = { status: 200, headers: { ...cors, 'Cache-Control': 'no-store' }, body: { found: false } };
     return;
   }
 
@@ -140,7 +131,7 @@ module.exports = async function (context, req) {
     return;
   }
 
-  context.log(`rsvp_lookup hit ipHash=${ipHash} inviteId=${invite.inviteId}`);
+  context.log(`rsvp_lookup hit mode=${lookupMode} ipHash=${ipHash} inviteId=${invite.inviteId}`);
   context.res = {
     status: 200,
     headers: {
@@ -155,3 +146,92 @@ module.exports = async function (context, req) {
     }
   };
 };
+
+// Helper that throws { responseBody } to signal a non-200-but-handled outcome
+// (e.g., found:false, ambiguous, requiresPhoneLast4) so the main handler can
+// emit the right response without inflating the happy-path code.
+function shortCircuit(status, headers, body) {
+  const err = new Error('SHORT_CIRCUIT');
+  err.responseBody = { status, headers, body };
+  return err;
+}
+
+async function lookupByLastName(lastName, phoneLast4, context, ipHash, cors) {
+  if (storage.normalizeName(lastName).length < MIN_NAME_CHARS) {
+    throw shortCircuit(400, cors, { error: 'name_too_short' });
+  }
+
+  const matches = await storage.findInvitesByLastName(lastName);
+
+  if (matches.length === 0) {
+    context.log(`rsvp_lookup miss mode=lastName ipHash=${ipHash}`);
+    throw shortCircuit(200, { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      { found: false });
+  }
+
+  if (matches.length === 1 && !phoneLast4) {
+    return matches[0];
+  }
+
+  // Multiple invites share this last name. Try to narrow with phone last 4.
+  const matchesWithPhone = matches.filter(m => m.phoneNorm);
+
+  if (phoneLast4) {
+    if (phoneLast4.length !== 4) {
+      // Caller sent a partial; ask again.
+      context.log(`rsvp_lookup phone4 bad-length mode=lastName+phone4 ipHash=${ipHash}`);
+      throw shortCircuit(200, { ...cors, 'Cache-Control': 'no-store' },
+        { found: false, ambiguous: true, requiresPhoneLast4: true });
+    }
+    const refined = matches.filter(m => m.phoneNorm && m.phoneNorm.endsWith(phoneLast4));
+    if (refined.length === 1) return refined[0];
+    if (refined.length > 1) {
+      // Same last name AND same last-4 — extremely rare. Bail to contact-us.
+      context.log(`rsvp_lookup phone4 still-ambiguous mode=lastName+phone4 ipHash=${ipHash} n=${refined.length}`);
+      throw shortCircuit(200, { ...cors, 'Cache-Control': 'no-store' },
+        { found: false, ambiguous: true });
+    }
+    // refined.length === 0 → phone didn't match any of the surname matches.
+    // Keep them in the disambig flow so the UI can say "that phone doesn't match — try again".
+    context.log(`rsvp_lookup phone4 no-match mode=lastName+phone4 ipHash=${ipHash}`);
+    throw shortCircuit(200, { ...cors, 'Cache-Control': 'no-store' },
+      { found: false, ambiguous: true, requiresPhoneLast4: true });
+  }
+
+  // No phoneLast4 supplied: tell the client to ask for it, but only if at least
+  // 2 of the matches actually have a phone on file (else disambig is impossible).
+  if (matchesWithPhone.length >= 2) {
+    context.log(`rsvp_lookup ambiguous-needs-phone4 mode=lastName ipHash=${ipHash} matchCount=${matches.length}`);
+    throw shortCircuit(200, { ...cors, 'Cache-Control': 'no-store' },
+      { found: false, ambiguous: true, requiresPhoneLast4: true });
+  }
+
+  // Multiple matches but we can't disambiguate via phone — give up cleanly.
+  context.log(`rsvp_lookup ambiguous-no-phone mode=lastName ipHash=${ipHash} matchCount=${matches.length}`);
+  throw shortCircuit(200, { ...cors, 'Cache-Control': 'no-store' },
+    { found: false, ambiguous: true });
+}
+
+async function lookupByPhone(rawPhone, context, ipHash, cors) {
+  const phoneNorm = storage.normalizePhone(rawPhone);
+  if (!phoneNorm) {
+    throw shortCircuit(400, cors, { error: 'invalid_phone' });
+  }
+
+  const matches = await storage.findInvitesByPhoneNorm(phoneNorm);
+
+  if (matches.length === 0) {
+    context.log(`rsvp_lookup miss mode=phone ipHash=${ipHash}`);
+    throw shortCircuit(200, { ...cors, 'Cache-Control': 'no-store' },
+      { found: false });
+  }
+
+  if (matches.length > 1) {
+    // Households sharing one number. We can't pick a household for them.
+    context.log(`rsvp_lookup ambiguous mode=phone ipHash=${ipHash} matchCount=${matches.length}`);
+    throw shortCircuit(200, { ...cors, 'Cache-Control': 'no-store' },
+      { found: false, ambiguous: true });
+  }
+
+  return matches[0];
+}

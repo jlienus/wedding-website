@@ -263,8 +263,25 @@ async function findInviteByPrimaryName(firstName, lastName) {
   return { inviteId: matches[0], ambiguous: false };
 }
 
+// Returns all invites whose primaryLastNorm matches. Used by the public RSVP
+// lookup flow (last-name-only primary, with phone-last-4 disambiguation for
+// the small set of families that share a surname). Single-partition scan with
+// server-side filter; ~80 invites total so cheap.
+async function findInvitesByLastName(lastName) {
+  const ln = normalizeName(lastName);
+  if (ln.length < 2) return [];
+  const c = getClients();
+  const filter = `PartitionKey eq '${INVITES_PARTITION}' and primaryLastNorm eq '${ln.replace(/'/g, "''")}'`;
+  const out = [];
+  for await (const e of c.invites.listEntities({ queryOptions: { filter } })) {
+    out.push(entityToInvite(e));
+  }
+  return out;
+}
+
 // Returns all invites that share this normalized phone. Used by the SMS
-// webhook so STOP/START applies to every household sharing a number.
+// webhook so STOP/START applies to every household sharing a number, and by
+// the public RSVP "look me up by phone" fallback path.
 async function findInvitesByPhoneNorm(phoneNorm) {
   if (!phoneNorm) return [];
   const c = getClients();
@@ -483,6 +500,7 @@ module.exports = {
   deleteInvite,
   listInvites,
   findInviteByPrimaryName,
+  findInvitesByLastName,
   findInvitesByPhoneNorm,
   markResponded,
   // smslog
