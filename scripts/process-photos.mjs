@@ -56,6 +56,16 @@ const jobs = [
     position: 'attention',
     quality: 80,
   },
+  {
+    name: 'mitad-del-mundo (itinerary hero)',
+    in: 'mitad-del-mundo-source.jpg',
+    out: path.join(outImg, 'mitad-del-mundo.jpg'),
+    width: 1800,
+    height: 1300,
+    fit: 'cover',
+    position: 'top',
+    quality: 80,
+  },
 ];
 
 for (const j of jobs) {
