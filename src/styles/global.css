@@ -120,6 +120,14 @@ img, picture, svg, video { display: block; max-width: 100%; height: auto; }
   border-color: var(--color-gold-deep);
   color: var(--color-gold-deep);
 }
+.btn--small {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  box-shadow: none;
+  gap: 0.3rem;
+}
 
 .eyebrow {
   font-family: var(--font-body);
