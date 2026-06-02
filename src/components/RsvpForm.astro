@@ -555,7 +555,7 @@ const initData = {
     if (digits.length === 0) return '';
     if (digits.length <= 3) return `(${digits}`;
     if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)} - ${digits.slice(6, 10)}`;
   }
   if (phoneInput) {
     phoneInput.addEventListener('input', () => {
@@ -941,6 +941,11 @@ const initData = {
     margin-bottom: 0.25rem;
   }
   .rsvp-form-wrap input[type="text"],
+  .rsvp-form-wrap input[type="tel"],
+  .rsvp-form-wrap input[type="email"],
+  .rsvp-form-wrap input[type="number"],
+  .rsvp-form-wrap input[type="search"],
+  .rsvp-form-wrap input[type="url"],
   .rsvp-form-wrap select,
   .rsvp-form-wrap textarea {
     width: 100%;

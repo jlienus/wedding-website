@@ -192,7 +192,7 @@
     "phoneLookupTitle": "Encuentra tu invitación por teléfono",
     "phoneLookupHint": "Escribe el número de teléfono que le diste a John o Diana cuando pedimos tu contacto.",
     "phoneLabel": "Número de teléfono",
-    "phonePlaceholder": "(555) 123-4567",
+    "phonePlaceholder": "(555) 123 - 4567",
     "phoneInvalid": "Por favor escribe un número de teléfono válido de 10 dígitos.",
     "phoneNotFound": "No encontramos ninguna invitación con ese número de teléfono. Por favor llámanos o escríbenos a John o Diana para ayuda.",
     "phoneAmbiguous": "Encontramos más de una invitación con ese número. Por favor llámanos o escríbenos a John o Diana para que podamos ubicar la correcta.",
