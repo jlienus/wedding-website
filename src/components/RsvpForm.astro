@@ -538,6 +538,40 @@ const initData = {
     });
   }
 
+  // Format the phone fallback input as the user types: (XXX) XXX-XXXX.
+  // The server normalizes to E.164 server-side, so the format here is purely
+  // a UX guard — keeps the field tidy and reduces "is my number valid?"
+  // anxiety. Pasting works too (digits extracted, leading "1" stripped).
+  function formatUsPhone(raw: string): string {
+    let digits = (raw || '').replace(/\D/g, '');
+    if (digits.length === 11 && digits.startsWith('1')) digits = digits.slice(1);
+    digits = digits.slice(0, 10);
+    if (digits.length === 0) return '';
+    if (digits.length <= 3) return `(${digits}`;
+    if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+  }
+  if (phoneInput) {
+    phoneInput.addEventListener('input', () => {
+      const before = phoneInput.value;
+      const formatted = formatUsPhone(before);
+      if (formatted !== before) {
+        phoneInput.value = formatted;
+        // Always park the caret at the end after reformatting — simplest UX
+        // and good enough for a single short input.
+        try { phoneInput.setSelectionRange(formatted.length, formatted.length); } catch {}
+      }
+    });
+  }
+  // Phone-last-4 input: digits only, max 4. Keeps the value clean so the
+  // server's length === 4 check never trips on stray characters.
+  if (phone4Input) {
+    phone4Input.addEventListener('input', () => {
+      const cleaned = (phone4Input.value || '').replace(/\D/g, '').slice(0, 4);
+      if (cleaned !== phone4Input.value) phone4Input.value = cleaned;
+    });
+  }
+
   if (lookupToggleBtn) {
     lookupToggleBtn.addEventListener('click', () => {
       const next: LookupMode = lookupMode === 'name' ? 'phone' : 'name';

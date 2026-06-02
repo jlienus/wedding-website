@@ -1,0 +1,160 @@
+---
+import Base from '../../layouts/Base.astro';
+import config from '../../data/wedding.config.json';
+import es from '../../i18n/es.json';
+import type { Locale } from '../../lib/i18n';
+import QRCode from 'qrcode';
+
+const locale: Locale = 'es';
+const page = es.share;
+const siteUrl = `https://${config.site.domain}/es/`;
+
+const qrSvg = await QRCode.toString(siteUrl, {
+  type: 'svg',
+  errorCorrectionLevel: 'M',
+  margin: 2,
+  width: 320,
+  color: { dark: '#3a2f1c', light: '#ffffff' }
+});
+
+const stringKeys = ['share.copied', 'share.copyFailed'];
+const strings: Record<string, string> = {};
+for (const k of stringKeys) {
+  const [a, b] = k.split('.');
+  strings[k] = (es as any)[a][b];
+}
+---
+
+<Base title={page.heading + ' · John & Diana'} description={page.metaDescription} lang={locale}>
+  <main>
+    <section class="section container container--narrow reveal share-section">
+      <p class="eyebrow">{page.eyebrow}</p>
+      <h1>{page.heading}</h1>
+      <p class="share-lede">{page.lede}</p>
+
+      <div class="share-qr" set:html={qrSvg} aria-label={page.scanInstructions}></div>
+
+      <p class="share-url"><code>{config.site.domain}/es</code></p>
+
+      <div class="share-actions">
+        <button id="share-native" type="button" class="btn btn--gold" hidden data-share-text={page.shareLink}>
+          {page.shareLink}
+        </button>
+        <button id="share-copy" type="button" class="btn btn--ghost">
+          {page.copyLink}
+        </button>
+      </div>
+      <p id="share-feedback" class="share-feedback" role="status" hidden></p>
+
+      <p class="share-tip">{page.tip}</p>
+    </section>
+  </main>
+
+  <script id="share-init-data" type="application/json" set:html={JSON.stringify({ strings, siteUrl })}></script>
+</Base>
+
+<script>
+  const dataNode = document.getElementById('share-init-data');
+  if (dataNode) {
+    const INIT = JSON.parse(dataNode.textContent || '{}');
+    const S: Record<string, string> = INIT.strings || {};
+    const SITE_URL: string = INIT.siteUrl || location.origin + '/';
+
+    const nativeBtn = document.getElementById('share-native') as HTMLButtonElement | null;
+    const copyBtn = document.getElementById('share-copy') as HTMLButtonElement | null;
+    const feedback = document.getElementById('share-feedback') as HTMLElement | null;
+
+    function showFeedback(msg: string) {
+      if (!feedback) return;
+      feedback.textContent = msg;
+      feedback.hidden = false;
+      window.setTimeout(() => { if (feedback) feedback.hidden = true; }, 3500);
+    }
+
+    if (nativeBtn && typeof (navigator as any).share === 'function') {
+      nativeBtn.hidden = false;
+      nativeBtn.addEventListener('click', async () => {
+        try {
+          await (navigator as any).share({
+            title: document.title,
+            text: document.title,
+            url: SITE_URL
+          });
+        } catch (_e) {
+          /* user cancelled or share unavailable */
+        }
+      });
+    }
+
+    if (copyBtn) {
+      copyBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(SITE_URL);
+          showFeedback(S['share.copied'] || 'Copiado');
+        } catch (_e) {
+          showFeedback(S['share.copyFailed'] || 'No se pudo copiar');
+        }
+      });
+    }
+  }
+</script>
+
+<style>
+  .share-section { text-align: center; }
+  .share-lede {
+    font-size: 1.05rem;
+    margin: 0 auto 2rem;
+    max-width: 28rem;
+    color: var(--color-text-muted);
+  }
+  .share-qr {
+    display: inline-block;
+    padding: 1rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(58, 47, 28, 0.10);
+    margin: 1rem auto 1.5rem;
+    line-height: 0;
+  }
+  .share-qr :global(svg) {
+    display: block;
+    width: 260px;
+    height: 260px;
+  }
+  @media (min-width: 28rem) {
+    .share-qr :global(svg) { width: 320px; height: 320px; }
+  }
+  .share-url {
+    font-family: var(--font-body);
+    color: var(--color-text-muted);
+    margin: 0 0 2rem;
+    word-break: break-all;
+  }
+  .share-url code {
+    background: rgba(58, 47, 28, 0.05);
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    color: var(--color-text);
+  }
+  .share-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+    margin-bottom: 1rem;
+  }
+  .share-feedback {
+    color: var(--color-gold-deep);
+    font-size: 0.95rem;
+    font-style: italic;
+    margin: 0.5rem 0 1rem;
+    min-height: 1.25rem;
+  }
+  .share-tip {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    margin-top: 2rem;
+    font-style: italic;
+  }
+</style>

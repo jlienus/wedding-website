@@ -269,7 +269,20 @@
     "languageSpanish": "Español",
     "backToTop": "Back to top ↑",
     "privacy": "Privacy",
-    "terms": "Terms"
+    "terms": "Terms",
+    "share": "Share"
+  },
+  "share": {
+    "eyebrow": "Share",
+    "heading": "Share our wedding site",
+    "lede": "Scan the QR code with a phone camera, or use the buttons below to send the link.",
+    "shareLink": "Share link",
+    "copyLink": "Copy link",
+    "copied": "Link copied to clipboard",
+    "copyFailed": "Couldn't copy automatically — long-press the address above to copy it.",
+    "tip": "Tip: add this page to your phone's home screen for a one-tap QR code you can flash to anyone you meet.",
+    "scanInstructions": "Open your phone camera and point it at the code.",
+    "metaDescription": "Share John & Diana's wedding website via QR code or link."
   },
   "privacy": {
     "eyebrow": "Privacy",

@@ -7,6 +7,7 @@ const { locale } = Astro.props;
 const date = locale === 'es' ? config.wedding.dateDisplayEs : config.wedding.dateDisplayEn;
 const privacyHref = locale === 'es' ? '/es/privacidad' : '/privacy';
 const termsHref = locale === 'es' ? '/es/terminos' : '/terms';
+const shareHref = locale === 'es' ? '/es/compartir' : '/share';
 ---
 
 <footer class="site-footer">
@@ -19,6 +20,13 @@ const termsHref = locale === 'es' ? '/es/terminos' : '/terms';
     <a href={privacyHref}>{t(locale, 'footer.privacy')}</a>
     <span aria-hidden="true">·</span>
     <a href={termsHref}>{t(locale, 'footer.terms')}</a>
+    <span aria-hidden="true">·</span>
+    <a href={shareHref} class="share-link">
+      <svg class="share-icon" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" focusable="false">
+        <path fill="currentColor" d="M2 2h4v1H3v3H2V2zm12 0v4h-1V3h-3V2h4zM2 14v-4h1v3h3v1H2zm12 0h-4v-1h3v-3h1v4zM4 4h2v2H4V4zm6 0h2v2h-2V4zm-6 6h2v2H4v-2zm6 0h2v2h-2v-2zM7 7h2v2H7V7z"/>
+      </svg>
+      {t(locale, 'footer.share')}
+    </a>
   </p>
 </footer>
 
@@ -85,4 +93,10 @@ const termsHref = locale === 'es' ? '/es/terminos' : '/terms';
   }
   .legal-links a:hover { opacity: 1; color: var(--color-gold-deep); }
   .legal-links span { margin: 0 0.4rem; }
+  .share-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .share-icon { display: inline-block; }
 </style>

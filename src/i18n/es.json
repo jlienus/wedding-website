@@ -269,7 +269,20 @@
     "languageSpanish": "Español",
     "backToTop": "Volver arriba ↑",
     "privacy": "Privacidad",
-    "terms": "Términos"
+    "terms": "Términos",
+    "share": "Compartir"
+  },
+  "share": {
+    "eyebrow": "Compartir",
+    "heading": "Comparte nuestro sitio de bodas",
+    "lede": "Escanea el código QR con la cámara de tu teléfono o usa los botones para enviar el enlace.",
+    "shareLink": "Compartir enlace",
+    "copyLink": "Copiar enlace",
+    "copied": "Enlace copiado al portapapeles",
+    "copyFailed": "No se pudo copiar automáticamente — mantén presionada la dirección de arriba para copiarla.",
+    "tip": "Consejo: añade esta página a la pantalla de inicio de tu teléfono para mostrar el código QR con un solo toque a quien conozcas.",
+    "scanInstructions": "Abre la cámara de tu teléfono y apunta al código.",
+    "metaDescription": "Comparte el sitio web de la boda de John y Diana mediante código QR o enlace."
   },
   "privacy": {
     "eyebrow": "Privacidad",
