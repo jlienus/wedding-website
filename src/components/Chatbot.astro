@@ -213,6 +213,7 @@ const suggestions = locale === 'es' ? [
       input.style.height = 'auto';
       setBusy(true);
       const typingNode = appendMessage('assistant', '', { typing: true });
+      window.appTelemetry?.trackEvent('chatbot_message_sent', { locale, messageLength: trimmed.length, historyLength: history.length });
 
       let payload;
       const controller = new AbortController();
@@ -234,20 +235,26 @@ const suggestions = locale === 'es' ? [
         typingNode.remove();
         if (res.status === 429) {
           appendMessage('assistant', errorRate);
+          window.appTelemetry?.trackEvent('chatbot_error', { reason: 'rate_limited', status: 429 });
         } else if (!res.ok) {
           const fallback = typeof payload.reply === 'string' ? String(payload.reply).slice(0, 4000) : errorGeneric;
           appendMessage('assistant', fallback);
+          window.appTelemetry?.trackEvent('chatbot_error', { reason: 'http_error', status: res.status });
         } else if (payload && typeof payload.reply === 'string') {
           const reply = String(payload.reply).slice(0, 4000);
           history.push({ role: 'assistant', content: reply });
           appendMessage('assistant', reply);
           saveHistory();
+          window.appTelemetry?.trackEvent('chatbot_message_received', { locale, replyLength: reply.length });
         } else {
           appendMessage('assistant', errorGeneric);
+          window.appTelemetry?.trackEvent('chatbot_error', { reason: 'empty_reply', status: res.status });
         }
       } catch (e) {
         typingNode.remove();
         appendMessage('assistant', errorGeneric);
+        const reason = (e && e.name === 'AbortError') ? 'timeout' : 'network_error';
+        window.appTelemetry?.trackEvent('chatbot_error', { reason });
       } finally {
         clearTimeout(timeoutId);
         setBusy(false);
@@ -260,6 +267,7 @@ const suggestions = locale === 'es' ? [
       launcher.setAttribute('aria-expanded', 'true');
       root.classList.add('chatbot--open');
       requestAnimationFrame(() => input.focus());
+      window.appTelemetry?.trackEvent('chatbot_opened', { locale, historyLength: history.length });
     }
     function closePanel() {
       panel.hidden = true;

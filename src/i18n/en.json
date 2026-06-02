@@ -273,6 +273,7 @@
       { "title": "How long we keep your data", "body": "We delete all RSVP responses, phone numbers, and email addresses within 60 days after the wedding (by mid-May 2027). Photos taken at the wedding itself are kept separately and aren't affected by this notice." },
       { "title": "Who sees your information", "body": "Only John and Diana. We do not sell, rent, or share your information with anyone, including our wedding vendors. Meal counts and dietary restrictions are provided to our caterer as anonymized totals." },
       { "title": "Your choices", "body": "You can ask us to delete your information at any time, update it, or send you a copy of what we have. Just email johnmlien@outlook.com and we'll handle it within a few days." },
+      { "title": "Anonymous usage analytics", "body": "We use Microsoft Application Insights (an Azure service) to see which pages get visited, whether anything errored out, and which features are used most. The data is anonymous — no names, no RSVP details, no contact info — just things like page views, click counts, and error reports. It helps us notice if a button is broken or a page isn't loading for someone. No third-party trackers are used and the data stays in our Azure subscription." },
       { "title": "Contact", "body": "Questions or requests: johnmlien@outlook.com. The website is operated by John Lien personally for John & Diana's March 13, 2027 wedding." }
     ]
   },

@@ -19,10 +19,26 @@ const enHref = currentLocale === 'en' ? normalizedPath : esToEn[normalizedPath] 
 const esHref = currentLocale === 'es' ? normalizedPath : enToEs[normalizedPath] ?? '/es';
 ---
 
-<div class="lang-switch" aria-label="Language switcher">
-  <a href={enHref} aria-current={currentLocale === 'en' ? 'true' : undefined} class:list={{ current: currentLocale === 'en' }}>EN</a>
-  <a href={esHref} aria-current={currentLocale === 'es' ? 'true' : undefined} class:list={{ current: currentLocale === 'es' }}>ES</a>
+<div class="lang-switch" aria-label="Language switcher" data-current={currentLocale}>
+  <a href={enHref} aria-current={currentLocale === 'en' ? 'true' : undefined} class:list={{ current: currentLocale === 'en' }} data-target-locale="en">EN</a>
+  <a href={esHref} aria-current={currentLocale === 'es' ? 'true' : undefined} class:list={{ current: currentLocale === 'es' }} data-target-locale="es">ES</a>
 </div>
+
+<script>
+  // Fire a telemetry event before the link navigates. AI SDK uses sendBeacon
+  // under the hood so the event lands even when the page is about to unload.
+  document.querySelectorAll('.lang-switch a[data-target-locale]').forEach((a) => {
+    a.addEventListener('click', () => {
+      const link = a as HTMLAnchorElement;
+      const wrap = link.closest('.lang-switch') as HTMLElement | null;
+      const from = wrap?.dataset.current ?? 'unknown';
+      const to = link.dataset.targetLocale ?? 'unknown';
+      if (from !== to) {
+        window.appTelemetry?.trackEvent('language_switched', { from, to });
+      }
+    });
+  });
+</script>
 
 <style>
   .lang-switch {

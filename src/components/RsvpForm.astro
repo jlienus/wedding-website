@@ -463,8 +463,10 @@ const initData = {
       const lastName = String(fd.get('lastName') || '').trim();
       if (firstName.length < 2 || lastName.length < 2) {
         showError($('#rsvp-lookup-error'), S['rsvp.lookupNameTooShort']);
+        window.appTelemetry?.trackEvent('rsvp_lookup_validation_failed', { reason: 'name_too_short' });
         return;
       }
+      window.appTelemetry?.trackEvent('rsvp_lookup_submitted', { locale });
       setBusy(btn, true);
       try {
         const res = await fetch('/api/rsvp/lookup', {
@@ -473,19 +475,30 @@ const initData = {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ firstName, lastName })
         });
-        if (res.status === 429) { showError($('#rsvp-lookup-error'), S['rsvp.lookupRateLimited']); return; }
-        if (!res.ok) { showError($('#rsvp-lookup-error'), S['rsvp.lookupError']); return; }
+        if (res.status === 429) {
+          showError($('#rsvp-lookup-error'), S['rsvp.lookupRateLimited']);
+          window.appTelemetry?.trackEvent('rsvp_lookup_failed', { reason: 'rate_limited', status: 429 });
+          return;
+        }
+        if (!res.ok) {
+          showError($('#rsvp-lookup-error'), S['rsvp.lookupError']);
+          window.appTelemetry?.trackEvent('rsvp_lookup_failed', { reason: 'http_error', status: res.status });
+          return;
+        }
         const data = await res.json();
         if (!data.found) {
           const msg = data.ambiguous ? S['rsvp.lookupAmbiguous'] : S['rsvp.lookupNotFound'];
           showError($('#rsvp-lookup-error'), msg);
+          window.appTelemetry?.trackEvent('rsvp_lookup_failed', { reason: data.ambiguous ? 'ambiguous' : 'not_found' });
           return;
         }
+        window.appTelemetry?.trackEvent('rsvp_lookup_success', { partySize: (data.invite?.guests?.length ?? 0) + 1 });
         INVITE = data.invite;
         try { localStorage.setItem('rsvp.lastFirst', firstName); } catch {}
         renderForm();
       } catch (_e) {
         showError($('#rsvp-lookup-error'), S['rsvp.lookupError']);
+        window.appTelemetry?.trackEvent('rsvp_lookup_failed', { reason: 'network_error' });
       } finally {
         setBusy(btn, false);
       }
@@ -587,6 +600,7 @@ const initData = {
       };
 
       setBusy(btn, true);
+      window.appTelemetry?.trackEvent('rsvp_submit_started', { locale, partySize: additionalGuests.length + 1 });
       try {
         const res = await fetch('/api/rsvp/submit', {
           method: 'POST',
@@ -594,7 +608,11 @@ const initData = {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ payload })
         });
-        if (res.status === 429) { showError($('#rsvp-submit-error'), S['rsvp.submitRateLimited']); return; }
+        if (res.status === 429) {
+          showError($('#rsvp-submit-error'), S['rsvp.submitRateLimited']);
+          window.appTelemetry?.trackEvent('rsvp_submit_failed', { reason: 'rate_limited', status: 429 });
+          return;
+        }
         if (res.status === 410) {
           // Distinguish "permanently closed" from "invite vanished" — body has
           // { error: 'rsvp_closed' } vs { error: 'invite_not_found' }.
@@ -606,21 +624,37 @@ const initData = {
             (lookupForm as HTMLFormElement | null)?.reset();
             show('lookup');
             showError($('#rsvp-lookup-error'), S['rsvp.lookupNotFound']);
+            window.appTelemetry?.trackEvent('rsvp_submit_failed', { reason: 'invite_not_found', status: 410 });
             return;
           }
           showError($('#rsvp-submit-error'), S['rsvp.submitClosed']);
+          window.appTelemetry?.trackEvent('rsvp_submit_failed', { reason: 'rsvp_closed', status: 410 });
           return;
         }
-        if (!res.ok) { showError($('#rsvp-submit-error'), S['rsvp.submitError']); return; }
+        if (!res.ok) {
+          showError($('#rsvp-submit-error'), S['rsvp.submitError']);
+          window.appTelemetry?.trackEvent('rsvp_submit_failed', { reason: 'http_error', status: res.status });
+          return;
+        }
         const data = await res.json();
         // Update local snapshot so Edit shows fresh values.
         if (INVITE && data && data.payload) {
           INVITE.payload = data.payload;
           INVITE.responded = true;
         }
+        const allGuests = [primary, ...additionalGuests];
+        const attendingCount = allGuests.filter((g: any) => g.attending === true).length;
+        window.appTelemetry?.trackEvent('rsvp_submit_success', {
+          locale,
+          partySize: allGuests.length,
+          attending: attendingCount,
+          declined: allGuests.length - attendingCount,
+          late: !!(data && data.late)
+        });
         renderConfirmation(!!(data && data.late), additionalGuests.length, primary, additionalGuests);
       } catch (_e) {
         showError($('#rsvp-submit-error'), S['rsvp.submitError']);
+        window.appTelemetry?.trackEvent('rsvp_submit_failed', { reason: 'network_error' });
       } finally {
         setBusy(btn, false);
       }

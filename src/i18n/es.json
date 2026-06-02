@@ -273,6 +273,7 @@
       { "title": "Cuánto tiempo guardamos los datos", "body": "Eliminamos todas las respuestas del RSVP, números de teléfono y correos electrónicos dentro de los 60 días posteriores a la boda (hacia mediados de mayo de 2027). Las fotos tomadas durante la boda se guardan por separado y no están sujetas a este aviso." },
       { "title": "Quién ve tu información", "body": "Solo John y Diana. No vendemos, alquilamos ni compartimos tu información con nadie, incluidos nuestros proveedores. Los conteos de comidas y restricciones alimentarias se entregan al servicio de catering como totales anónimos." },
       { "title": "Tus opciones", "body": "Puedes pedirnos que eliminemos tu información en cualquier momento, que la actualicemos o que te enviemos una copia. Solo escríbenos a johnmlien@outlook.com y lo manejaremos en pocos días." },
+      { "title": "Estadísticas de uso anónimas", "body": "Usamos Microsoft Application Insights (un servicio de Azure) para ver qué páginas se visitan, si hubo errores y qué funciones se usan más. Los datos son anónimos — sin nombres, sin detalles de RSVP, sin información de contacto — solo cosas como vistas de página, conteo de clics y reportes de errores. Nos ayuda a notar si un botón está roto o una página no carga para alguien. No usamos rastreadores de terceros y los datos permanecen en nuestra suscripción de Azure." },
       { "title": "Contacto", "body": "Preguntas o solicitudes: johnmlien@outlook.com. El sitio es operado por John Lien personalmente para la boda de John y Diana el 13 de marzo de 2027." }
     ]
   },

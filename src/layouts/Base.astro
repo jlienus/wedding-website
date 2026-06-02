@@ -41,6 +41,12 @@ const absoluteOgImage = ogImage.startsWith('http') ? ogImage : new URL(ogImage, 
     <Footer locale={lang} />
     <Chatbot locale={lang} />
     <script>
+      import { initTelemetry } from '../lib/telemetry';
+      const aiConn = import.meta.env.PUBLIC_APPINSIGHTS_CONNECTION_STRING;
+      if (aiConn) {
+        initTelemetry(aiConn);
+      }
+
       (() => {
         const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const revealItems = document.querySelectorAll('.reveal');

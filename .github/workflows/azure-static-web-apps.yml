@@ -20,6 +20,8 @@ jobs:
         with: { node-version: '22', cache: 'npm' }
       - run: npm ci
       - run: npm run build
+        env:
+          PUBLIC_APPINSIGHTS_CONNECTION_STRING: ${{ secrets.APPINSIGHTS_CONNECTION_STRING }}
       - name: Deploy
         id: deploy
         uses: Azure/static-web-apps-deploy@v1
