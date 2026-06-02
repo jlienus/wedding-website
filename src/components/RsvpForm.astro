@@ -25,6 +25,7 @@ const stringKeys = [
   'rsvp.backToNameLookup',
   'rsvp.formIntro','rsvp.formHelloPrefix','rsvp.notYou','rsvp.save','rsvp.saving',
   'rsvp.primaryYourRsvp','rsvp.additionalGuestsTitle','rsvp.additionalGuestsHint',
+  'rsvp.previouslyDeclinedHint',
   'rsvp.addGuest','rsvp.removeGuest','rsvp.maxGuestsReached',
   'rsvp.guestNameLabel','rsvp.guestNamePlaceholder','rsvp.isKidLabel',
   'rsvp.attendingQuestion','rsvp.attendingYes','rsvp.attendingNo',
@@ -111,6 +112,7 @@ const initData = {
         <p class="rsvp-muted rsvp-additional-hint">{t(locale, 'rsvp.additionalGuestsHint')}</p>
       </div>
       <div id="rsvp-guests" class="rsvp-guests"></div>
+      <p id="rsvp-declined-hint" class="rsvp-muted rsvp-declined-hint" hidden>{t(locale, 'rsvp.previouslyDeclinedHint')}</p>
       <div class="rsvp-add-guest-row">
         <button type="button" id="rsvp-add-guest" class="btn btn--ghost btn--small">
           + <span data-bind="addGuest"></span>
@@ -143,7 +145,10 @@ const initData = {
     Template for the attendee card (used for both primary and additional guests).
     Field visibility is toggled at render time:
       - Primary cards hide the .guest-name-row and .guest-remove-row.
-      - Additional-guest cards show both, and inject a stable guestId in dataset.
+      - Additional-guest cards hide .rsvp-attending (no per-guest Y/N — being
+        in the list means attending) and show .rsvp-attending-fields always.
+      - Notes lives in .rsvp-primary-notes so it stays visible for the primary
+        even when they choose "not attending" (lets them send a regret note).
   -->
   <template id="rsvp-attendee-card">
     <fieldset class="rsvp-member">
@@ -179,7 +184,9 @@ const initData = {
           <span class="rsvp-label" data-bind="songLabel"></span>
           <input type="text" name="songRequest" maxlength="500" data-placeholder="song" />
         </label>
-        <label class="rsvp-field rsvp-field--notes" hidden>
+      </div>
+      <div class="rsvp-primary-notes" hidden>
+        <label class="rsvp-field rsvp-field--notes">
           <span class="rsvp-label" data-bind="notesLabel"></span>
           <textarea name="notes" maxlength="800" rows="2" data-placeholder="notes"></textarea>
         </label>
@@ -340,8 +347,13 @@ const initData = {
     });
   }
 
-  // Build one attendee card (primary or additional guest). `kind` controls
-  // whether the name input + remove button + isKid toggle are shown.
+  // Build one attendee card (primary or additional guest). The two kinds
+  // diverge in three ways:
+  //   - primary: shows attending radio (Y/N), gates meal/dietary/song on Y,
+  //              shows notes always; hides name input + remove button.
+  //   - guest:   no attending radio (being in the list IS the answer);
+  //              meal/dietary/song always shown; shows name input + remove;
+  //              notes hidden.
   function buildAttendeeCard(
     kind: 'primary' | 'guest',
     data: any,
@@ -354,23 +366,26 @@ const initData = {
 
     bindStaticLabels(fieldset);
 
-    // Scope radio names so each attendee's yes/no is independent.
-    const scope = kind === 'primary' ? 'primary' : (opts.guestId || randomGuestId());
-    fieldset.dataset.scope = scope;
-    if (kind === 'guest') fieldset.dataset.guestId = scope;
-    fieldset.querySelectorAll('input[type="radio"][name="attending"]').forEach((r) => {
-      (r as HTMLInputElement).name = `attending-${scope}`;
-    });
-    // Notes field is only shown on the primary card.
-    const notesField = fieldset.querySelector('.rsvp-field--notes') as HTMLElement | null;
-    if (notesField && kind === 'primary') notesField.hidden = false;
+    const attendingBlock = fieldset.querySelector('.rsvp-attending') as HTMLElement | null;
+    const attendingFields = fieldset.querySelector('.rsvp-attending-fields') as HTMLElement | null;
+    const notesBlock = fieldset.querySelector('.rsvp-primary-notes') as HTMLElement | null;
 
     if (kind === 'primary') {
-      // Hide name row + remove row, show display name in the legend.
+      // Scope radio names so primary's yes/no doesn't collide with anything.
+      fieldset.dataset.scope = 'primary';
+      fieldset.querySelectorAll('input[type="radio"][name="attending"]').forEach((r) => {
+        (r as HTMLInputElement).name = 'attending-primary';
+      });
       const nameEl = fieldset.querySelector('.rsvp-member-name') as HTMLElement;
       nameEl.textContent = opts.primaryName || '';
+      if (notesBlock) notesBlock.hidden = false;
     } else {
-      // Additional guest: show name input + remove button, hide legend.
+      // Guests: drop the attending radio entirely. Show name + remove.
+      if (attendingBlock) attendingBlock.remove();
+      if (attendingFields) attendingFields.hidden = false;
+      const guestId = opts.guestId || randomGuestId();
+      fieldset.dataset.scope = guestId;
+      fieldset.dataset.guestId = guestId;
       (fieldset.querySelector('.guest-name-row') as HTMLElement).hidden = false;
       (fieldset.querySelector('.guest-remove-row') as HTMLElement).hidden = false;
       (fieldset.querySelector('.rsvp-member-name') as HTMLElement).hidden = true;
@@ -387,12 +402,14 @@ const initData = {
 
     // Pre-fill attendee fields from saved data.
     if (data) {
-      if (data.attending === true) {
-        const yes = fieldset.querySelector('input[type="radio"][value="yes"]') as HTMLInputElement;
-        if (yes) yes.checked = true;
-      } else if (data.attending === false) {
-        const no = fieldset.querySelector('input[type="radio"][value="no"]') as HTMLInputElement;
-        if (no) no.checked = true;
+      if (kind === 'primary') {
+        if (data.attending === true) {
+          const yes = fieldset.querySelector('input[type="radio"][value="yes"]') as HTMLInputElement;
+          if (yes) yes.checked = true;
+        } else if (data.attending === false) {
+          const no = fieldset.querySelector('input[type="radio"][value="no"]') as HTMLInputElement;
+          if (no) no.checked = true;
+        }
       }
       const sel = fieldset.querySelector('select[name="mealChoice"]') as HTMLSelectElement;
       if (sel && data.mealChoice) {
@@ -407,18 +424,42 @@ const initData = {
       }
     }
 
-    // Toggle attending-only fields based on radio state.
-    const updateFieldsVisibility = () => {
-      const attendingFields = fieldset.querySelector('.rsvp-attending-fields') as HTMLElement;
-      const yesChecked = (fieldset.querySelector('input[type="radio"][value="yes"]') as HTMLInputElement | null)?.checked;
-      if (attendingFields) attendingFields.hidden = !yesChecked;
-    };
-    fieldset.querySelectorAll('input[type="radio"][name^="attending-"]').forEach((inp) => {
-      inp.addEventListener('change', updateFieldsVisibility);
-    });
-    updateFieldsVisibility();
+    if (kind === 'primary') {
+      // Primary's Yes/No drives both its own meal fields AND the entire
+      // additional-guests section visibility (handled in updatePrimaryGated).
+      fieldset.querySelectorAll('input[type="radio"][name="attending-primary"]').forEach((inp) => {
+        inp.addEventListener('change', updatePrimaryGated);
+      });
+    }
 
     return fieldset;
+  }
+
+  // Read primary's current attending choice off the form. Returns null when
+  // unanswered, true when "yes" is checked, false when "no" is checked.
+  function getPrimaryAttending(): boolean | null {
+    const primaryFs = $('#rsvp-primary-card')?.querySelector('fieldset') as HTMLFieldSetElement | null;
+    if (!primaryFs) return null;
+    const yes = (primaryFs.querySelector('input[type="radio"][value="yes"]') as HTMLInputElement | null)?.checked;
+    const no = (primaryFs.querySelector('input[type="radio"][value="no"]') as HTMLInputElement | null)?.checked;
+    if (yes) return true;
+    if (no) return false;
+    return null;
+  }
+
+  // Sync everything that depends on the primary's attending answer:
+  //   - primary's meal/dietary/song fields (shown only on Yes)
+  //   - the entire additional-guests section (shown only on Yes)
+  // Notes for the primary stay visible either way (regret messages on No).
+  function updatePrimaryGated() {
+    const attending = getPrimaryAttending();
+    const primaryFs = $('#rsvp-primary-card')?.querySelector('fieldset') as HTMLFieldSetElement | null;
+    if (primaryFs) {
+      const fields = primaryFs.querySelector('.rsvp-attending-fields') as HTMLElement | null;
+      if (fields) fields.hidden = attending !== true;
+    }
+    const additional = root!.querySelector('.rsvp-additional') as HTMLElement | null;
+    if (additional) additional.hidden = attending !== true;
   }
 
   function updateAddGuestButton() {
@@ -454,7 +495,14 @@ const initData = {
 
     const payload = INVITE.payload || { primary: emptyPrimary(), additionalGuests: [] };
     const primary = payload.primary || emptyPrimary();
-    const guests = Array.isArray(payload.additionalGuests) ? payload.additionalGuests : [];
+    const savedGuests = Array.isArray(payload.additionalGuests) ? payload.additionalGuests : [];
+    // In the simplified model, being in the additional-guests list means
+    // attending. Saved guests with attending===false are dropped from the UI
+    // so the user doesn't see a "coming" card for someone they already
+    // declined. We surface a small one-time hint when this happens so they
+    // can add the guest back if plans changed.
+    const activeGuests = savedGuests.filter((g: any) => g && g.attending !== false);
+    const declinedCount = savedGuests.length - activeGuests.length;
 
     const primaryBox = $('#rsvp-primary-card');
     const guestsBox = $('#rsvp-guests');
@@ -465,10 +513,13 @@ const initData = {
     const primaryName = `${INVITE.primaryFirstName || ''} ${INVITE.primaryLastName || ''}`.trim();
     primaryBox.appendChild(buildAttendeeCard('primary', primary, { primaryName }));
 
-    for (const g of guests) {
+    for (const g of activeGuests) {
       guestsBox.appendChild(buildAttendeeCard('guest', g, { guestId: g.id || randomGuestId() }));
     }
+    const declinedHint = $('#rsvp-declined-hint');
+    if (declinedHint) declinedHint.hidden = declinedCount === 0;
     updateAddGuestButton();
+    updatePrimaryGated();
     clearError($('#rsvp-submit-error'));
     show('form');
   }
@@ -745,26 +796,36 @@ const initData = {
   }
 
   // --- Submit ---
+  // collectAttendee derives the per-attendee payload shape from the card.
+  // For guests, attending is hardcoded to true — they only exist in the
+  // list because the user added them, and the new UX uses "remove" instead
+  // of a per-row Yes/No radio. For the primary, attending is read from the
+  // radio (tri-state: true|false|null while undecided).
   function collectAttendee(fs: HTMLFieldSetElement, kind: 'primary' | 'guest'): any {
-    const yes = (fs.querySelector('input[type="radio"][value="yes"]') as HTMLInputElement | null)?.checked;
-    const no = (fs.querySelector('input[type="radio"][value="no"]') as HTMLInputElement | null)?.checked;
-    let attending: boolean | null = null;
-    if (yes) attending = true; else if (no) attending = false;
     const get = (n: string): string => (fs.querySelector(`[name="${n}"]`) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null)?.value || '';
-    const out: any = {
-      attending,
-      mealChoice: attending === true ? get('mealChoice') : '',
-      dietary: attending === true ? get('dietary') : '',
-      songRequest: attending === true ? get('songRequest') : ''
-    };
     if (kind === 'primary') {
-      out.notes = get('notes');
-    } else {
-      out.id = fs.dataset.guestId || randomGuestId();
-      out.name = get('guestName').trim();
-      out.isKid = !!(fs.querySelector('input[name="isKid"]') as HTMLInputElement | null)?.checked;
+      const yes = (fs.querySelector('input[type="radio"][value="yes"]') as HTMLInputElement | null)?.checked;
+      const no = (fs.querySelector('input[type="radio"][value="no"]') as HTMLInputElement | null)?.checked;
+      let attending: boolean | null = null;
+      if (yes) attending = true; else if (no) attending = false;
+      return {
+        attending,
+        mealChoice: attending === true ? get('mealChoice') : '',
+        dietary: attending === true ? get('dietary') : '',
+        songRequest: attending === true ? get('songRequest') : '',
+        notes: get('notes')
+      };
     }
-    return out;
+    // Guest.
+    return {
+      id: fs.dataset.guestId || randomGuestId(),
+      name: get('guestName').trim(),
+      isKid: !!(fs.querySelector('input[name="isKid"]') as HTMLInputElement | null)?.checked,
+      attending: true,
+      mealChoice: get('mealChoice'),
+      dietary: get('dietary'),
+      songRequest: get('songRequest')
+    };
   }
 
   const submitForm = phases.form as HTMLFormElement | null;
@@ -779,19 +840,30 @@ const initData = {
       if (!primaryFs) return;
       const primary = collectAttendee(primaryFs, 'primary');
 
-      const guestFieldsets = Array.from($('#rsvp-guests')!.querySelectorAll('fieldset')) as HTMLFieldSetElement[];
-      const additionalGuests = guestFieldsets.map(fs => collectAttendee(fs, 'guest'));
-
-      // Client-side guards
-      const missingNames = additionalGuests.filter(g => !g.name);
-      if (missingNames.length) {
-        showError($('#rsvp-submit-error'), S['rsvp.guestNameRequired']);
-        return;
-      }
-      const everyone = [primary, ...additionalGuests];
-      if (everyone.some(a => a.attending !== true && a.attending !== false)) {
+      // Primary must answer Yes or No before we let the form go through.
+      if (primary.attending !== true && primary.attending !== false) {
         showError($('#rsvp-submit-error'), S['rsvp.attendingAllRequired']);
         return;
+      }
+
+      // Collect additional guests ONLY when primary is attending. If primary
+      // declined, the whole party is declining and the DOM rows (kept around
+      // for the No -> Yes toggle-back case) are ignored entirely.
+      let additionalGuests: any[] = [];
+      if (primary.attending === true) {
+        const guestFieldsets = Array.from($('#rsvp-guests')!.querySelectorAll('fieldset')) as HTMLFieldSetElement[];
+        const collected = guestFieldsets.map(fs => collectAttendee(fs, 'guest'));
+        // Drop totally-empty cards silently — a user who clicks "Add guest"
+        // by mistake and never types anything shouldn't be blocked. A
+        // half-filled card (name present but blank, or no name but a meal
+        // chosen) still fails the name guard below so we don't lose data.
+        const isEmpty = (g: any) => !g.name && !g.mealChoice && !g.dietary && !g.songRequest && !g.isKid;
+        additionalGuests = collected.filter(g => !isEmpty(g));
+        const missingNames = additionalGuests.filter(g => !g.name);
+        if (missingNames.length) {
+          showError($('#rsvp-submit-error'), S['rsvp.guestNameRequired']);
+          return;
+        }
       }
 
       const payload = {
@@ -801,7 +873,11 @@ const initData = {
       };
 
       setBusy(btn, true);
-      window.appTelemetry?.trackEvent('rsvp_submit_started', { locale: LOCALE, partySize: additionalGuests.length + 1 });
+      window.appTelemetry?.trackEvent('rsvp_submit_started', {
+        locale: LOCALE,
+        primaryAttending: primary.attending,
+        partySize: additionalGuests.length + 1
+      });
       try {
         const res = await fetch('/api/rsvp/submit', {
           method: 'POST',
@@ -843,13 +919,11 @@ const initData = {
           INVITE.payload = data.payload;
           INVITE.responded = true;
         }
-        const allGuests = [primary, ...additionalGuests];
-        const attendingCount = allGuests.filter((g: any) => g.attending === true).length;
         window.appTelemetry?.trackEvent('rsvp_submit_success', {
           locale: LOCALE,
-          partySize: allGuests.length,
-          attending: attendingCount,
-          declined: allGuests.length - attendingCount,
+          primaryAttending: primary.attending,
+          partySize: additionalGuests.length + 1,
+          attendingCount: primary.attending === true ? additionalGuests.length + 1 : 0,
           late: !!(data && data.late)
         });
         renderConfirmation(!!(data && data.late), additionalGuests.length, primary, additionalGuests);
@@ -1049,6 +1123,14 @@ const initData = {
   .rsvp-kid-toggle input { margin: 0; }
 
   .rsvp-attending { margin-top: 0.5rem; }
+  .rsvp-primary-notes { margin-top: var(--space-3); }
+  .rsvp-additional[hidden],
+  .rsvp-primary-notes[hidden] { display: none !important; }
+  .rsvp-declined-hint {
+    margin: 0 0 var(--space-2);
+    font-size: 0.85rem;
+    font-style: italic;
+  }
   .rsvp-radio-group {
     display: flex;
     gap: 1rem;
