@@ -271,6 +271,7 @@ const initData = {
     payload: any;
     responded: boolean;
     respondedAt: string;
+    respondedLate?: boolean;
   };
 
   let INVITE: Invite | null = null;
@@ -284,7 +285,14 @@ const initData = {
       const data = await res.json();
       if (data && data.authenticated && data.invite) {
         INVITE = data.invite;
-        renderForm();
+        if (INVITE.responded) {
+          const payload = INVITE.payload || { primary: emptyPrimary(), additionalGuests: [] };
+          const primary = payload.primary || emptyPrimary();
+          const guests = Array.isArray(payload.additionalGuests) ? payload.additionalGuests : [];
+          renderConfirmation(!!INVITE.respondedLate, guests.length, primary, guests);
+        } else {
+          renderForm();
+        }
         return;
       }
     } catch (_e) { /* fall through */ }

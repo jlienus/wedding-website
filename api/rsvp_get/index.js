@@ -72,7 +72,8 @@ module.exports = async function (context, req) {
         hasPhone: !!invite.phoneNorm,
         payload: invite.payload || emptyPayload(),
         responded: !!invite.responded,
-        respondedAt: invite.respondedAt || ''
+        respondedAt: invite.respondedAt || '',
+        respondedLate: !!invite.respondedLate
       }
     }
   };
