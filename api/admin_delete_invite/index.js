@@ -1,14 +1,12 @@
 'use strict';
 
-// POST /api/mgmt/send-reminder
-// Body: { inviteId: string, force?: boolean }
-// Sends an SMS reminder immediately. `force: true` bypasses the
-// 30-day-between-reminders rule (still respects responded/opt-out/hardfail).
+// POST /api/mgmt/delete-invite
+// Body: { inviteId: string }
+// Returns: { ok: true, deleted: true, smsRowsDeleted: N }
 
 const { preflight, isAllowedOrigin } = require('../_lib/cors');
 const auth = require('../_lib/auth');
 const storage = require('../_lib/storage');
-const { sendReminderToInvite } = require('../_lib/reminders');
 
 module.exports = async function (context, req) {
   const pre = preflight(req, 'POST, OPTIONS');
@@ -32,25 +30,30 @@ module.exports = async function (context, req) {
   try { body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body; }
   catch { body = null; }
   const inviteId = body && typeof body.inviteId === 'string' ? body.inviteId : '';
-  const force = !!(body && body.force);
   if (!inviteId) {
     context.res = { status: 400, headers: cors, body: { error: 'inviteId_required' } };
     return;
   }
 
-  let result;
-  try {
-    result = await sendReminderToInvite(inviteId, { context, force, dedupePhones: new Set() });
-  } catch (err) {
-    context.log.error(`admin_send_reminder err: ${err && err.message}`);
-    context.res = { status: 503, headers: cors, body: { error: 'send_failed', detail: err && err.message } };
+  const existing = await storage.getInvite(inviteId);
+  if (!existing) {
+    context.res = { status: 404, headers: cors, body: { error: 'invite_not_found' } };
     return;
   }
 
-  context.log(`admin_send_reminder inviteId=${inviteId} force=${force} sent=${result && result.sent} reason=${result && result.reason}`);
+  let result;
+  try {
+    result = await storage.deleteInvite(inviteId);
+  } catch (err) {
+    context.log.error(`admin_delete_invite err: ${err && err.message}`);
+    context.res = { status: 503, headers: cors, body: { error: 'storage_unavailable' } };
+    return;
+  }
+
+  context.log(`admin_delete_invite inviteId=${inviteId} smsRowsDeleted=${result && result.smsRowsDeleted}`);
   context.res = {
     status: 200,
     headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-    body: { ok: true, ...result }
+    body: { ok: true, deleted: true, smsRowsDeleted: (result && result.smsRowsDeleted) || 0 }
   };
 };

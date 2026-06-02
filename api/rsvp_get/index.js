@@ -3,9 +3,10 @@
 const { preflight, isAllowedOrigin } = require('../_lib/cors');
 const auth = require('../_lib/auth');
 const storage = require('../_lib/storage');
+const { emptyPayload } = require('../_lib/payload');
 
-// GET /api/rsvp/get — reads the session cookie and returns the party + members
-// + existing responses. Used by the form on return visits and after magic-link
+// GET /api/rsvp/get — reads the session cookie and returns the invite +
+// saved payload. Used by the form on return visits and after a magic-link
 // redirect. No body needed.
 module.exports = async function (context, req) {
   const pre = preflight(req, 'GET, OPTIONS');
@@ -38,26 +39,22 @@ module.exports = async function (context, req) {
     return;
   }
 
-  const { partyId } = session;
+  const { inviteId } = session;
 
-  let party, members, responses;
+  let invite;
   try {
-    [party, members, responses] = await Promise.all([
-      storage.getParty(partyId),
-      storage.listMembers(partyId),
-      storage.getResponses(partyId)
-    ]);
+    invite = await storage.getInvite(inviteId);
   } catch (err) {
     context.log.error(`rsvp_get storage err: ${err && err.message}`);
     context.res = { status: 503, headers: cors, body: { error: 'storage_unavailable' } };
     return;
   }
-  if (!party) {
-    // Cookie pointed to a deleted party. Clear cookie.
+  if (!invite) {
+    // Cookie pointed to a deleted invite. Clear cookie.
     context.res = {
       status: 200,
       headers: { ...cors, 'Content-Type': 'application/json', 'Set-Cookie': auth.clearSessionCookie() },
-      body: { authenticated: false, reason: 'party_not_found' }
+      body: { authenticated: false, reason: 'invite_not_found' }
     };
     return;
   }
@@ -67,26 +64,16 @@ module.exports = async function (context, req) {
     headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
     body: {
       authenticated: true,
-      party: {
-        partyId: party.partyId,
-        displayName: party.displayName,
-        locale: party.locale,
-        plusOneAllowed: party.plusOneAllowed,
-        kidsAllowed: party.kidsAllowed,
-        hasPhone: !!party.phoneNorm
-      },
-      members: members.map((m) => ({ memberId: m.memberId, firstName: m.firstName, lastName: m.lastName, role: m.role, isKid: m.isKid })),
-      responses: responses.map((r) => ({
-        memberId: r.memberId,
-        attending: r.attending,
-        mealChoice: r.mealChoice,
-        dietary: r.dietary,
-        songRequest: r.songRequest,
-        notes: r.notes,
-        plusOneName: r.plusOneName,
-        submittedAt: r.submittedAt,
-        updatedAt: r.updatedAt
-      }))
+      invite: {
+        inviteId: invite.inviteId,
+        primaryFirstName: invite.primaryFirstName,
+        primaryLastName: invite.primaryLastName,
+        locale: invite.locale,
+        hasPhone: !!invite.phoneNorm,
+        payload: invite.payload || emptyPayload(),
+        responded: !!invite.responded,
+        respondedAt: invite.respondedAt || ''
+      }
     }
   };
 };

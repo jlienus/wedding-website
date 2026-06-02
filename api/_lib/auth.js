@@ -51,40 +51,40 @@ function constantTimeEqual(a, b) {
 }
 
 // --- Magic-link tokens ----------------------------------------------------
-// Format: <partyId>.<sig>
-// Used in SMS links: /api/rsvp/magic?t=<partyId>.<sig>
+// Format: <inviteId>.<sig>
+// Used in SMS links: /api/rsvp/magic?t=<inviteId>.<sig>
 
-function signMagicToken(partyId) {
-  const sig = hmacSign(getMagicSecret(), MAGIC_PURPOSE, partyId);
-  return `${partyId}.${sig}`;
+function signMagicToken(inviteId) {
+  const sig = hmacSign(getMagicSecret(), MAGIC_PURPOSE, inviteId);
+  return `${inviteId}.${sig}`;
 }
 
 function verifyMagicToken(token) {
   if (typeof token !== 'string') return null;
   const dot = token.lastIndexOf('.');
   if (dot <= 0) return null;
-  const partyId = token.slice(0, dot);
+  const inviteId = token.slice(0, dot);
   const sig = token.slice(dot + 1);
-  if (!/^[A-Za-z0-9_-]{1,128}$/.test(partyId)) return null;
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(inviteId)) return null;
   if (sig.length !== SIG_LEN_CHARS) return null;
-  const expected = hmacSign(getMagicSecret(), MAGIC_PURPOSE, partyId);
-  return constantTimeEqual(sig, expected) ? partyId : null;
+  const expected = hmacSign(getMagicSecret(), MAGIC_PURPOSE, inviteId);
+  return constantTimeEqual(sig, expected) ? inviteId : null;
 }
 
 // --- Session cookies ------------------------------------------------------
-// Format: <partyId>.<issuedAtMs>.<sig>
+// Format: <inviteId>.<issuedAtMs>.<sig>
 // Issued after successful name lookup or magic-link click.
 // HttpOnly + Secure + SameSite=Lax cookie sent to /api/rsvp/submit.
 
-function signSession(partyId, issuedAtMs) {
-  const payload = `${partyId}|${issuedAtMs}`;
+function signSession(inviteId, issuedAtMs) {
+  const payload = `${inviteId}|${issuedAtMs}`;
   return hmacSign(getSessionSecret(), SESSION_PURPOSE, payload);
 }
 
-function issueSessionCookie(partyId, opts = {}) {
+function issueSessionCookie(inviteId, opts = {}) {
   const now = Date.now();
-  const sig = signSession(partyId, now);
-  const value = `${partyId}.${now}.${sig}`;
+  const sig = signSession(inviteId, now);
+  const value = `${inviteId}.${now}.${sig}`;
   const maxAge = opts.maxAgeSec || SESSION_MAX_AGE_SEC;
   const attrs = [
     `${SESSION_COOKIE_NAME}=${value}`,
@@ -126,15 +126,15 @@ function verifySessionCookie(req, maxAgeSec) {
   if (!raw) return null;
   const parts = raw.split('.');
   if (parts.length !== 3) return null;
-  const [partyId, issuedAtStr, sig] = parts;
-  if (!/^[A-Za-z0-9_-]{1,128}$/.test(partyId)) return null;
+  const [inviteId, issuedAtStr, sig] = parts;
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(inviteId)) return null;
   const issuedAt = Number(issuedAtStr);
   if (!Number.isFinite(issuedAt) || issuedAt <= 0) return null;
   const ageMs = Date.now() - issuedAt;
   const limit = (maxAgeSec || SESSION_MAX_AGE_SEC) * 1000;
   if (ageMs < 0 || ageMs > limit) return null;
-  const expected = signSession(partyId, issuedAt);
-  return constantTimeEqual(sig, expected) ? { partyId, issuedAt } : null;
+  const expected = signSession(inviteId, issuedAt);
+  return constantTimeEqual(sig, expected) ? { inviteId, issuedAt } : null;
 }
 
 // --- Admin auth (SWA principal) -------------------------------------------

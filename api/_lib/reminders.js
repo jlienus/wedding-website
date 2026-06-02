@@ -1,16 +1,16 @@
 'use strict';
 
-// High-level "send a reminder to one party" helper. Used by:
-//   - cron_reminders   (scheduled fan-out, respects cadence)
-//   - admin_send_reminder (one-off, can override cadence)
+// High-level "send a reminder to one invite" helper. Used by:
+//   - cron_reminders        (scheduled fan-out, respects cadence + phone dedupe)
+//   - admin_send_reminder   (one-off, can override cadence)
 //
 // Decision matrix (in order):
 //   1. settings.remindersEnabled OFF (and !overrideCadence) -> skip 'reminders_off'
 //   2. now > remindersStopOnUtc (and !overrideCadence)      -> skip 'past_stop_date'
-//   3. !party.phone                                          -> skip 'no_phone'
-//   4. party.optedOutOfSms                                   -> skip 'opted_out'
-//   5. party.smsHardFailedAt                                 -> skip 'hard_failed'
-//   6. all members have a response with attending != null    -> skip 'already_responded'
+//   3. !invite.phoneNorm                                     -> skip 'no_phone'
+//   4. invite.optedOutOfSms                                  -> skip 'opted_out'
+//   5. invite.smsHardFailedAt                                -> skip 'hard_failed'
+//   6. invite.responded                                      -> skip 'already_responded'
 //   7. !overrideCadence and lastReminderSentAt within 30d    -> skip 'too_soon'
 //   8. dedupe: this phone already sent in this cron run      -> skip 'dup_phone'
 //   ELSE send.
@@ -28,35 +28,19 @@ function deadlineDisplay(locale) {
   return locale === 'es' ? '15 de noviembre' : 'November 15';
 }
 
-function pickGreetingName(members) {
-  if (!Array.isArray(members) || members.length === 0) return '';
-  const primary = members.find((m) => m.role === 'primary') || members[0];
-  return primary.firstName || '';
-}
-
-function allMembersResponded(members, responses) {
-  if (!Array.isArray(members) || members.length === 0) return false;
-  const byMember = new Map((responses || []).map((r) => [r.memberId, r]));
-  return members.every((m) => {
-    const r = byMember.get(m.memberId);
-    return r && r.attending !== null && r.attending !== undefined;
-  });
-}
-
 // Returns the canonical reason string for a delivery-status that should mark
-// a party as permanently hard-failed (bad number, blocked, etc.). Soft errors
-// (rate limits, transient) should NOT poison the party.
+// an invite as permanently hard-failed (bad number, blocked, etc.). Soft errors
+// (rate limits, transient) should NOT poison the invite.
 function isHardFailure(deliveryStatus, errorCode) {
   if (deliveryStatus === 'rejected') {
     if (!errorCode) return true;
-    // 4xx from ACS = client problem (bad number, opted-out at carrier, etc.)
     if (/^HTTP_4/.test(errorCode)) return true;
   }
   return false;
 }
 
-async function sendReminderToParty(partyId, opts = {}) {
-  const overrideCadence = !!opts.overrideCadence;
+async function sendReminderToInvite(inviteId, opts = {}) {
+  const overrideCadence = !!(opts.overrideCadence || opts.force);
   const dedupePhones = opts.dedupePhones instanceof Set ? opts.dedupePhones : null;
   const settings = opts.settings || (await storage.getSettings());
 
@@ -70,23 +54,18 @@ async function sendReminderToParty(partyId, opts = {}) {
     }
   }
 
-  const party = await storage.getParty(partyId);
-  if (!party) return { ok: false, skipped: 'party_not_found' };
-  if (!party.phoneNorm) return { ok: false, skipped: 'no_phone' };
-  if (party.optedOutOfSms) return { ok: false, skipped: 'opted_out' };
-  if (party.smsHardFailedAt) return { ok: false, skipped: 'hard_failed' };
+  const invite = opts.invite || (await storage.getInvite(inviteId));
+  if (!invite) return { ok: false, skipped: 'invite_not_found' };
+  if (!invite.phoneNorm) return { ok: false, skipped: 'no_phone' };
+  if (invite.optedOutOfSms) return { ok: false, skipped: 'opted_out' };
+  if (invite.smsHardFailedAt) return { ok: false, skipped: 'hard_failed' };
 
-  const [members, responses] = await Promise.all([
-    storage.listMembers(partyId),
-    storage.getResponses(partyId)
-  ]);
-
-  if (allMembersResponded(members, responses)) {
+  if (invite.responded) {
     return { ok: false, skipped: 'already_responded' };
   }
 
-  if (!overrideCadence && party.lastReminderSentAt) {
-    const last = new Date(party.lastReminderSentAt).getTime();
+  if (!overrideCadence && invite.lastReminderSentAt) {
+    const last = new Date(invite.lastReminderSentAt).getTime();
     if (Number.isFinite(last)) {
       const ageDays = (Date.now() - last) / DAY_MS;
       if (ageDays < MIN_DAYS_BETWEEN_REMINDERS) {
@@ -95,38 +74,38 @@ async function sendReminderToParty(partyId, opts = {}) {
     }
   }
 
-  if (dedupePhones && dedupePhones.has(party.phoneNorm)) {
+  if (dedupePhones && dedupePhones.has(invite.phoneNorm)) {
     return { ok: false, skipped: 'dup_phone' };
   }
-  // Reserve the phone BEFORE we attempt the send so a failure doesn't let
-  // a subsequent party sharing the same phone try again in the same run.
-  if (dedupePhones) dedupePhones.add(party.phoneNorm);
+  // Reserve the phone BEFORE we attempt the send so a failure doesn't let a
+  // subsequent invite sharing the same phone try again in the same run.
+  if (dedupePhones) dedupePhones.add(invite.phoneNorm);
 
-  const locale = party.locale === 'es' ? 'es' : 'en';
-  const magicToken = auth.signMagicToken(partyId);
+  const locale = invite.locale === 'es' ? 'es' : 'en';
+  const magicToken = auth.signMagicToken(inviteId);
   const body = sms.buildReminderBody({
     locale,
-    firstName: pickGreetingName(members),
+    firstName: invite.primaryFirstName || '',
     deadlineDisplay: deadlineDisplay(locale),
     siteOrigin: SITE_ORIGIN,
     magicToken
   });
 
-  const result = await sms.sendSms(party.phoneNorm, body, { tag: opts.tag || 'rsvp-reminder' });
+  const result = await sms.sendSms(invite.phoneNorm, body, { tag: opts.tag || 'rsvp-reminder' });
 
-  const logRowKey = await storage.appendSmsLog(partyId, {
+  const logRowKey = await storage.appendSmsLog(inviteId, {
     type: opts.type || 'reminder',
     body,
-    toPhone: party.phoneNorm,
+    toPhone: invite.phoneNorm,
     deliveryStatus: result.deliveryStatus,
     errorCode: result.errorCode,
     correlationId: result.messageId
   });
 
   if (result.successful) {
-    await storage.patchParty(partyId, {
+    await storage.patchInvite(inviteId, {
       lastReminderSentAt: new Date().toISOString(),
-      reminderCount: (party.reminderCount || 0) + 1
+      reminderCount: (invite.reminderCount || 0) + 1
     });
     return {
       ok: true,
@@ -139,7 +118,7 @@ async function sendReminderToParty(partyId, opts = {}) {
   }
 
   if (isHardFailure(result.deliveryStatus, result.errorCode)) {
-    await storage.patchParty(partyId, {
+    await storage.patchInvite(inviteId, {
       smsHardFailedAt: new Date().toISOString()
     });
   }
@@ -154,7 +133,7 @@ async function sendReminderToParty(partyId, opts = {}) {
 }
 
 module.exports = {
-  sendReminderToParty,
+  sendReminderToInvite,
   deadlineDisplay,
   isHardFailure,
   MIN_DAYS_BETWEEN_REMINDERS

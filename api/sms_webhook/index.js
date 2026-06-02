@@ -3,7 +3,7 @@
 // Event Grid webhook for ACS SMS events.
 //
 // Two event types we care about:
-//   Microsoft.Communication.SMSReceived        -> inbound SMS (STOP handling)
+//   Microsoft.Communication.SMSReceived               -> inbound SMS (STOP handling)
 //   Microsoft.Communication.SMSDeliveryReportReceived -> outbound status update
 //
 // Also handles the Event Grid subscription-validation handshake on both the
@@ -16,6 +16,10 @@
 //     subscription's webhook URL with the same secret.
 //   - We validate the event structure and only act on known types. The
 //     action surface is small (set opted-out, update log status).
+//
+// STOP/START is a consent action on the PHONE, not a single invite. If two
+// households share a number, opting out one without the other would still
+// send to the second on the next cycle — wrong for SMS consent.
 
 const storage = require('../_lib/storage');
 const { isHardFailure } = require('../_lib/reminders');
@@ -47,20 +51,6 @@ function checkWebhookSecret(req) {
   try { return timingSafeEqual(a, b); } catch { return false; }
 }
 
-async function findSmsLogByMessageId(messageId) {
-  if (!messageId) return null;
-  const c = storage.getClients();
-  // Most recent first (reverse-timestamp row keys). Scan up to a few hundred.
-  let scanned = 0;
-  for await (const e of c.smslog.listEntities()) {
-    if (e.correlationId === messageId) {
-      return { partitionKey: e.partitionKey, rowKey: e.rowKey };
-    }
-    if (++scanned >= 500) break;
-  }
-  return null;
-}
-
 async function handleSmsReceived(context, data) {
   const fromPhone = data && data.from ? String(data.from) : '';
   const message = data && data.message ? String(data.message) : '';
@@ -69,18 +59,15 @@ async function handleSmsReceived(context, data) {
 
   context.log(`sms_webhook inbound from=${phoneNorm} keyword=${keyword || 'none'}`);
 
-  // STOP/START is a consent action on the PHONE, not a single party. If two
-  // households share a number, opting out one without the other would still
-  // send to the second on the next cycle — wrong for SMS consent.
-  const parties = await storage.findPartiesByPhoneNorm(phoneNorm);
-  if (parties.length === 0) {
-    context.log(`sms_webhook inbound no party for phone=${phoneNorm}`);
+  const invites = await storage.findInvitesByPhoneNorm(phoneNorm);
+  if (invites.length === 0) {
+    context.log(`sms_webhook inbound no invite for phone=${phoneNorm}`);
     return;
   }
 
-  for (const party of parties) {
+  for (const invite of invites) {
     try {
-      await storage.appendSmsLog(party.partyId, {
+      await storage.appendSmsLog(invite.inviteId, {
         type: 'inbound',
         body: message,
         toPhone: phoneNorm, // for inbound, this is the sender's number
@@ -91,17 +78,17 @@ async function handleSmsReceived(context, data) {
     } catch (err) {
       context.log.error(`sms_webhook log inbound err: ${err && err.message}`);
     }
-    if (keyword === 'stop' && !party.optedOutOfSms) {
+    if (keyword === 'stop' && !invite.optedOutOfSms) {
       try {
-        await storage.patchParty(party.partyId, { optedOutOfSms: true });
-        context.log(`sms_webhook OPTED OUT partyId=${party.partyId}`);
+        await storage.patchInvite(invite.inviteId, { optedOutOfSms: true });
+        context.log(`sms_webhook OPTED OUT inviteId=${invite.inviteId}`);
       } catch (err) {
         context.log.error(`sms_webhook optout err: ${err && err.message}`);
       }
-    } else if (keyword === 'start' && party.optedOutOfSms) {
+    } else if (keyword === 'start' && invite.optedOutOfSms) {
       try {
-        await storage.patchParty(party.partyId, { optedOutOfSms: false });
-        context.log(`sms_webhook OPTED IN partyId=${party.partyId}`);
+        await storage.patchInvite(invite.inviteId, { optedOutOfSms: false });
+        context.log(`sms_webhook OPTED IN inviteId=${invite.inviteId}`);
       } catch (err) {
         context.log.error(`sms_webhook optin err: ${err && err.message}`);
       }
@@ -116,7 +103,7 @@ async function handleDeliveryReport(context, data) {
     ? String(data.deliveryStatusDetails.deliveryStatusMessage)
     : '';
   if (!messageId) return;
-  const match = await findSmsLogByMessageId(messageId);
+  const match = await storage.findSmsLogByCorrelationId(messageId);
   if (!match) {
     context.log(`sms_webhook delivery report no match for messageId=${messageId}`);
     return;
@@ -129,13 +116,13 @@ async function handleDeliveryReport(context, data) {
     context.log.error(`sms_webhook delivery update err: ${err && err.message}`);
   }
   // If this is a hard failure (number invalid, blocked, etc.), mark the
-  // party so the cron never tries again. Only stamp it if not already set.
+  // invite so the cron never tries again. Only stamp it if not already set.
   if (isHardFailure(status, errorCode)) {
     try {
-      const party = await storage.getParty(match.partitionKey);
-      if (party && !party.smsHardFailedAt) {
-        await storage.patchParty(match.partitionKey, { smsHardFailedAt: new Date().toISOString() });
-        context.log(`sms_webhook HARD FAIL partyId=${match.partitionKey} status=${status}`);
+      const invite = await storage.getInvite(match.partitionKey);
+      if (invite && !invite.smsHardFailedAt) {
+        await storage.patchInvite(match.partitionKey, { smsHardFailedAt: new Date().toISOString() });
+        context.log(`sms_webhook HARD FAIL inviteId=${match.partitionKey} status=${status}`);
       }
     } catch (err) {
       context.log.error(`sms_webhook hardfail patch err: ${err && err.message}`);
@@ -165,8 +152,6 @@ module.exports = async function (context, req) {
     return;
   }
 
-  // Event Grid sends an array of events (legacy schema) or a single
-  // CloudEvent (CloudEvents 1.0 schema). Handle both.
   let body;
   try {
     body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;

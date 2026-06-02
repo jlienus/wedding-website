@@ -1,20 +1,34 @@
 'use strict';
 
+// RSVP storage layer (v2 — single-table model).
+//
+// Three logical tables:
+//   rsvpInvites   PK='invites'              RK=inviteId
+//                 Columns: primaryFirstName, primaryLastName, primaryFirstNorm,
+//                          primaryLastNorm, phone, phoneNorm, locale,
+//                          optedOutOfSms, smsHardFailedAt, lastReminderSentAt,
+//                          reminderCount, responded, respondedAt, respondedLate,
+//                          payload (JSON string), adminNotes, createdAt, updatedAt
+//   rsvpSettings  PK='global'               RK='settings'
+//                 Columns: remindersEnabled, remindersEnabledAt, remindersDisabledAt
+//   rsvpSmsLog    PK=inviteId               RK=<revTimestamp>_<random>
+//                 Columns: type, body, bodyLen, toPhone, deliveryStatus,
+//                          errorCode, sentAt, correlationId
+//
+// Older v1 tables (rsvpParties, rsvpMembers, rsvpResponses) are obsolete and
+// dropped by scripts/drop-old-rsvp-tables.cjs.
+
 const { TableClient, AzureNamedKeyCredential } = require('@azure/data-tables');
 
-// Table names. Five logical tables:
-//   Parties        PK=partyId, RK='profile'  -> party-level fields (group, locale, phone, plusOneAllowed, kidsAllowed, optedOutOfSms, smsHardFailedAt, createdAt)
-//   Members        PK=partyId, RK=memberId   -> per-person rows in a party (name, role: primary/plusone/child, kid: bool, locale)
-//   Responses      PK=partyId, RK=memberId   -> per-person RSVP (attending, mealChoice, dietary, songRequest, notes, submittedAt, updatedAt)
-//   SmsLog         PK=partyId, RK=<revTimestamp>_<random> -> one row per SMS attempt (type, body, deliveryStatus, sentAt, segmentCount, errorCode)
-//   Settings       PK='global', RK='settings' -> system settings (remindersEnabled, remindersEnabledAt)
-const TABLE_PARTIES = 'rsvpParties';
-const TABLE_MEMBERS = 'rsvpMembers';
-const TABLE_RESPONSES = 'rsvpResponses';
+const TABLE_INVITES = 'rsvpInvites';
 const TABLE_SMSLOG = 'rsvpSmsLog';
 const TABLE_SETTINGS = 'rsvpSettings';
 
-const ALL_TABLES = [TABLE_PARTIES, TABLE_MEMBERS, TABLE_RESPONSES, TABLE_SMSLOG, TABLE_SETTINGS];
+// Tables to drop on migration cutover.
+const OBSOLETE_TABLES = ['rsvpParties', 'rsvpMembers', 'rsvpResponses'];
+
+const INVITES_PARTITION = 'invites'; // single fixed partition
+const ALL_TABLES = [TABLE_INVITES, TABLE_SMSLOG, TABLE_SETTINGS];
 
 let _clients = null;
 
@@ -45,24 +59,23 @@ function getClients() {
   const cred = new AzureNamedKeyCredential(name, key);
   const make = (table) => new TableClient(endpoint, table, cred, { allowInsecureConnection: false });
   _clients = {
-    parties: make(TABLE_PARTIES),
-    members: make(TABLE_MEMBERS),
-    responses: make(TABLE_RESPONSES),
+    invites: make(TABLE_INVITES),
     smslog: make(TABLE_SMSLOG),
     settings: make(TABLE_SETTINGS),
     _accountName: name,
-    _endpoint: endpoint
+    _endpoint: endpoint,
+    _make: make
   };
   return _clients;
 }
 
 async function ensureTables() {
   const c = getClients();
-  // createTable throws 409 ResourceAlreadyExists on re-runs — that's fine,
-  // it just means the schema is already set up. Swallow that one specific
-  // error per table so this function is safely idempotent.
+  // createTable returns 409 ResourceAlreadyExists on re-runs — that's fine,
+  // it means the schema is already set up. Swallow that one specific error
+  // per table so this function is safely idempotent.
   await Promise.all(
-    [c.parties, c.members, c.responses, c.smslog, c.settings].map(async (tc) => {
+    [c.invites, c.smslog, c.settings].map(async (tc) => {
       try {
         await tc.createTable();
       } catch (err) {
@@ -89,223 +102,206 @@ function normalizeName(s) {
 // the SMS destination produces a permanent ACS failure.
 function normalizePhone(p) {
   if (typeof p !== 'string') return '';
-  // Drop anything after an extension marker. Examples we want to handle:
-  //   "(555) 123-4567 ext 89"  -> "(555) 123-4567"
-  //   "555-123-4567 x12"       -> "555-123-4567"
-  //   "555.123.4567,123"       -> "555.123.4567"  (PBX comma pause)
   const cleaned = p.split(/(?:ext\.?|extension|x(?=\s|\d)|,|;)/i)[0];
   const digits = cleaned.replace(/[^\d]/g, '');
   if (digits.length === 10) return `+1${digits}`;
   if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
-  // Reject anything else (international, too short, too long) — caller can
-  // decide what to do. We don't want bogus "+5551234567ext89" landing in
-  // the table.
   return '';
 }
 
-// --- Parties --------------------------------------------------------------
-async function getParty(partyId) {
+// --- Invites --------------------------------------------------------------
+
+function entityToInvite(e) {
+  let payload = null;
+  if (typeof e.payload === 'string' && e.payload.length > 0) {
+    try { payload = JSON.parse(e.payload); } catch { payload = null; }
+  }
+  return {
+    inviteId: e.rowKey,
+    primaryFirstName: e.primaryFirstName || '',
+    primaryLastName: e.primaryLastName || '',
+    primaryFirstNorm: e.primaryFirstNorm || '',
+    primaryLastNorm: e.primaryLastNorm || '',
+    phone: e.phone || '',
+    phoneNorm: e.phoneNorm || '',
+    locale: e.locale || 'en',
+    optedOutOfSms: !!e.optedOutOfSms,
+    smsHardFailedAt: e.smsHardFailedAt || '',
+    lastReminderSentAt: e.lastReminderSentAt || '',
+    reminderCount: Number(e.reminderCount || 0),
+    responded: !!e.responded,
+    respondedAt: e.respondedAt || '',
+    respondedLate: !!e.respondedLate,
+    payload, // parsed JSON or null
+    adminNotes: e.adminNotes || '',
+    createdAt: e.createdAt || '',
+    updatedAt: e.updatedAt || ''
+  };
+}
+
+function inviteToEntity(inv) {
+  const phoneNorm = normalizePhone(inv.phone || '');
+  return {
+    partitionKey: INVITES_PARTITION,
+    rowKey: inv.inviteId,
+    primaryFirstName: inv.primaryFirstName || '',
+    primaryLastName: inv.primaryLastName || '',
+    primaryFirstNorm: normalizeName(inv.primaryFirstName || ''),
+    primaryLastNorm: normalizeName(inv.primaryLastName || ''),
+    phone: inv.phone || '',
+    phoneNorm,
+    locale: inv.locale === 'es' ? 'es' : 'en',
+    optedOutOfSms: !!inv.optedOutOfSms,
+    smsHardFailedAt: inv.smsHardFailedAt || '',
+    lastReminderSentAt: inv.lastReminderSentAt || '',
+    reminderCount: Number(inv.reminderCount || 0),
+    responded: !!inv.responded,
+    respondedAt: inv.respondedAt || '',
+    respondedLate: !!inv.respondedLate,
+    payload: typeof inv.payload === 'string' ? inv.payload : (inv.payload ? JSON.stringify(inv.payload) : ''),
+    adminNotes: inv.adminNotes || '',
+    createdAt: inv.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+async function getInvite(inviteId) {
+  if (!inviteId) return null;
   const c = getClients();
   try {
-    const e = await c.parties.getEntity(partyId, 'profile');
-    return entityToParty(e);
+    const e = await c.invites.getEntity(INVITES_PARTITION, inviteId);
+    return entityToInvite(e);
   } catch (err) {
     if (err && err.statusCode === 404) return null;
     throw err;
   }
 }
 
-async function upsertParty(party) {
+async function upsertInvite(invite) {
+  const c = getClients();
+  if (!invite || !invite.inviteId) throw new Error('upsertInvite requires inviteId');
+  const entity = inviteToEntity(invite);
+  await c.invites.upsertEntity(entity, 'Replace');
+  return entityToInvite(entity);
+}
+
+// Partial update — pass only the fields you want to change. If `phone` is in
+// the patch, we recompute `phoneNorm` automatically.
+async function patchInvite(inviteId, patch) {
+  if (!inviteId) throw new Error('patchInvite requires inviteId');
   const c = getClients();
   const entity = {
-    partitionKey: party.partyId,
-    rowKey: 'profile',
-    displayName: party.displayName || '',
-    locale: party.locale || 'en',
-    phone: party.phone || '',
-    phoneNorm: normalizePhone(party.phone || ''),
-    plusOneAllowed: !!party.plusOneAllowed,
-    kidsAllowed: !!party.kidsAllowed,
-    optedOutOfSms: !!party.optedOutOfSms,
-    smsHardFailedAt: party.smsHardFailedAt || '',
-    lastReminderSentAt: party.lastReminderSentAt || '',
-    reminderCount: Number(party.reminderCount || 0),
-    group: party.group || '',
-    notes: party.notes || '',
-    createdAt: party.createdAt || new Date().toISOString(),
+    partitionKey: INVITES_PARTITION,
+    rowKey: inviteId,
     updatedAt: new Date().toISOString()
   };
-  await c.parties.upsertEntity(entity, 'Replace');
+  for (const [k, v] of Object.entries(patch || {})) {
+    if (k === 'phone') {
+      entity.phone = v || '';
+      entity.phoneNorm = normalizePhone(v || '');
+    } else if (k === 'primaryFirstName') {
+      entity.primaryFirstName = v || '';
+      entity.primaryFirstNorm = normalizeName(v || '');
+    } else if (k === 'primaryLastName') {
+      entity.primaryLastName = v || '';
+      entity.primaryLastNorm = normalizeName(v || '');
+    } else if (k === 'payload' && typeof v !== 'string') {
+      entity.payload = v ? JSON.stringify(v) : '';
+    } else {
+      entity[k] = v;
+    }
+  }
+  await c.invites.updateEntity(entity, 'Merge');
 }
 
-async function patchParty(partyId, patch) {
+async function deleteInvite(inviteId) {
+  if (!inviteId) throw new Error('deleteInvite requires inviteId');
   const c = getClients();
-  const entity = { partitionKey: partyId, rowKey: 'profile', ...patch, updatedAt: new Date().toISOString() };
-  await c.parties.updateEntity(entity, 'Merge');
+  try {
+    await c.invites.deleteEntity(INVITES_PARTITION, inviteId);
+  } catch (err) {
+    if (err && err.statusCode === 404) return { deleted: false, smsRowsDeleted: 0 };
+    throw err;
+  }
+  // Cascade — drop all SMS log rows for this invite. Best-effort; we don't
+  // want a partial-cleanup failure to block the user from re-creating the
+  // invite by the same id later.
+  const smsRowsDeleted = await deleteSmsLogForInvite(inviteId).catch(() => 0);
+  return { deleted: true, smsRowsDeleted };
 }
 
-async function listParties() {
+async function listInvites() {
   const c = getClients();
   const out = [];
-  for await (const e of c.parties.listEntities()) {
-    if (e.rowKey === 'profile') out.push(entityToParty(e));
+  for await (const e of c.invites.listEntities()) {
+    if (e.partitionKey !== INVITES_PARTITION) continue;
+    out.push(entityToInvite(e));
   }
   return out;
 }
 
-function entityToParty(e) {
-  return {
-    partyId: e.partitionKey,
-    displayName: e.displayName || '',
-    locale: e.locale || 'en',
-    phone: e.phone || '',
-    phoneNorm: e.phoneNorm || '',
-    plusOneAllowed: !!e.plusOneAllowed,
-    kidsAllowed: !!e.kidsAllowed,
-    optedOutOfSms: !!e.optedOutOfSms,
-    smsHardFailedAt: e.smsHardFailedAt || '',
-    lastReminderSentAt: e.lastReminderSentAt || '',
-    reminderCount: Number(e.reminderCount || 0),
-    group: e.group || '',
-    notes: e.notes || '',
-    createdAt: e.createdAt || '',
-    updatedAt: e.updatedAt || ''
-  };
-}
-
-// --- Members --------------------------------------------------------------
-async function listMembers(partyId) {
-  const c = getClients();
-  const out = [];
-  for await (const e of c.members.listEntities({ queryOptions: { filter: `PartitionKey eq '${partyId.replace(/'/g, "''")}'` } })) {
-    out.push(entityToMember(e));
-  }
-  return out;
-}
-
-async function upsertMember(partyId, member) {
-  const c = getClients();
-  const entity = {
-    partitionKey: partyId,
-    rowKey: member.memberId,
-    firstName: member.firstName || '',
-    lastName: member.lastName || '',
-    firstNameNorm: normalizeName(member.firstName || ''),
-    lastNameNorm: normalizeName(member.lastName || ''),
-    role: member.role || 'guest', // primary | plusone | child | guest
-    isKid: !!member.isKid,
-    locale: member.locale || ''
-  };
-  await c.members.upsertEntity(entity, 'Replace');
-}
-
-function entityToMember(e) {
-  return {
-    partyId: e.partitionKey,
-    memberId: e.rowKey,
-    firstName: e.firstName || '',
-    lastName: e.lastName || '',
-    firstNameNorm: e.firstNameNorm || '',
-    lastNameNorm: e.lastNameNorm || '',
-    role: e.role || 'guest',
-    isKid: !!e.isKid,
-    locale: e.locale || ''
-  };
-}
-
-// Exact-match lookup across all parties. For ~150 guests, a full scan is fine.
-// Returns:
-//   null                                    when no member matches
-//   { ambiguous: true, matchCount: N }      when 2+ DISTINCT parties match
-//   { partyId, memberId, ambiguous: false } when exactly one party matches
-//                                          (even if multiple members in the
-//                                          same party share that name)
-async function findPartyByMemberName(firstName, lastName) {
+// Returns one of:
+//   null                                   — no match
+//   { ambiguous: true, matchCount: N }     — multiple invites share this name
+//   { inviteId }                           — exactly one match
+//
+// At ~80 invites this is a single-partition scan with server-side filter.
+async function findInviteByPrimaryName(firstName, lastName) {
   const fn = normalizeName(firstName);
   const ln = normalizeName(lastName);
   if (fn.length < 2 || ln.length < 2) return null;
   const c = getClients();
+  const filter = `PartitionKey eq '${INVITES_PARTITION}' and primaryFirstNorm eq '${fn.replace(/'/g, "''")}' and primaryLastNorm eq '${ln.replace(/'/g, "''")}'`;
   const matches = [];
-  for await (const e of c.members.listEntities()) {
-    if (e.firstNameNorm === fn && e.lastNameNorm === ln) {
-      matches.push({ partyId: e.partitionKey, memberId: e.rowKey });
-    }
+  for await (const e of c.invites.listEntities({ queryOptions: { filter } })) {
+    matches.push(e.rowKey);
   }
   if (matches.length === 0) return null;
-  const distinctParties = new Set(matches.map((m) => m.partyId));
-  if (distinctParties.size > 1) {
-    return { ambiguous: true, matchCount: distinctParties.size };
+  if (matches.length > 1) {
+    return { ambiguous: true, matchCount: matches.length };
   }
-  return { partyId: matches[0].partyId, memberId: matches[0].memberId, ambiguous: false };
+  return { inviteId: matches[0], ambiguous: false };
 }
 
-// Returns all parties whose normalized phone matches. Used by the SMS webhook
-// so STOP/START applies to every household sharing that number.
-async function findPartiesByPhoneNorm(phoneNorm) {
+// Returns all invites that share this normalized phone. Used by the SMS
+// webhook so STOP/START applies to every household sharing a number.
+async function findInvitesByPhoneNorm(phoneNorm) {
   if (!phoneNorm) return [];
-  const all = await listParties();
-  return all.filter((p) => p.phoneNorm === phoneNorm);
-}
-
-// --- Responses ------------------------------------------------------------
-async function getResponses(partyId) {
   const c = getClients();
+  const filter = `PartitionKey eq '${INVITES_PARTITION}' and phoneNorm eq '${phoneNorm.replace(/'/g, "''")}'`;
   const out = [];
-  for await (const e of c.responses.listEntities({ queryOptions: { filter: `PartitionKey eq '${partyId.replace(/'/g, "''")}'` } })) {
-    out.push(entityToResponse(e));
+  for await (const e of c.invites.listEntities({ queryOptions: { filter } })) {
+    out.push(entityToInvite(e));
   }
   return out;
 }
 
-async function upsertResponse(partyId, memberId, fields) {
+// Marks an invite responded (with the given payload + late flag). Single
+// merge update; cheap.
+async function markResponded(inviteId, payloadJson, opts = {}) {
+  if (!inviteId) throw new Error('markResponded requires inviteId');
   const c = getClients();
-  const now = new Date().toISOString();
-  const existing = await c.responses.getEntity(partyId, memberId).catch((err) => {
-    if (err && err.statusCode === 404) return null;
-    throw err;
-  });
-  const entity = {
-    partitionKey: partyId,
-    rowKey: memberId,
-    attending: fields.attending === null ? null : !!fields.attending,
-    mealChoice: fields.mealChoice || '',
-    dietary: fields.dietary || '',
-    songRequest: fields.songRequest || '',
-    notes: fields.notes || '',
-    plusOneName: fields.plusOneName || '',
-    submittedAt: existing ? (existing.submittedAt || now) : now,
-    updatedAt: now,
-    submittedByMethod: fields.submittedByMethod || 'web',
-    sourceIpHash: fields.sourceIpHash || ''
-  };
-  await c.responses.upsertEntity(entity, 'Replace');
-}
-
-function entityToResponse(e) {
-  return {
-    partyId: e.partitionKey,
-    memberId: e.rowKey,
-    attending: e.attending === null || e.attending === undefined ? null : !!e.attending,
-    mealChoice: e.mealChoice || '',
-    dietary: e.dietary || '',
-    songRequest: e.songRequest || '',
-    notes: e.notes || '',
-    plusOneName: e.plusOneName || '',
-    submittedAt: e.submittedAt || '',
-    updatedAt: e.updatedAt || '',
-    submittedByMethod: e.submittedByMethod || ''
-  };
+  await c.invites.updateEntity({
+    partitionKey: INVITES_PARTITION,
+    rowKey: inviteId,
+    payload: payloadJson,
+    responded: true,
+    respondedAt: opts.respondedAt || new Date().toISOString(),
+    respondedLate: !!opts.late,
+    updatedAt: new Date().toISOString()
+  }, 'Merge');
 }
 
 // --- SMS Log --------------------------------------------------------------
-async function appendSmsLog(partyId, entry) {
+
+async function appendSmsLog(inviteId, entry) {
   const c = getClients();
   // Reverse-timestamp row key so most recent sorts first lexically.
   const revTs = (10_000_000_000_000 - Date.now()).toString().padStart(13, '0');
   const rand = Math.random().toString(36).slice(2, 8);
   const rowKey = `${revTs}_${rand}`;
   const entity = {
-    partitionKey: partyId,
+    partitionKey: inviteId,
     rowKey,
     type: entry.type || 'reminder',
     body: entry.body || '',
@@ -320,19 +316,36 @@ async function appendSmsLog(partyId, entry) {
   return rowKey;
 }
 
-async function listSmsLog(partyId, limit = 50) {
+async function listSmsLog(inviteId, limit = 50) {
   const c = getClients();
   const out = [];
-  for await (const e of c.smslog.listEntities({ queryOptions: { filter: `PartitionKey eq '${partyId.replace(/'/g, "''")}'` } })) {
+  const filter = `PartitionKey eq '${String(inviteId).replace(/'/g, "''")}'`;
+  for await (const e of c.smslog.listEntities({ queryOptions: { filter } })) {
     out.push(entityToSmsLog(e));
     if (out.length >= limit) break;
   }
   return out;
 }
 
+async function deleteSmsLogForInvite(inviteId) {
+  if (!inviteId) return 0;
+  const c = getClients();
+  const filter = `PartitionKey eq '${String(inviteId).replace(/'/g, "''")}'`;
+  let n = 0;
+  for await (const e of c.smslog.listEntities({ queryOptions: { filter } })) {
+    try {
+      await c.smslog.deleteEntity(e.partitionKey, e.rowKey);
+      n += 1;
+    } catch (err) {
+      if (!err || err.statusCode !== 404) throw err;
+    }
+  }
+  return n;
+}
+
 function entityToSmsLog(e) {
   return {
-    partyId: e.partitionKey,
+    inviteId: e.partitionKey,
     rowKey: e.rowKey,
     type: e.type || '',
     body: e.body || '',
@@ -345,43 +358,56 @@ function entityToSmsLog(e) {
   };
 }
 
-// Status precedence so out-of-order delivery reports can't regress a final
-// state. Once a message reaches a terminal state we don't accept a contradictory
-// later report. (We DO still record the raw inbound event in the log even if
-// we don't mutate this row — see sms_webhook.)
 const TERMINAL_STATUSES = new Set(['delivered', 'failed', 'rejected', 'expired', 'unknown_terminal']);
 const SUCCESS_TERMINAL = new Set(['delivered']);
 
-async function updateSmsLogStatus(partyId, rowKey, status, errorCode) {
+async function updateSmsLogStatus(inviteId, rowKey, status, errorCode) {
   const c = getClients();
   const nextStatus = (status || 'unknown').toLowerCase();
-  // Read current state to enforce precedence.
   let current;
   try {
-    current = await c.smslog.getEntity(partyId, rowKey);
+    current = await c.smslog.getEntity(inviteId, rowKey);
   } catch (err) {
-    if (err && err.statusCode === 404) return; // log row vanished, give up
+    if (err && err.statusCode === 404) return;
     throw err;
   }
   const curStatus = (current.deliveryStatus || '').toLowerCase();
-  // Never downgrade a delivered terminal success to a failure.
   if (SUCCESS_TERMINAL.has(curStatus) && !SUCCESS_TERMINAL.has(nextStatus)) return;
-  // Don't oscillate between terminal states.
   if (TERMINAL_STATUSES.has(curStatus) && curStatus === nextStatus) return;
   await c.smslog.updateEntity({
-    partitionKey: partyId,
+    partitionKey: inviteId,
     rowKey,
     deliveryStatus: nextStatus,
     errorCode: errorCode || current.errorCode || ''
   }, 'Merge');
 }
 
+// Scans the most recent N smslog rows across all invites for one matching
+// correlationId (== ACS messageId). Returns { partitionKey, rowKey } or null.
+// Scan cap sized for the full wedding window: ~80 invites × monthly reminders
+// for 8 months × ~2 rows/send (outbound + delivery report) ≈ 1280; plus
+// opt-in/out events. 10k gives ~8x headroom before we'd need a secondary
+// lookup table.
+async function findSmsLogByCorrelationId(correlationId, scanLimit = 10000) {
+  if (!correlationId) return null;
+  const c = getClients();
+  let scanned = 0;
+  for await (const e of c.smslog.listEntities()) {
+    if (e.correlationId === correlationId) {
+      return { partitionKey: e.partitionKey, rowKey: e.rowKey };
+    }
+    if (++scanned >= scanLimit) break;
+  }
+  return null;
+}
+
 // --- Settings -------------------------------------------------------------
+
 const DEFAULT_SETTINGS = Object.freeze({
   remindersEnabled: false,
   remindersEnabledAt: '',
   remindersDisabledAt: '',
-  remindersStopOnUtc: '2027-01-15T23:59:59-05:00' // hard stop date
+  remindersStopOnUtc: '2027-01-15T23:59:59-05:00'
 });
 
 async function getSettings() {
@@ -415,31 +441,60 @@ async function setSettings(patch) {
   return next;
 }
 
+// --- Migration helper ----------------------------------------------------
+
+// One-shot helper to drop the obsolete v1 tables. Safe to run multiple times.
+// Returns a per-table {dropped, error} map.
+async function dropObsoleteTables() {
+  const c = getClients();
+  const out = {};
+  for (const name of OBSOLETE_TABLES) {
+    const tc = c._make(name);
+    try {
+      await tc.deleteTable();
+      out[name] = { dropped: true };
+    } catch (err) {
+      // 404 = already gone. Other codes => surface them but don't throw.
+      if (err && err.statusCode === 404) {
+        out[name] = { dropped: false, reason: 'not_found' };
+      } else {
+        out[name] = { dropped: false, error: (err && err.message) || String(err) };
+      }
+    }
+  }
+  return out;
+}
+
 module.exports = {
+  // tables / constants
   ALL_TABLES,
+  INVITES_PARTITION,
+  OBSOLETE_TABLES,
+  // setup
   ensureTables,
   getClients,
+  // helpers
   normalizeName,
   normalizePhone,
-  // Parties
-  getParty,
-  upsertParty,
-  patchParty,
-  listParties,
-  // Members
-  listMembers,
-  upsertMember,
-  findPartyByMemberName,
-  findPartiesByPhoneNorm,
-  // Responses
-  getResponses,
-  upsertResponse,
-  // SmsLog
+  // invites
+  getInvite,
+  upsertInvite,
+  patchInvite,
+  deleteInvite,
+  listInvites,
+  findInviteByPrimaryName,
+  findInvitesByPhoneNorm,
+  markResponded,
+  // smslog
   appendSmsLog,
   listSmsLog,
+  deleteSmsLogForInvite,
   updateSmsLogStatus,
-  // Settings
+  findSmsLogByCorrelationId,
+  // settings
   getSettings,
   setSettings,
-  DEFAULT_SETTINGS
+  DEFAULT_SETTINGS,
+  // migration
+  dropObsoleteTables
 };

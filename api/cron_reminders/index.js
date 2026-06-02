@@ -4,9 +4,9 @@
 // (SWA Free Functions don't support timer triggers). Caller must present
 // the X-Cron-Secret header matching the RSVP_CRON_SECRET env var.
 //
-// Cadence is enforced inside reminders.sendReminderToParty (>=30 days
-// between sends per party). This endpoint runs daily; most parties will
-// be skipped most days.
+// Cadence is enforced inside reminders.sendReminderToInvite (>=30 days
+// between sends per invite). This endpoint runs monthly; most invites that
+// have already responded or opted out get skipped immediately.
 
 const auth = require('../_lib/auth');
 const storage = require('../_lib/storage');
@@ -21,17 +21,16 @@ module.exports = async function (context, req) {
 
   const startedAt = new Date();
   try {
-    // Idempotent — creates tables on first run, no-op afterwards.
     await storage.ensureTables();
   } catch (err) {
     context.log.error(`cron_reminders ensureTables err: ${err && err.message}`);
   }
 
-  let settings, parties;
+  let settings, invites;
   try {
-    [settings, parties] = await Promise.all([
+    [settings, invites] = await Promise.all([
       storage.getSettings(),
-      storage.listParties()
+      storage.listInvites()
     ]);
   } catch (err) {
     context.log.error(`cron_reminders load err: ${err && err.message}`);
@@ -44,7 +43,7 @@ module.exports = async function (context, req) {
     context.res = {
       status: 200,
       headers: { 'Cache-Control': 'no-store' },
-      body: { ok: true, skipped: 'reminders_off', settings, totalParties: parties.length }
+      body: { ok: true, skipped: 'reminders_off', settings, totalInvites: invites.length }
     };
     return;
   }
@@ -55,7 +54,7 @@ module.exports = async function (context, req) {
       context.res = {
         status: 200,
         headers: { 'Cache-Control': 'no-store' },
-        body: { ok: true, skipped: 'past_stop_date', settings, totalParties: parties.length }
+        body: { ok: true, skipped: 'past_stop_date', settings, totalInvites: invites.length }
       };
       return;
     }
@@ -66,24 +65,33 @@ module.exports = async function (context, req) {
   const skipped = {};
   let failures = 0;
 
-  for (const party of parties) {
+  for (const invite of invites) {
+    // Cheap filtering before doing any work — saves storage round-trips for
+    // invites that will never be eligible.
+    if (!invite.phoneNorm) { skipped.no_phone = (skipped.no_phone || 0) + 1; continue; }
+    if (invite.optedOutOfSms) { skipped.opted_out = (skipped.opted_out || 0) + 1; continue; }
+    if (invite.smsHardFailedAt) { skipped.hard_failed = (skipped.hard_failed || 0) + 1; continue; }
+    if (invite.responded) { skipped.already_responded = (skipped.already_responded || 0) + 1; continue; }
+
     let result;
     try {
-      result = await reminders.sendReminderToParty(party.partyId, {
-        overrideCadence: false,
+      result = await reminders.sendReminderToInvite(invite.inviteId, {
+        context,
+        force: false,
         settings,
+        invite,
         dedupePhones,
         tag: 'rsvp-cron'
       });
     } catch (err) {
       failures += 1;
-      context.log.error(`cron_reminders party ${party.partyId} threw: ${err && err.message}`);
+      context.log.error(`cron_reminders invite ${invite.inviteId} threw: ${err && err.message}`);
       continue;
     }
-    if (result.sent) {
-      sentRows.push({ partyId: party.partyId, messageId: result.messageId, segmentCount: result.segmentCount });
+    if (result && result.sent) {
+      sentRows.push({ inviteId: invite.inviteId, messageId: result.messageId, segmentCount: result.segmentCount });
     } else {
-      const reason = result.skipped || 'unknown';
+      const reason = (result && (result.reason || result.skipped)) || 'unknown';
       skipped[reason] = (skipped[reason] || 0) + 1;
     }
   }
@@ -92,7 +100,7 @@ module.exports = async function (context, req) {
     ok: true,
     startedAt: startedAt.toISOString(),
     finishedAt: new Date().toISOString(),
-    totalParties: parties.length,
+    totalInvites: invites.length,
     sent: sentRows.length,
     sentMessages: sentRows,
     skipped,

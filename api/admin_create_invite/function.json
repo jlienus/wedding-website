@@ -6,7 +6,7 @@
       "direction": "in",
       "name": "req",
       "methods": ["post", "options"],
-      "route": "mgmt/update-party"
+      "route": "mgmt/create-invite"
     },
     {
       "type": "http",

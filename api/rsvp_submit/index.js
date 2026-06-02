@@ -4,26 +4,14 @@ const { preflight, isAllowedOrigin } = require('../_lib/cors');
 const ratelimit = require('../_lib/ratelimit');
 const auth = require('../_lib/auth');
 const storage = require('../_lib/storage');
+const { validatePayload, isComplete } = require('../_lib/payload');
 
 const RATE_LIMIT_PER_MIN = 10;
 const RATE_WINDOW_MS = 60_000;
-const MAX_BODY_BYTES = 32 * 1024;
-const MAX_FIELD_CHARS = 800;
+const MAX_BODY_BYTES = 48 * 1024; // payload cap is 32k, plus envelope headroom
 
-// Final permanent lock: after this datetime the form 410s, no admin override
-// from the public endpoint (admin can still edit via /api/admin/*).
 const PERMANENT_LOCK_UTC = new Date(process.env.RSVP_PERMANENT_LOCK_UTC || '2027-01-15T23:59:59-05:00');
-
-// Public guest-facing deadline. Submissions after this still accepted (per
-// user direction — reminders continue through Jan 15) but flagged "late".
 const GUEST_DEADLINE_UTC = new Date(process.env.RSVP_GUEST_DEADLINE_UTC || '2026-11-15T23:59:59-05:00');
-
-const VALID_MEAL_CHOICES = new Set(['chicken', 'beef', 'vegetarian', 'vegan', 'kids', '']);
-
-function clipString(v) {
-  if (typeof v !== 'string') return '';
-  return v.trim().slice(0, MAX_FIELD_CHARS);
-}
 
 module.exports = async function (context, req) {
   const pre = preflight(req, 'POST, OPTIONS');
@@ -61,7 +49,6 @@ module.exports = async function (context, req) {
     return;
   }
 
-  // Permanent lock check
   const now = new Date();
   if (now > PERMANENT_LOCK_UTC) {
     context.res = {
@@ -85,107 +72,65 @@ module.exports = async function (context, req) {
     context.res = { status: 401, headers: cors, body: { error: 'session_required' } };
     return;
   }
-  const { partyId } = session;
+  const { inviteId } = session;
 
-  let payload;
+  let body;
   try {
-    payload = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-  } catch { payload = null; }
-  if (!payload || typeof payload !== 'object') {
+    body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+  } catch { body = null; }
+  if (!body || typeof body !== 'object') {
     context.res = { status: 400, headers: cors, body: { error: 'invalid_json' } };
     return;
   }
-  if (!Array.isArray(payload.members)) {
-    context.res = { status: 400, headers: cors, body: { error: 'members_required' } };
+  if (!body.payload || typeof body.payload !== 'object') {
+    context.res = { status: 400, headers: cors, body: { error: 'payload_required' } };
     return;
   }
 
-  // Verify the party still exists and members belong to it.
-  let party, members;
+  // Strict validation — every attending must be answered (the public form
+  // is a final submit, not a draft save).
+  const v = validatePayload(body.payload, { requireAttending: true });
+  if (!v.ok) {
+    context.res = { status: 400, headers: cors, body: { error: v.error, detail: v.detail } };
+    return;
+  }
+
+  // Confirm the invite still exists.
+  let invite;
   try {
-    [party, members] = await Promise.all([
-      storage.getParty(partyId),
-      storage.listMembers(partyId)
-    ]);
+    invite = await storage.getInvite(inviteId);
   } catch (err) {
     context.log.error(`rsvp_submit hydrate err: ${err && err.message}`);
     context.res = { status: 503, headers: cors, body: { error: 'storage_unavailable' } };
     return;
   }
-  if (!party) {
-    context.res = { status: 410, headers: cors, body: { error: 'party_not_found' } };
+  if (!invite) {
+    context.res = {
+      status: 410,
+      headers: { ...cors, 'Set-Cookie': auth.clearSessionCookie() },
+      body: { error: 'invite_not_found' }
+    };
     return;
-  }
-
-  const memberById = new Map(members.map((m) => [m.memberId, m]));
-
-  // Validate each member payload, then persist.
-  const sanitized = [];
-  for (const m of payload.members) {
-    if (!m || typeof m !== 'object') {
-      context.res = { status: 400, headers: cors, body: { error: 'member_invalid' } };
-      return;
-    }
-    const memberId = String(m.memberId || '');
-    const member = memberById.get(memberId);
-    if (!member) {
-      context.res = { status: 400, headers: cors, body: { error: 'unknown_member', memberId } };
-      return;
-    }
-    // Require a real tri-state: true / false / null. Reject undefined or
-    // truthy strings — those typically indicate a client-side bug we'd
-    // rather know about than silently coerce.
-    let attending;
-    if (m.attending === null || m.attending === true || m.attending === false) {
-      attending = m.attending;
-    } else {
-      context.res = { status: 400, headers: cors, body: { error: 'attending_invalid', memberId } };
-      return;
-    }
-    const mealChoice = clipString(m.mealChoice).toLowerCase();
-    if (!VALID_MEAL_CHOICES.has(mealChoice)) {
-      context.res = { status: 400, headers: cors, body: { error: 'bad_meal_choice', mealChoice } };
-      return;
-    }
-    // Only let the actual plus-one slot (when allowed) carry a plus-one
-    // name. Otherwise drop it so a crafted request can't smuggle in extra
-    // attendees.
-    const plusOneAllowedHere = !!party.plusOneAllowed && member.role === 'plusone';
-    const plusOneName = plusOneAllowedHere ? clipString(m.plusOneName) : '';
-    sanitized.push({
-      memberId,
-      attending,
-      mealChoice,
-      dietary: clipString(m.dietary),
-      songRequest: clipString(m.songRequest),
-      notes: clipString(m.notes),
-      plusOneName
-    });
   }
 
   const isLate = now > GUEST_DEADLINE_UTC;
   try {
-    for (const fields of sanitized) {
-      await storage.upsertResponse(partyId, fields.memberId, {
-        ...fields,
-        submittedByMethod: isLate ? 'web-late' : 'web',
-        sourceIpHash: ipHash
-      });
-    }
+    await storage.markResponded(inviteId, v.json, { late: isLate, respondedAt: now.toISOString() });
   } catch (err) {
     context.log.error(`rsvp_submit write err: ${err && err.message}`);
     context.res = { status: 503, headers: cors, body: { error: 'storage_unavailable' } };
     return;
   }
 
-  context.log(`rsvp_submit ok ipHash=${ipHash} partyId=${partyId} members=${sanitized.length} late=${isLate}`);
+  context.log(`rsvp_submit ok ipHash=${ipHash} inviteId=${inviteId} guests=${v.payload.additionalGuests.length} complete=${isComplete(v.payload)} late=${isLate}`);
   context.res = {
     status: 200,
     headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
     body: {
       ok: true,
       late: isLate,
-      receivedAt: now.toISOString()
+      receivedAt: now.toISOString(),
+      payload: v.payload
     }
   };
 };

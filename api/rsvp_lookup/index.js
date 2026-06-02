@@ -4,6 +4,7 @@ const { preflight, isAllowedOrigin } = require('../_lib/cors');
 const ratelimit = require('../_lib/ratelimit');
 const auth = require('../_lib/auth');
 const storage = require('../_lib/storage');
+const { emptyPayload } = require('../_lib/payload');
 
 const RATE_LIMIT_PER_MIN = 5;
 const RATE_WINDOW_MS = 60_000;
@@ -16,6 +17,20 @@ function sanitizeName(s) {
   const trimmed = s.trim();
   if (!trimmed) return '';
   return trimmed.slice(0, MAX_NAME_CHARS);
+}
+
+// Public shape — never expose phone, adminNotes, opted-out, hardFail, etc.
+function publicInvite(inv) {
+  return {
+    inviteId: inv.inviteId,
+    primaryFirstName: inv.primaryFirstName,
+    primaryLastName: inv.primaryLastName,
+    locale: inv.locale,
+    hasPhone: !!inv.phoneNorm,
+    payload: inv.payload || emptyPayload(),
+    responded: !!inv.responded,
+    respondedAt: inv.respondedAt || ''
+  };
 }
 
 module.exports = async function (context, req) {
@@ -54,17 +69,17 @@ module.exports = async function (context, req) {
     return;
   }
 
-  let payload;
+  let body;
   try {
-    payload = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-  } catch { payload = null; }
-  if (!payload || typeof payload !== 'object') {
+    body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+  } catch { body = null; }
+  if (!body || typeof body !== 'object') {
     context.res = { status: 400, headers: cors, body: { error: 'invalid_json' } };
     return;
   }
 
-  const firstName = sanitizeName(payload.firstName);
-  const lastName = sanitizeName(payload.lastName);
+  const firstName = sanitizeName(body.firstName);
+  const lastName = sanitizeName(body.lastName);
   if (storage.normalizeName(firstName).length < MIN_NAME_CHARS
       || storage.normalizeName(lastName).length < MIN_NAME_CHARS) {
     context.res = { status: 400, headers: cors, body: { error: 'name_too_short' } };
@@ -73,7 +88,7 @@ module.exports = async function (context, req) {
 
   let match;
   try {
-    match = await storage.findPartyByMemberName(firstName, lastName);
+    match = await storage.findInviteByPrimaryName(firstName, lastName);
   } catch (err) {
     context.log.error(`rsvp_lookup storage err: ${err && err.message}`);
     context.res = { status: 503, headers: cors, body: { error: 'storage_unavailable' } };
@@ -91,9 +106,8 @@ module.exports = async function (context, req) {
   }
 
   if (match.ambiguous) {
-    // 2+ different parties have a guest with this exact name. Don't pick
-    // one — we'd be silently RSVP'ing for the wrong household. Tell the
-    // user to contact us.
+    // Two invites have the same primary first+last name. Don't pick one —
+    // we'd authenticate the wrong household. Tell the user to contact us.
     context.log(`rsvp_lookup AMBIGUOUS ipHash=${ipHash} matchCount=${match.matchCount}`);
     context.res = {
       status: 200,
@@ -103,35 +117,30 @@ module.exports = async function (context, req) {
     return;
   }
 
-  // Match — issue session cookie + return minimal party metadata.
-  let party, members, responses;
+  let invite;
   try {
-    [party, members, responses] = await Promise.all([
-      storage.getParty(match.partyId),
-      storage.listMembers(match.partyId),
-      storage.getResponses(match.partyId)
-    ]);
+    invite = await storage.getInvite(match.inviteId);
   } catch (err) {
     context.log.error(`rsvp_lookup hydrate err: ${err && err.message}`);
     context.res = { status: 503, headers: cors, body: { error: 'storage_unavailable' } };
     return;
   }
-  if (!party) {
-    // Member orphaned without a party row — shouldn't happen but be defensive.
+  if (!invite) {
+    // Filter returned an id but the row vanished between the two calls.
     context.res = { status: 200, headers: cors, body: { found: false } };
     return;
   }
 
   let cookie;
   try {
-    cookie = auth.issueSessionCookie(match.partyId);
+    cookie = auth.issueSessionCookie(invite.inviteId);
   } catch (err) {
     context.log.error(`rsvp_lookup cookie err: ${err && err.message}`);
     context.res = { status: 503, headers: cors, body: { error: 'config_error' } };
     return;
   }
 
-  context.log(`rsvp_lookup hit ipHash=${ipHash} partyId=${match.partyId}`);
+  context.log(`rsvp_lookup hit ipHash=${ipHash} inviteId=${invite.inviteId}`);
   context.res = {
     status: 200,
     headers: {
@@ -142,38 +151,7 @@ module.exports = async function (context, req) {
     },
     body: {
       found: true,
-      party: publicParty(party),
-      members: members.map(publicMember),
-      responses: responses.map(publicResponse)
+      invite: publicInvite(invite)
     }
   };
 };
-
-function publicParty(p) {
-  return {
-    partyId: p.partyId,
-    displayName: p.displayName,
-    locale: p.locale,
-    plusOneAllowed: p.plusOneAllowed,
-    kidsAllowed: p.kidsAllowed,
-    hasPhone: !!p.phoneNorm
-  };
-}
-
-function publicMember(m) {
-  return { memberId: m.memberId, firstName: m.firstName, lastName: m.lastName, role: m.role, isKid: m.isKid };
-}
-
-function publicResponse(r) {
-  return {
-    memberId: r.memberId,
-    attending: r.attending,
-    mealChoice: r.mealChoice,
-    dietary: r.dietary,
-    songRequest: r.songRequest,
-    notes: r.notes,
-    plusOneName: r.plusOneName,
-    submittedAt: r.submittedAt,
-    updatedAt: r.updatedAt
-  };
-}

@@ -3,7 +3,10 @@
 const { preflight, isAllowedOrigin } = require('../_lib/cors');
 const auth = require('../_lib/auth');
 const storage = require('../_lib/storage');
+const { summarize } = require('../_lib/payload');
 
+// GET /api/mgmt/guests — admin dashboard payload. Returns settings, every
+// invite (full), per-invite SMS log (last 5), and overall stats.
 module.exports = async function (context, req) {
   const pre = preflight(req, 'GET, OPTIONS');
   if (pre.handled) { context.res = pre.response; return; }
@@ -22,10 +25,10 @@ module.exports = async function (context, req) {
     return;
   }
 
-  let parties, settings;
+  let invites, settings;
   try {
-    [parties, settings] = await Promise.all([
-      storage.listParties(),
+    [invites, settings] = await Promise.all([
+      storage.listInvites(),
       storage.getSettings()
     ]);
   } catch (err) {
@@ -34,67 +37,24 @@ module.exports = async function (context, req) {
     return;
   }
 
-  parties.sort((a, b) => (a.displayName || a.partyId).localeCompare(b.displayName || b.partyId));
+  invites.sort((a, b) => {
+    const an = `${a.primaryLastName} ${a.primaryFirstName}`.trim().toLowerCase();
+    const bn = `${b.primaryLastName} ${b.primaryFirstName}`.trim().toLowerCase();
+    return an.localeCompare(bn);
+  });
 
-  // Load members + responses + recent SMS for every party in parallel. Each
-  // party = 3 storage calls; we let them all race rather than walking the
-  // list sequentially. For ~150 parties this finishes in ~2s instead of
-  // ~30s.
-  const partyBundles = await Promise.all(parties.map(async (party) => {
+  // Load SMS log per invite in parallel — cheap at our scale.
+  const rows = await Promise.all(invites.map(async (invite) => {
+    let smsLog = [];
     try {
-      const [members, responses, smsLog] = await Promise.all([
-        storage.listMembers(party.partyId),
-        storage.getResponses(party.partyId),
-        storage.listSmsLog(party.partyId, 5)
-      ]);
-      return { party, members, responses, smsLog, loadError: null };
+      smsLog = await storage.listSmsLog(invite.inviteId, 5);
     } catch (err) {
-      context.log.error(`admin_guests party ${party.partyId} load err: ${err && err.message}`);
-      return { party, members: [], responses: [], smsLog: [], loadError: (err && err.message) || 'unknown' };
+      context.log.error(`admin_guests sms ${invite.inviteId} err: ${err && err.message}`);
     }
-  }));
-
-  const rows = [];
-  for (const bundle of partyBundles) {
-    const { party, members, responses, smsLog } = bundle;
-    const responseByMember = new Map(responses.map((r) => [r.memberId, r]));
-    members.sort((a, b) => {
-      const order = { primary: 0, plusone: 1, child: 2, guest: 1 };
-      const oa = order[a.role] ?? 9;
-      const ob = order[b.role] ?? 9;
-      if (oa !== ob) return oa - ob;
-      return (a.firstName || '').localeCompare(b.firstName || '');
-    });
-    const memberSummaries = members.map((m) => {
-      const r = responseByMember.get(m.memberId) || null;
-      return {
-        memberId: m.memberId,
-        firstName: m.firstName,
-        lastName: m.lastName,
-        role: m.role,
-        isKid: m.isKid,
-        attending: r ? r.attending : null,
-        mealChoice: r ? r.mealChoice : '',
-        dietary: r ? r.dietary : '',
-        songRequest: r ? r.songRequest : '',
-        plusOneName: r ? r.plusOneName : '',
-        notes: r ? r.notes : '',
-        submittedAt: r ? r.submittedAt : '',
-        updatedAt: r ? r.updatedAt : '',
-        submittedByMethod: r ? r.submittedByMethod : ''
-      };
-    });
-    const responseCount = memberSummaries.filter((m) => m.attending !== null).length;
-    const attendingCount = memberSummaries.filter((m) => m.attending === true).length;
-    rows.push({
-      party,
-      members: memberSummaries,
-      stats: {
-        memberCount: members.length,
-        responseCount,
-        attendingCount,
-        fullyResponded: responseCount === members.length && members.length > 0
-      },
+    const summary = summarize(invite.payload);
+    return {
+      invite, // includes full payload for the drill-down
+      summary,
       recentSms: smsLog.map((s) => ({
         type: s.type,
         deliveryStatus: s.deliveryStatus,
@@ -103,19 +63,22 @@ module.exports = async function (context, req) {
         sentAt: s.sentAt,
         toPhone: s.toPhone,
         correlationId: s.correlationId
-      })),
-      loadError: bundle.loadError || undefined
-    });
-  }
+      }))
+    };
+  }));
 
   const overall = {
-    partyCount: rows.length,
-    fullyRespondedParties: rows.filter((r) => r.stats.fullyResponded).length,
-    totalGuests: rows.reduce((n, r) => n + r.stats.memberCount, 0),
-    confirmedAttending: rows.reduce((n, r) => n + r.stats.attendingCount, 0),
-    confirmedNotAttending: rows.reduce((n, r) => n + r.members.filter((m) => m.attending === false).length, 0),
-    optedOutCount: rows.filter((r) => r.party.optedOutOfSms).length,
-    hardFailedCount: rows.filter((r) => r.party.smsHardFailedAt).length
+    inviteCount: rows.length,
+    respondedCount: rows.filter((r) => r.invite.responded).length,
+    pendingCount: rows.filter((r) => !r.invite.responded).length,
+    totalYes: rows.reduce((n, r) => n + r.summary.yes, 0),
+    totalNo: rows.reduce((n, r) => n + r.summary.no, 0),
+    totalPending: rows.reduce((n, r) => n + r.summary.pending, 0),
+    totalAdults: rows.reduce((n, r) => n + r.summary.adults, 0),
+    totalKids: rows.reduce((n, r) => n + r.summary.kids, 0),
+    withPhone: rows.filter((r) => r.invite.phoneNorm).length,
+    optedOutCount: rows.filter((r) => r.invite.optedOutOfSms).length,
+    hardFailedCount: rows.filter((r) => r.invite.smsHardFailedAt).length
   };
 
   context.res = {
