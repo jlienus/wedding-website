@@ -57,14 +57,14 @@ const jobs = [
     quality: 80,
   },
   {
-    name: 'mitad-del-mundo (itinerary hero)',
-    in: 'mitad-del-mundo-source.jpg',
-    out: path.join(outImg, 'mitad-del-mundo.jpg'),
-    width: 1800,
-    height: 1300,
+    name: 'cotopaxi (itinerary hero)',
+    in: 'cotopaxi-source.jpg',
+    out: path.join(outImg, 'cotopaxi.jpg'),
+    width: 2000,
+    height: 1100,
     fit: 'cover',
-    position: 'top',
-    quality: 80,
+    position: 'center',
+    quality: 78,
   },
 ];
 
