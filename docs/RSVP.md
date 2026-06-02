@@ -152,10 +152,10 @@ The workflow at `.github/workflows/rsvp-reminders.yml` runs daily at 16:00 UTC
 ```powershell
 $env:RSVP_STORAGE_CONNECTION = "<connection string>"
 # Optional: real phone for SMS testing
-node scripts/seed-rsvp.js --phone +15551234567
+node scripts/seed-rsvp.cjs --phone +15551234567
 
 # Reset (delete + reinsert) just the seeded parties:
-node scripts/seed-rsvp.js --reset --phone +15551234567
+node scripts/seed-rsvp.cjs --reset --phone +15551234567
 ```
 
 Creates three test parties:

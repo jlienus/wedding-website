@@ -6,7 +6,7 @@
 //
 // Usage:
 //   $env:RSVP_STORAGE_CONNECTION = "<full connection string>"
-//   node scripts/seed-rsvp.js [--reset] [--phone +15551234567]
+//   node scripts/seed-rsvp.cjs [--reset] [--phone +15551234567]
 //
 // Flags:
 //   --reset        Delete existing test parties before seeding (rsvpParties.PK
