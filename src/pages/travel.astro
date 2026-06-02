@@ -5,6 +5,7 @@ import SectionDivider from '../components/SectionDivider.astro';
 import PageAnchors from '../components/PageAnchors.astro';
 import BudgetSection from '../components/BudgetSection.astro';
 import AltitudeAdvisory from '../components/AltitudeAdvisory.astro';
+import PageHero from '../components/PageHero.astro';
 import { t, type Locale } from '../lib/i18n';
 import hotels from '../data/hotels.json';
 import en from '../i18n/en.json';
@@ -28,12 +29,12 @@ const anchorLinks = [
 
 <Base title={t(locale, 'travel.heading') + ' · John & Diana'} description={t(locale, 'travel.airportInfoBody')} lang={locale}>
   <main>
-    <section class="section container container--narrow reveal" style="text-align:center;">
+    <PageHero photoSlot="quito-panorama.jpg" imageAlt={t(locale, 'travel.heroAlt')}>
       <p class="eyebrow">{t(locale, 'nav.travel')}</p>
       <h1>{t(locale, 'travel.heading')}</h1>
       <p>{t(locale, 'travel.stayIntro')}</p>
       <PageAnchors locale={locale} links={anchorLinks} />
-    </section>
+    </PageHero>
     <section class="section container reveal" style="padding-top: 0;">
       <AltitudeAdvisory locale={locale} />
     </section>

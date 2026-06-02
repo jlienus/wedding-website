@@ -66,6 +66,16 @@ const jobs = [
     position: 'center',
     quality: 78,
   },
+  {
+    name: 'quito-panorama (travel hero)',
+    in: 'quito-source.jpg',
+    out: path.join(outImg, 'quito-panorama.jpg'),
+    width: 2000,
+    height: 1100,
+    fit: 'cover',
+    position: 'center',
+    quality: 70,
+  },
 ];
 
 for (const j of jobs) {
