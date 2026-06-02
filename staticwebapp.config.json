@@ -1,5 +1,23 @@
 {
+  "routes": [
+    {
+      "route": "/admin",
+      "allowedRoles": ["authenticated"]
+    },
+    {
+      "route": "/admin/*",
+      "allowedRoles": ["authenticated"]
+    },
+    {
+      "route": "/api/admin/*",
+      "allowedRoles": ["authenticated"]
+    }
+  ],
   "responseOverrides": {
+    "401": {
+      "redirect": "/.auth/login/github?post_login_redirect_uri=/admin",
+      "statusCode": 302
+    },
     "404": {
       "rewrite": "/404.html",
       "statusCode": 404

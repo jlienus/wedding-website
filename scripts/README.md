@@ -2,6 +2,20 @@
 
 Helpers for maintaining the wedding site infrastructure. All are idempotent and safe to run from any machine with `az` logged in.
 
+## `seed-rsvp.js` — Seed RSVP test data
+
+Inserts three starter parties (John + Diana, a placeholder family, a placeholder
+solo guest) into the Azure Table Storage tables backing the RSVP system. Safe
+to run repeatedly. See [`docs/RSVP.md`](../docs/RSVP.md) for the full system
+overview.
+
+```powershell
+$env:RSVP_STORAGE_CONNECTION = "<connection string>"
+node scripts/seed-rsvp.js                          # add (or upsert) the test parties
+node scripts/seed-rsvp.js --reset                  # wipe + reinsert just the seeded parties
+node scripts/seed-rsvp.js --phone +15551234567     # use a real phone for John (live SMS test)
+```
+
 ## `rotate-aoai-key.ps1` — Azure OpenAI key rotation
 
 Two-key (zero-downtime) rotation of the `AZURE_OPENAI_KEY` consumed by the `/api/chat` Static Web App function.
