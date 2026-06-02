@@ -257,7 +257,37 @@
     "tagline": "Con cariño, John y Diana",
     "languageEnglish": "English",
     "languageSpanish": "Español",
-    "backToTop": "Volver arriba ↑"
+    "backToTop": "Volver arriba ↑",
+    "privacy": "Privacidad",
+    "terms": "Términos"
+  },
+  "privacy": {
+    "eyebrow": "Privacidad",
+    "heading": "Aviso de privacidad",
+    "updated": "Última actualización: junio de 2026",
+    "intro": "Esta página explica cómo John y Diana manejamos la información que compartes con nuestro sitio web de boda. Es un sitio pequeño y personal para los invitados — no vendemos ni compartimos nada con anunciantes ni con terceros.",
+    "sections": [
+      { "title": "Qué recopilamos", "body": "Cuando confirmas tu asistencia, recopilamos tu nombre, los nombres de tus acompañantes, tus respuestas (asistirás o no), y cualquier restricción alimentaria, sugerencia musical o nota que quieras compartir. Si proporcionas un correo o número de teléfono, también los guardamos para enviarte actualizaciones y recordatorios." },
+      { "title": "Por qué la recopilamos", "body": "Usamos esta información solo para la logística de la boda — conteo de comidas para la cocina, distribución de mesas, lista de canciones, planificación de transporte y un número pequeño de mensajes recordatorio antes de la fecha límite del RSVP." },
+      { "title": "Sobre los mensajes de texto", "body": "Si proporcionas un número de teléfono, podemos enviarte hasta unos pocos mensajes de recordatorio antes de la fecha límite del RSVP, el 15 de noviembre de 2026. Los mensajes provienen de un número gratuito registrado a este sitio web. Responde STOP en cualquier momento para dejar de recibir mensajes, o HELP para soporte. Pueden aplicar tarifas de mensajes y datos de tu operador. No compartimos tu número con nadie — ni con otros invitados, ni con proveedores, ni con terceros." },
+      { "title": "Cuánto tiempo guardamos los datos", "body": "Eliminamos todas las respuestas del RSVP, números de teléfono y correos electrónicos dentro de los 60 días posteriores a la boda (hacia mediados de mayo de 2027). Las fotos tomadas durante la boda se guardan por separado y no están sujetas a este aviso." },
+      { "title": "Quién ve tu información", "body": "Solo John y Diana. No vendemos, alquilamos ni compartimos tu información con nadie, incluidos nuestros proveedores. Los conteos de comidas y restricciones alimentarias se entregan al servicio de catering como totales anónimos." },
+      { "title": "Tus opciones", "body": "Puedes pedirnos que eliminemos tu información en cualquier momento, que la actualicemos o que te enviemos una copia. Solo escríbenos a johnmlien@outlook.com y lo manejaremos en pocos días." },
+      { "title": "Contacto", "body": "Preguntas o solicitudes: johnmlien@outlook.com. El sitio es operado por John Lien personalmente para la boda de John y Diana el 13 de marzo de 2027." }
+    ]
+  },
+  "terms": {
+    "eyebrow": "Términos",
+    "heading": "Términos de uso",
+    "updated": "Última actualización: junio de 2026",
+    "intro": "Este es un sitio web personal pequeño para los invitados de la boda de John y Diana. Al usar el sitio o el formulario de RSVP aceptas estos términos.",
+    "sections": [
+      { "title": "Uso personal únicamente", "body": "El sitio se ofrece para el uso personal y no comercial de nuestros invitados. Por favor no compartas enlaces de RSVP, enlaces mágicos ni detalles de invitados fuera de nuestra lista de invitados." },
+      { "title": "Mensajes de texto de recordatorio", "body": "Si ingresas un número de teléfono en el formulario de RSVP, aceptas recibir hasta unos pocos mensajes de texto de recordatorio nuestros antes de la fecha límite del 15 de noviembre de 2026. Responde STOP para dejar de recibirlos en cualquier momento, o HELP para soporte. Pueden aplicar tarifas de mensajes y datos de tu operador." },
+      { "title": "Sin garantías", "body": "Ofrecemos el sitio tal cual, sin garantía de que todo funcione perfectamente. Si algo está mal, por favor avísanos para que podamos corregirlo. No somos responsables por problemas causados por tu red, dispositivo o navegador." },
+      { "title": "Cambios", "body": "Podemos actualizar estos términos ocasionalmente. Los cambios importantes se reflejarán en la fecha de 'Última actualización' arriba. El uso continuado del sitio después de un cambio significa que aceptas los términos actualizados." },
+      { "title": "Contacto", "body": "Preguntas: johnmlien@outlook.com." }
+    ]
   },
   "common": {
     "loading": "Cargando...",

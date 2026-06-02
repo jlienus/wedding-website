@@ -5,6 +5,8 @@ import { t, type Locale } from '../lib/i18n';
 interface Props { locale: Locale }
 const { locale } = Astro.props;
 const date = locale === 'es' ? config.wedding.dateDisplayEs : config.wedding.dateDisplayEn;
+const privacyHref = locale === 'es' ? '/es/privacidad' : '/privacy';
+const termsHref = locale === 'es' ? '/es/terminos' : '/terms';
 ---
 
 <footer class="site-footer">
@@ -13,6 +15,11 @@ const date = locale === 'es' ? config.wedding.dateDisplayEs : config.wedding.dat
   <p>{t(locale, 'footer.tagline')}</p>
   <p class="meta">{date}</p>
   <p class="hashtag">{config.social?.hashtag}</p>
+  <p class="legal-links">
+    <a href={privacyHref}>{t(locale, 'footer.privacy')}</a>
+    <span aria-hidden="true">·</span>
+    <a href={termsHref}>{t(locale, 'footer.terms')}</a>
+  </p>
 </footer>
 
 <script>
@@ -64,4 +71,18 @@ const date = locale === 'es' ? config.wedding.dateDisplayEs : config.wedding.dat
   .meta, .hashtag { font-size: var(--fs-small); margin-bottom: 0.35rem; }
   .meta { color: var(--color-text-muted); font-style: italic; font-family: var(--font-display); font-size: 1.05rem; letter-spacing: 0.04em; }
   .hashtag { color: var(--color-gold-deep); letter-spacing: 0.05em; font-weight: 500; }
+  .legal-links {
+    margin-top: 1.75rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    opacity: 0.55;
+  }
+  .legal-links a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px dotted currentColor;
+  }
+  .legal-links a:hover { opacity: 1; color: var(--color-gold-deep); }
+  .legal-links span { margin: 0 0.4rem; }
 </style>

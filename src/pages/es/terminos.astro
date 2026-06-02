@@ -1,0 +1,33 @@
+---
+import Base from '../../layouts/Base.astro';
+import es from '../../i18n/es.json';
+import type { Locale } from '../../lib/i18n';
+
+const locale: Locale = 'es';
+const page = es.terms;
+---
+
+<Base title={page.heading + ' · John & Diana'} description={page.intro} lang={locale}>
+  <main>
+    <section class="section container container--narrow reveal">
+      <p class="eyebrow">{page.eyebrow}</p>
+      <h1>{page.heading}</h1>
+      <p class="updated">{page.updated}</p>
+      <p class="lede">{page.intro}</p>
+      {page.sections.map((s) => (
+        <section class="legal-section">
+          <h2>{s.title}</h2>
+          <p>{s.body}</p>
+        </section>
+      ))}
+    </section>
+  </main>
+</Base>
+
+<style>
+  .updated { color: var(--color-text-muted); font-size: var(--fs-small); margin-top: -0.5rem; font-style: italic; }
+  .lede { font-size: 1.1rem; margin-bottom: 2rem; }
+  .legal-section { margin-bottom: 1.75rem; }
+  .legal-section h2 { font-family: var(--font-display); font-size: 1.35rem; margin-bottom: 0.5rem; color: var(--color-gold-deep); }
+  .legal-section p { line-height: 1.65; }
+</style>

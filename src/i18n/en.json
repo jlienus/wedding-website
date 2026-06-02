@@ -257,7 +257,37 @@
     "tagline": "With love from John & Diana",
     "languageEnglish": "English",
     "languageSpanish": "Español",
-    "backToTop": "Back to top ↑"
+    "backToTop": "Back to top ↑",
+    "privacy": "Privacy",
+    "terms": "Terms"
+  },
+  "privacy": {
+    "eyebrow": "Privacy",
+    "heading": "Privacy notice",
+    "updated": "Last updated: June 2026",
+    "intro": "This page explains how John & Diana handle the information you share with our wedding website. It is a small personal site for invited guests — nothing here is sold, shared with advertisers, or passed to third parties.",
+    "sections": [
+      { "title": "What we collect", "body": "When you RSVP, we collect your name, your party members' names, your responses (attending or not attending), and any dietary restrictions, song requests, or notes you choose to share. If you provide an email address or phone number, we store those too so we can send updates and reminders." },
+      { "title": "Why we collect it", "body": "We use this information only for wedding logistics — meal counts for the kitchen, seating charts, song queue, transportation planning, and a small number of reminder messages before the RSVP deadline." },
+      { "title": "About the reminder text messages", "body": "If you provide a phone number, we may send up to a few reminder texts before the RSVP deadline of November 15, 2026. Messages come from a toll-free number registered to this wedding website. Reply STOP at any time to stop receiving messages, or HELP for support. Message and data rates from your carrier may apply. We do not share your phone number with anyone — not other guests, not vendors, not third parties." },
+      { "title": "How long we keep your data", "body": "We delete all RSVP responses, phone numbers, and email addresses within 60 days after the wedding (by mid-May 2027). Photos taken at the wedding itself are kept separately and aren't affected by this notice." },
+      { "title": "Who sees your information", "body": "Only John and Diana. We do not sell, rent, or share your information with anyone, including our wedding vendors. Meal counts and dietary restrictions are provided to our caterer as anonymized totals." },
+      { "title": "Your choices", "body": "You can ask us to delete your information at any time, update it, or send you a copy of what we have. Just email johnmlien@outlook.com and we'll handle it within a few days." },
+      { "title": "Contact", "body": "Questions or requests: johnmlien@outlook.com. The website is operated by John Lien personally for John & Diana's March 13, 2027 wedding." }
+    ]
+  },
+  "terms": {
+    "eyebrow": "Terms",
+    "heading": "Terms of use",
+    "updated": "Last updated: June 2026",
+    "intro": "This is a small personal wedding website for invited guests of John & Diana. By using the site or the RSVP form, you agree to these terms.",
+    "sections": [
+      { "title": "Personal use only", "body": "The site is provided for the personal, non-commercial use of our invited wedding guests. Please don't share RSVP links, magic-link URLs, or guest details outside our invitee list." },
+      { "title": "Text-message reminders", "body": "If you enter a phone number on the RSVP form, you consent to receive up to a few reminder text messages from us before the RSVP deadline of November 15, 2026. Reply STOP to opt out at any time, or HELP for support. Message and data rates from your carrier may apply." },
+      { "title": "No warranty", "body": "We provide the site as-is, with no warranty that everything will be perfect. If something is wrong, please tell us so we can fix it. We are not responsible for issues caused by your network, device, or browser." },
+      { "title": "Changes", "body": "We may update these terms occasionally. Material changes will be reflected by the 'Last updated' date above. Continued use of the site after a change means you accept the updated terms." },
+      { "title": "Contact", "body": "Questions: johnmlien@outlook.com." }
+    ]
   },
   "common": {
     "loading": "Loading...",
