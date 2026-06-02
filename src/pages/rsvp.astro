@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import RsvpEmbed from '../components/RsvpEmbed.astro';
+import RsvpForm from '../components/RsvpForm.astro';
 import { t, type Locale } from '../lib/i18n';
 
 const locale: Locale = 'en';
@@ -14,8 +14,9 @@ const locale: Locale = 'en';
       <p>{t(locale, 'rsvp.intro')}</p>
     </section>
     <aside class="container container--narrow reveal" style="text-align:center; padding: var(--space-3); border-left: 4px solid var(--color-gold); background: rgba(201,169,97,0.08); margin: var(--space-3) auto;">{t(locale, 'rsvp.deadlineCallout')}</aside>
-    <section class="section"><RsvpEmbed locale={locale} /></section>
+    <section class="section"><RsvpForm locale={locale} /></section>
     <p class="container container--narrow reveal" style="text-align:center;">{t(locale, 'rsvp.contactIssues')}</p>
   </main>
 </Base>
+
 

@@ -1,0 +1,679 @@
+---
+import config from '../data/wedding.config.json';
+import { t, type Locale } from '../lib/i18n';
+
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+
+const deadlineDisplay = locale === 'es' ? config.rsvp.deadlineDisplayEs : config.rsvp.deadlineDisplayEn;
+const guestDeadlineISO = '2026-11-15T23:59:59-05:00';
+const permanentLockISO = '2027-01-15T23:59:59-05:00';
+
+const mealOptions = [
+  { value: '', labelKey: 'rsvp.mealNone' },
+  { value: 'chicken', labelKey: 'rsvp.mealChicken' },
+  { value: 'beef', labelKey: 'rsvp.mealBeef' },
+  { value: 'vegetarian', labelKey: 'rsvp.mealVegetarian' },
+  { value: 'vegan', labelKey: 'rsvp.mealVegan' },
+  { value: 'kids', labelKey: 'rsvp.mealKids' }
+];
+
+// String bundle passed to client script.
+const stringKeys = [
+  'rsvp.loading','rsvp.lookupTitle','rsvp.lookupHint','rsvp.firstNameLabel','rsvp.lastNameLabel',
+  'rsvp.findMe','rsvp.lookingUp','rsvp.cantFindName','rsvp.cantFindNameHelp',
+  'rsvp.lookupNotFound','rsvp.lookupAmbiguous','rsvp.lookupRateLimited','rsvp.lookupNameTooShort','rsvp.lookupError',
+  'rsvp.formIntro','rsvp.formHelloPrefix','rsvp.notYou','rsvp.save','rsvp.saving',
+  'rsvp.memberKidLabel','rsvp.memberPlusOneLabel',
+  'rsvp.attendingQuestion','rsvp.attendingYes','rsvp.attendingNo',
+  'rsvp.mealLabel','rsvp.mealHint','rsvp.mealNone',
+  'rsvp.mealChicken','rsvp.mealBeef','rsvp.mealVegetarian','rsvp.mealVegan','rsvp.mealKids',
+  'rsvp.dietaryLabel','rsvp.dietaryPlaceholder','rsvp.songLabel','rsvp.songPlaceholder',
+  'rsvp.notesLabel','rsvp.notesPlaceholder','rsvp.plusOneNameLabel','rsvp.plusOneNamePlaceholder',
+  'rsvp.submitError','rsvp.submitRateLimited','rsvp.submitClosed','rsvp.lateNotice',
+  'rsvp.thanks','rsvp.thanksAttending','rsvp.thanksNotAttending','rsvp.thanksMixed','rsvp.edit',
+  'rsvp.magicOk','rsvp.magicInvalid','rsvp.magicError','rsvp.magicMissing'
+];
+const strings: Record<string, string> = {};
+for (const k of stringKeys) {
+  strings[k] = t(locale, k);
+}
+
+const initData = {
+  locale,
+  deadlineDisplay,
+  guestDeadlineISO,
+  permanentLockISO,
+  mealOptions: mealOptions.map(o => ({ value: o.value, label: t(locale, o.labelKey) })),
+  strings
+};
+---
+
+<section class="rsvp-form-wrap reveal" aria-labelledby="rsvp-form-heading">
+  <h2 id="rsvp-form-heading" class="visually-hidden">{t(locale, 'rsvp.heading')}</h2>
+
+  <div id="rsvp-magic-banner" class="rsvp-banner" role="status" aria-live="polite" hidden></div>
+
+  <div id="rsvp-loading" class="rsvp-phase rsvp-phase--loading" aria-live="polite">
+    <p class="rsvp-loading-text">{t(locale, 'rsvp.loading')}</p>
+  </div>
+
+  <form id="rsvp-lookup-form" class="rsvp-phase rsvp-lookup" hidden novalidate>
+    <h3>{t(locale, 'rsvp.lookupTitle')}</h3>
+    <p class="rsvp-muted">{t(locale, 'rsvp.lookupHint')}</p>
+    <div class="rsvp-fields rsvp-fields--two">
+      <label>
+        <span class="rsvp-label">{t(locale, 'rsvp.firstNameLabel')}</span>
+        <input name="firstName" type="text" required minlength="2" maxlength="50" autocomplete="given-name" />
+      </label>
+      <label>
+        <span class="rsvp-label">{t(locale, 'rsvp.lastNameLabel')}</span>
+        <input name="lastName" type="text" required minlength="2" maxlength="50" autocomplete="family-name" />
+      </label>
+    </div>
+    <div class="rsvp-actions">
+      <button type="submit" class="btn btn--gold" data-label-default={t(locale, 'rsvp.findMe')} data-label-busy={t(locale, 'rsvp.lookingUp')}>{t(locale, 'rsvp.findMe')}</button>
+    </div>
+    <div id="rsvp-lookup-error" class="rsvp-error" role="alert" aria-live="polite" hidden></div>
+    <details class="rsvp-help">
+      <summary>{t(locale, 'rsvp.cantFindName')}</summary>
+      <p>{t(locale, 'rsvp.cantFindNameHelp')}</p>
+    </details>
+  </form>
+
+  <form id="rsvp-form" class="rsvp-phase rsvp-form" hidden novalidate>
+    <div class="rsvp-form-header">
+      <h3 id="rsvp-greeting"></h3>
+      <p class="rsvp-muted">{t(locale, 'rsvp.formIntro')}</p>
+      <button type="button" id="rsvp-not-you" class="rsvp-link">{t(locale, 'rsvp.notYou')}</button>
+    </div>
+    <div id="rsvp-members" class="rsvp-members"></div>
+    <details class="rsvp-privacy">
+      <summary>{t(locale, 'rsvp.privacySummary')}</summary>
+      <p>{t(locale, 'rsvp.privacyBody')}</p>
+    </details>
+    <div class="rsvp-actions">
+      <button type="submit" class="btn btn--gold" data-label-default={t(locale, 'rsvp.save')} data-label-busy={t(locale, 'rsvp.saving')}>{t(locale, 'rsvp.save')}</button>
+    </div>
+    <div id="rsvp-submit-error" class="rsvp-error" role="alert" aria-live="polite" hidden></div>
+  </form>
+
+  <div id="rsvp-confirmation" class="rsvp-phase rsvp-confirmation" hidden>
+    <div class="rsvp-confirm-card">
+      <h3>{t(locale, 'rsvp.thanks')}</h3>
+      <p id="rsvp-confirm-summary"></p>
+      <div class="rsvp-actions">
+        <button type="button" id="rsvp-edit" class="btn btn--ghost">{t(locale, 'rsvp.edit')}</button>
+      </div>
+    </div>
+  </div>
+
+  <template id="rsvp-member-row">
+    <fieldset class="rsvp-member">
+      <legend class="rsvp-member-name"></legend>
+      <div class="rsvp-attending">
+        <span class="rsvp-label" data-bind="attendingQuestion"></span>
+        <div class="rsvp-radio-group" role="radiogroup">
+          <label class="rsvp-radio"><input type="radio" name="attending" value="yes" /> <span data-bind="attendingYes"></span></label>
+          <label class="rsvp-radio"><input type="radio" name="attending" value="no" /> <span data-bind="attendingNo"></span></label>
+        </div>
+      </div>
+      <div class="rsvp-attending-fields" hidden>
+        <label class="rsvp-field">
+          <span class="rsvp-label"><span data-bind="mealLabel"></span></span>
+          <select name="mealChoice" data-bind="mealSelect"></select>
+          <small class="rsvp-muted" data-bind="mealHint"></small>
+        </label>
+        <label class="rsvp-field">
+          <span class="rsvp-label" data-bind="dietaryLabel"></span>
+          <input type="text" name="dietary" maxlength="200" data-placeholder="dietary" />
+        </label>
+        <label class="rsvp-field rsvp-plusone-field" hidden>
+          <span class="rsvp-label" data-bind="plusOneNameLabel"></span>
+          <input type="text" name="plusOneName" maxlength="100" data-placeholder="plusOneName" />
+        </label>
+        <label class="rsvp-field">
+          <span class="rsvp-label" data-bind="songLabel"></span>
+          <input type="text" name="songRequest" maxlength="200" data-placeholder="song" />
+        </label>
+        <label class="rsvp-field">
+          <span class="rsvp-label" data-bind="notesLabel"></span>
+          <textarea name="notes" maxlength="500" rows="2" data-placeholder="notes"></textarea>
+        </label>
+      </div>
+    </fieldset>
+  </template>
+
+  <script type="application/json" id="rsvp-init-data" set:html={JSON.stringify(initData).replace(/</g, '\\u003c').replace(/-->/g, '--\\u003e').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029')}></script>
+</section>
+
+<script>
+(() => {
+  const root = document.querySelector('.rsvp-form-wrap');
+  if (!root) return;
+  const dataNode = root.querySelector('#rsvp-init-data');
+  if (!dataNode) return;
+  const INIT = JSON.parse(dataNode.textContent || '{}');
+  const S = INIT.strings || {};
+  const MEAL_OPTIONS = INIT.mealOptions || [];
+
+  const $ = (sel: string): HTMLElement | null => root.querySelector(sel);
+  const phases = {
+    loading: $('#rsvp-loading'),
+    lookup: $('#rsvp-lookup-form'),
+    form: $('#rsvp-form'),
+    confirmation: $('#rsvp-confirmation')
+  };
+
+  function show(phase: keyof typeof phases) {
+    for (const [name, el] of Object.entries(phases)) {
+      if (!el) continue;
+      el.hidden = name !== phase;
+    }
+  }
+  function showError(el: HTMLElement | null, msg: string) {
+    if (!el) return;
+    el.textContent = msg;
+    el.hidden = false;
+  }
+  function clearError(el: HTMLElement | null) {
+    if (!el) return;
+    el.textContent = '';
+    el.hidden = true;
+  }
+  function setBusy(btn: HTMLButtonElement | null, busy: boolean) {
+    if (!btn) return;
+    btn.disabled = busy;
+    const def = btn.getAttribute('data-label-default') || btn.textContent || '';
+    const bz = btn.getAttribute('data-label-busy') || def;
+    btn.textContent = busy ? bz : def;
+  }
+
+  function showMagicBanner() {
+    const params = new URLSearchParams(location.search);
+    const magic = params.get('magic');
+    if (!magic) return;
+    const banner = $('#rsvp-magic-banner') as HTMLElement | null;
+    if (!banner) return;
+    const map: Record<string, { msg: string; tone: string }> = {
+      ok:       { msg: S['rsvp.magicOk']      || '', tone: 'ok' },
+      invalid:  { msg: S['rsvp.magicInvalid'] || '', tone: 'warn' },
+      error:    { msg: S['rsvp.magicError']   || '', tone: 'warn' },
+      missing:  { msg: S['rsvp.magicMissing'] || '', tone: 'warn' }
+    };
+    const entry = map[magic];
+    if (!entry || !entry.msg) return;
+    banner.textContent = entry.msg;
+    banner.dataset.tone = entry.tone;
+    banner.hidden = false;
+    // Strip the query param so refresh doesn't keep showing it
+    const url = new URL(location.href);
+    url.searchParams.delete('magic');
+    history.replaceState({}, '', url.pathname + (url.search || '') + url.hash);
+  }
+
+  let CURRENT: { party: any; members: any[]; responses: any[] } | null = null;
+
+  async function init() {
+    showMagicBanner();
+    show('loading');
+    try {
+      const res = await fetch('/api/rsvp/get', { credentials: 'same-origin' });
+      if (!res.ok) {
+        show('lookup');
+        return;
+      }
+      const data = await res.json();
+      if (data && data.authenticated && data.party) {
+        CURRENT = { party: data.party, members: data.members || [], responses: data.responses || [] };
+        renderForm();
+        return;
+      }
+    } catch (_e) { /* fall through to lookup */ }
+    show('lookup');
+  }
+
+  function renderForm() {
+    if (!CURRENT) { show('lookup'); return; }
+    const greetingEl = $('#rsvp-greeting');
+    if (greetingEl) {
+      const primary = CURRENT.members.find(m => m.role === 'primary') || CURRENT.members[0];
+      const first = primary ? primary.firstName : '';
+      greetingEl.textContent = first
+        ? `${S['rsvp.formHelloPrefix']} ${first}!`
+        : (CURRENT.party.displayName || S['rsvp.heading'] || '');
+    }
+    const membersBox = $('#rsvp-members');
+    if (!membersBox) return;
+    membersBox.innerHTML = '';
+    const tpl = root.querySelector('#rsvp-member-row') as HTMLTemplateElement | null;
+    if (!tpl) return;
+    const responseByMember = new Map(CURRENT.responses.map(r => [r.memberId, r]));
+    for (const m of CURRENT.members) {
+      const node = tpl.content.cloneNode(true) as DocumentFragment;
+      const fieldset = node.querySelector('fieldset') as HTMLFieldSetElement;
+      fieldset.dataset.memberId = m.memberId;
+      const nameEl = fieldset.querySelector('.rsvp-member-name') as HTMLElement;
+      const nameSuffix = m.role === 'plusone' ? ` ${S['rsvp.memberPlusOneLabel']}` :
+                         m.isKid ? ` ${S['rsvp.memberKidLabel']}` : '';
+      nameEl.textContent = `${m.firstName || ''} ${m.lastName || ''}`.trim() + nameSuffix;
+      // Bind static strings
+      fieldset.querySelectorAll('[data-bind]').forEach((el) => {
+        const key = (el as HTMLElement).dataset.bind || '';
+        if (key.startsWith('attending')) {
+          (el as HTMLElement).textContent = S[`rsvp.${key}`] || '';
+        } else if (key === 'mealLabel') {
+          (el as HTMLElement).textContent = S['rsvp.mealLabel'] || '';
+        } else if (key === 'mealHint') {
+          (el as HTMLElement).textContent = S['rsvp.mealHint'] || '';
+        } else if (key === 'mealSelect') {
+          const sel = el as HTMLSelectElement;
+          for (const opt of MEAL_OPTIONS) {
+            const o = document.createElement('option');
+            o.value = opt.value;
+            o.textContent = opt.label;
+            sel.appendChild(o);
+          }
+        } else if (key === 'dietaryLabel') {
+          (el as HTMLElement).textContent = S['rsvp.dietaryLabel'] || '';
+        } else if (key === 'songLabel') {
+          (el as HTMLElement).textContent = S['rsvp.songLabel'] || '';
+        } else if (key === 'notesLabel') {
+          (el as HTMLElement).textContent = S['rsvp.notesLabel'] || '';
+        } else if (key === 'plusOneNameLabel') {
+          (el as HTMLElement).textContent = S['rsvp.plusOneNameLabel'] || '';
+        }
+      });
+      // Placeholders
+      fieldset.querySelectorAll('[data-placeholder]').forEach((el) => {
+        const key = (el as HTMLElement).dataset.placeholder || '';
+        const map: Record<string, string> = {
+          dietary: S['rsvp.dietaryPlaceholder'] || '',
+          song: S['rsvp.songPlaceholder'] || '',
+          notes: S['rsvp.notesPlaceholder'] || '',
+          plusOneName: S['rsvp.plusOneNamePlaceholder'] || ''
+        };
+        (el as HTMLInputElement | HTMLTextAreaElement).placeholder = map[key] || '';
+      });
+
+      // Plus-one field visibility — only show on the actual plus-one slot
+      const plusOneField = fieldset.querySelector('.rsvp-plusone-field') as HTMLElement;
+      if (m.role === 'plusone' && CURRENT!.party.plusOneAllowed) {
+        plusOneField.hidden = false;
+      }
+
+      // Pre-fill from saved response
+      const r = responseByMember.get(m.memberId);
+      if (r) {
+        if (r.attending === true) {
+          const yes = fieldset.querySelector('input[name="attending"][value="yes"]') as HTMLInputElement;
+          if (yes) yes.checked = true;
+        } else if (r.attending === false) {
+          const no = fieldset.querySelector('input[name="attending"][value="no"]') as HTMLInputElement;
+          if (no) no.checked = true;
+        }
+        const sel = fieldset.querySelector('select[name="mealChoice"]') as HTMLSelectElement;
+        if (sel && r.mealChoice) sel.value = r.mealChoice;
+        const fld = (n: string) => fieldset.querySelector(`[name="${n}"]`) as HTMLInputElement | HTMLTextAreaElement | null;
+        const dietary = fld('dietary'); if (dietary && r.dietary) dietary.value = r.dietary;
+        const song = fld('songRequest'); if (song && r.songRequest) song.value = r.songRequest;
+        const notes = fld('notes'); if (notes && r.notes) notes.value = r.notes;
+        const plus = fld('plusOneName'); if (plus && r.plusOneName) plus.value = r.plusOneName;
+      }
+      // Show/hide attendee details based on attending choice
+      const updateFieldsVisibility = () => {
+        const attendingFields = fieldset.querySelector('.rsvp-attending-fields') as HTMLElement;
+        const yesChecked = (fieldset.querySelector('input[name="attending"][value="yes"]') as HTMLInputElement | null)?.checked;
+        if (attendingFields) attendingFields.hidden = !yesChecked;
+      };
+      fieldset.querySelectorAll('input[name="attending"]').forEach((inp) => {
+        inp.addEventListener('change', updateFieldsVisibility);
+      });
+      updateFieldsVisibility();
+
+      membersBox.appendChild(node);
+    }
+    show('form');
+    clearError($('#rsvp-submit-error'));
+  }
+
+  // --- Lookup form ---
+  const lookupForm = phases.lookup as HTMLFormElement | null;
+  if (lookupForm) {
+    lookupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearError($('#rsvp-lookup-error'));
+      const btn = lookupForm.querySelector('button[type="submit"]') as HTMLButtonElement;
+      const fd = new FormData(lookupForm);
+      const firstName = String(fd.get('firstName') || '').trim();
+      const lastName = String(fd.get('lastName') || '').trim();
+      if (firstName.length < 2 || lastName.length < 2) {
+        showError($('#rsvp-lookup-error'), S['rsvp.lookupNameTooShort']);
+        return;
+      }
+      setBusy(btn, true);
+      try {
+        const res = await fetch('/api/rsvp/lookup', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ firstName, lastName })
+        });
+        if (res.status === 429) {
+          showError($('#rsvp-lookup-error'), S['rsvp.lookupRateLimited']);
+          return;
+        }
+        if (!res.ok) {
+          showError($('#rsvp-lookup-error'), S['rsvp.lookupError']);
+          return;
+        }
+        const data = await res.json();
+        if (!data.found) {
+          const msg = data.ambiguous ? S['rsvp.lookupAmbiguous'] : S['rsvp.lookupNotFound'];
+          showError($('#rsvp-lookup-error'), msg);
+          return;
+        }
+        CURRENT = { party: data.party, members: data.members || [], responses: data.responses || [] };
+        try { localStorage.setItem('rsvp.lastFirst', firstName); } catch {}
+        renderForm();
+      } catch (_e) {
+        showError($('#rsvp-lookup-error'), S['rsvp.lookupError']);
+      } finally {
+        setBusy(btn, false);
+      }
+    });
+  }
+
+  // --- Not-you button ---
+  const notYouBtn = $('#rsvp-not-you');
+  if (notYouBtn) {
+    notYouBtn.addEventListener('click', async () => {
+      try {
+        await fetch('/api/rsvp/logout', { method: 'POST', credentials: 'same-origin' });
+      } catch {}
+      try { localStorage.removeItem('rsvp.lastFirst'); } catch {}
+      CURRENT = null;
+      (lookupForm as HTMLFormElement | null)?.reset();
+      show('lookup');
+    });
+  }
+
+  // --- Edit button ---
+  const editBtn = $('#rsvp-edit');
+  if (editBtn) {
+    editBtn.addEventListener('click', () => {
+      if (CURRENT) renderForm();
+      else show('lookup');
+    });
+  }
+
+  // --- Submit form ---
+  const submitForm = phases.form as HTMLFormElement | null;
+  if (submitForm) {
+    submitForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearError($('#rsvp-submit-error'));
+      const btn = submitForm.querySelector('button[type="submit"]') as HTMLButtonElement;
+      if (!CURRENT) return;
+      const memberFieldsets = submitForm.querySelectorAll('.rsvp-member');
+      const payload = { members: [] as any[] };
+      let invalid = false;
+      memberFieldsets.forEach((fs) => {
+        const f = fs as HTMLFieldSetElement;
+        const memberId = f.dataset.memberId || '';
+        const yes = (f.querySelector('input[name="attending"][value="yes"]') as HTMLInputElement | null)?.checked;
+        const no = (f.querySelector('input[name="attending"][value="no"]') as HTMLInputElement | null)?.checked;
+        let attending: boolean | null = null;
+        if (yes) attending = true;
+        else if (no) attending = false;
+        else invalid = true;
+        const get = (n: string): string => (f.querySelector(`[name="${n}"]`) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null)?.value || '';
+        payload.members.push({
+          memberId,
+          attending,
+          mealChoice: attending === true ? get('mealChoice') : '',
+          dietary: attending === true ? get('dietary') : '',
+          songRequest: attending === true ? get('songRequest') : '',
+          notes: get('notes'),
+          plusOneName: attending === true ? get('plusOneName') : ''
+        });
+      });
+      if (invalid) {
+        showError($('#rsvp-submit-error'), S['rsvp.submitError']);
+        return;
+      }
+      setBusy(btn, true);
+      try {
+        const res = await fetch('/api/rsvp/submit', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.status === 429) {
+          showError($('#rsvp-submit-error'), S['rsvp.submitRateLimited']);
+          return;
+        }
+        if (res.status === 410) {
+          showError($('#rsvp-submit-error'), S['rsvp.submitClosed']);
+          return;
+        }
+        if (!res.ok) {
+          showError($('#rsvp-submit-error'), S['rsvp.submitError']);
+          return;
+        }
+        const data = await res.json();
+        // Update local responses snapshot so edit shows current data
+        if (CURRENT) {
+          const byId = new Map(CURRENT.responses.map((r: any) => [r.memberId, r]));
+          for (const m of payload.members) {
+            const r = byId.get(m.memberId) || { memberId: m.memberId };
+            (r as any).attending = m.attending;
+            (r as any).mealChoice = m.mealChoice;
+            (r as any).dietary = m.dietary;
+            (r as any).songRequest = m.songRequest;
+            (r as any).notes = m.notes;
+            (r as any).plusOneName = m.plusOneName;
+            byId.set(m.memberId, r);
+          }
+          CURRENT.responses = Array.from(byId.values());
+        }
+        renderConfirmation(data && data.late);
+      } catch (_e) {
+        showError($('#rsvp-submit-error'), S['rsvp.submitError']);
+      } finally {
+        setBusy(btn, false);
+      }
+    });
+  }
+
+  function renderConfirmation(late: boolean) {
+    if (!CURRENT) { show('lookup'); return; }
+    const summaryEl = $('#rsvp-confirm-summary');
+    if (summaryEl) {
+      const responses = CURRENT.responses || [];
+      const attendingCount = responses.filter((r: any) => r.attending === true).length;
+      const total = CURRENT.members.length;
+      let summaryText = '';
+      if (attendingCount === total && total > 0) summaryText = S['rsvp.thanksAttending'];
+      else if (attendingCount === 0) summaryText = S['rsvp.thanksNotAttending'];
+      else summaryText = S['rsvp.thanksMixed'];
+      if (late) summaryText = `${S['rsvp.lateNotice']} ${summaryText}`;
+      summaryEl.textContent = summaryText;
+    }
+    show('confirmation');
+  }
+
+  init();
+})();
+</script>
+
+<style>
+  .rsvp-form-wrap {
+    max-width: 44rem;
+    margin: 0 auto;
+    padding: 0 var(--space-3);
+  }
+  .rsvp-banner {
+    margin: 0 0 var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md, 8px);
+    background: rgba(201, 169, 97, 0.12);
+    border-left: 4px solid var(--color-gold);
+    color: var(--color-text);
+  }
+  .rsvp-banner[data-tone="warn"] {
+    background: rgba(200, 100, 60, 0.08);
+    border-left-color: #c8643c;
+  }
+  .rsvp-phase {
+    margin: 0;
+  }
+  .rsvp-phase[hidden] { display: none !important; }
+  .rsvp-phase--loading { text-align: center; padding: var(--space-5) 0; opacity: 0.7; }
+  .rsvp-loading-text { font-style: italic; }
+
+  .rsvp-lookup, .rsvp-form, .rsvp-confirmation {
+    padding: var(--space-4);
+    background: var(--gradient-surface, #fff);
+    border: 1px solid var(--color-rule, #e8e0c8);
+    border-radius: var(--radius-lg, 12px);
+    box-shadow: var(--shadow-soft, 0 2px 8px rgba(0,0,0,0.05));
+  }
+  .rsvp-lookup h3, .rsvp-form-header h3, .rsvp-confirmation h3 {
+    margin-top: 0;
+    color: var(--color-gold-deep, #8a6a2c);
+  }
+  .rsvp-muted { color: var(--color-text-muted, #6b6b6b); }
+
+  .rsvp-fields {
+    display: grid;
+    gap: var(--space-3);
+    margin: var(--space-3) 0;
+  }
+  .rsvp-fields--two { grid-template-columns: 1fr; }
+  @media (min-width: 28rem) {
+    .rsvp-fields--two { grid-template-columns: 1fr 1fr; }
+  }
+
+  .rsvp-label {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+  .rsvp-form-wrap input[type="text"],
+  .rsvp-form-wrap select,
+  .rsvp-form-wrap textarea {
+    width: 100%;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--color-rule, #d6cdb6);
+    border-radius: var(--radius-md, 8px);
+    font: inherit;
+    background: #fff;
+    box-sizing: border-box;
+  }
+  .rsvp-form-wrap input:focus,
+  .rsvp-form-wrap select:focus,
+  .rsvp-form-wrap textarea:focus {
+    outline: 2px solid var(--color-gold, #c9a961);
+    outline-offset: 1px;
+  }
+  .rsvp-form-wrap textarea { resize: vertical; min-height: 3.5rem; }
+
+  .rsvp-form-header {
+    margin-bottom: var(--space-3);
+    position: relative;
+  }
+  .rsvp-link {
+    background: none;
+    border: 0;
+    color: var(--color-gold-deep, #8a6a2c);
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0.25rem 0;
+    font-size: 0.9rem;
+  }
+
+  .rsvp-members {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin: var(--space-3) 0;
+  }
+  .rsvp-member {
+    border: 1px solid var(--color-rule, #e8e0c8);
+    border-radius: var(--radius-md, 8px);
+    padding: var(--space-3);
+    background: rgba(255, 255, 255, 0.6);
+  }
+  .rsvp-member-name {
+    padding: 0 0.5rem;
+    font-weight: 700;
+    font-size: 1.05rem;
+  }
+  .rsvp-attending {
+    margin-top: 0.5rem;
+  }
+  .rsvp-radio-group {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.25rem;
+    flex-wrap: wrap;
+  }
+  .rsvp-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm, 4px);
+    cursor: pointer;
+  }
+  .rsvp-radio input { margin: 0; }
+  .rsvp-attending-fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    padding-top: var(--space-2);
+    border-top: 1px dashed var(--color-rule, #e8e0c8);
+  }
+  .rsvp-field { display: block; }
+  .rsvp-field small { display: block; margin-top: 0.2rem; font-size: 0.85rem; }
+
+  .rsvp-privacy { margin: var(--space-3) 0; font-size: 0.9rem; }
+  .rsvp-privacy summary { cursor: pointer; color: var(--color-text-muted, #6b6b6b); }
+  .rsvp-privacy p { margin-top: 0.5rem; color: var(--color-text-muted, #6b6b6b); }
+
+  .rsvp-help { margin-top: var(--space-2); font-size: 0.9rem; }
+  .rsvp-help summary { cursor: pointer; color: var(--color-text-muted, #6b6b6b); }
+
+  .rsvp-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: var(--space-3);
+  }
+  .rsvp-actions .btn { min-width: 12rem; }
+
+  .rsvp-error {
+    margin-top: var(--space-2);
+    padding: 0.5rem 0.75rem;
+    background: rgba(200, 60, 60, 0.08);
+    border-left: 4px solid #c83c3c;
+    border-radius: var(--radius-sm, 4px);
+    color: #8a2c2c;
+    font-size: 0.95rem;
+  }
+
+  .rsvp-confirm-card { text-align: center; }
+  .rsvp-confirm-card .rsvp-actions { justify-content: center; }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0);
+    white-space: nowrap; border: 0;
+  }
+</style>

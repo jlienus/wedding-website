@@ -52,9 +52,7 @@
   "rsvp": {
     "deadline": "2026-11-15",
     "deadlineDisplayEn": "Sunday, November 15, 2026",
-    "deadlineDisplayEs": "Domingo, 15 de noviembre de 2026",
-    "embedUrl": "RSVPIFY_EMBED_URL_GOES_HERE",
-    "fallbackUrl": "RSVPIFY_PUBLIC_URL_GOES_HERE"
+    "deadlineDisplayEs": "Domingo, 15 de noviembre de 2026"
   },
   "registry": {
     "amazon": {

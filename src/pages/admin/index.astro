@@ -1,0 +1,390 @@
+---
+import Base from '../../layouts/Base.astro';
+const locale = 'en';
+---
+
+<Base title="RSVP Admin · John & Diana" description="RSVP administration dashboard" lang={locale}>
+  <main class="admin">
+    <section class="container">
+      <header class="admin-header">
+        <h1>RSVP Admin</h1>
+        <div class="admin-user">
+          <span id="admin-user-label">…</span>
+          <a href="/.auth/logout?post_logout_redirect_uri=/" class="rsvp-link">Log out</a>
+        </div>
+      </header>
+
+      <div id="admin-error" class="admin-error" role="alert" hidden></div>
+
+      <section class="admin-card admin-controls">
+        <h2>Reminders</h2>
+        <div class="admin-row">
+          <label class="admin-toggle">
+            <input type="checkbox" id="reminders-enabled" />
+            <span>Monthly reminder texts enabled</span>
+          </label>
+          <span id="reminders-stop" class="admin-muted"></span>
+        </div>
+        <div class="admin-row admin-row--actions">
+          <button id="btn-send-test" class="btn btn--ghost">Send test SMS</button>
+          <span class="admin-muted">Sends a test message to a phone you specify. Useful to verify ACS provisioning.</span>
+        </div>
+        <div id="settings-status" class="admin-status"></div>
+      </section>
+
+      <section class="admin-card">
+        <h2>Overall</h2>
+        <div id="admin-overall" class="admin-stats">…</div>
+      </section>
+
+      <section class="admin-card">
+        <div class="admin-card-header">
+          <h2>Parties &amp; responses</h2>
+          <button id="btn-refresh" class="btn btn--ghost btn--small">Refresh</button>
+        </div>
+        <div class="admin-table-wrap">
+          <table id="admin-table" class="admin-table">
+            <thead>
+              <tr>
+                <th>Party</th>
+                <th>Members</th>
+                <th>Responded</th>
+                <th>Attending</th>
+                <th>Phone</th>
+                <th>Reminders</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-tbody">
+              <tr><td colspan="7" class="admin-loading">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-card">
+        <h2>Drill-down</h2>
+        <p class="admin-muted">Click a row above to see member-level responses.</p>
+        <div id="admin-drilldown"></div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const errorEl = document.getElementById('admin-error') as HTMLDivElement | null;
+      const userLabel = document.getElementById('admin-user-label') as HTMLSpanElement | null;
+      const remindersChk = document.getElementById('reminders-enabled') as HTMLInputElement | null;
+      const settingsStatus = document.getElementById('settings-status') as HTMLDivElement | null;
+      const overallEl = document.getElementById('admin-overall') as HTMLDivElement | null;
+      const tbody = document.getElementById('admin-tbody') as HTMLTableSectionElement | null;
+      const drilldownEl = document.getElementById('admin-drilldown') as HTMLDivElement | null;
+      const remindersStopEl = document.getElementById('reminders-stop') as HTMLSpanElement | null;
+
+      function showError(msg: string) {
+        if (!errorEl) return;
+        errorEl.textContent = msg;
+        errorEl.hidden = false;
+      }
+      function clearError() {
+        if (!errorEl) return;
+        errorEl.textContent = '';
+        errorEl.hidden = true;
+      }
+      function setStatus(msg: string, tone: 'ok' | 'warn' | '' = '') {
+        if (!settingsStatus) return;
+        settingsStatus.textContent = msg;
+        settingsStatus.dataset.tone = tone;
+        if (msg) {
+          window.setTimeout(() => {
+            if (settingsStatus.textContent === msg) {
+              settingsStatus.textContent = '';
+              settingsStatus.dataset.tone = '';
+            }
+          }, 4500);
+        }
+      }
+
+      let LAST_DATA: any = null;
+
+      async function loadUser() {
+        try {
+          const res = await fetch('/.auth/me', { credentials: 'same-origin' });
+          if (!res.ok) return;
+          const data = await res.json();
+          const principal = data && data.clientPrincipal;
+          if (principal && userLabel) {
+            userLabel.textContent = `${principal.userDetails || principal.userId} (${principal.identityProvider})`;
+          }
+        } catch {}
+      }
+
+      async function loadGuests() {
+        clearError();
+        try {
+          const res = await fetch('/api/admin/guests', { credentials: 'same-origin' });
+          if (res.status === 401) { showError('Not signed in. Redirecting…'); window.location.href = '/.auth/login/github?post_login_redirect_uri=/admin'; return; }
+          if (res.status === 403) { showError('Your account is signed in but is not authorized. Only the configured admin GitHub user can use this page.'); return; }
+          if (!res.ok) { showError(`Couldn't load guests (HTTP ${res.status}).`); return; }
+          const data = await res.json();
+          LAST_DATA = data;
+          render(data);
+        } catch (e: any) {
+          showError(`Couldn't load guests: ${e && e.message}`);
+        }
+      }
+
+      function render(data: any) {
+        if (!remindersChk) return;
+        remindersChk.checked = !!(data.settings && data.settings.remindersEnabled);
+        if (remindersStopEl && data.settings && data.settings.remindersStopOnUtc) {
+          const stop = new Date(data.settings.remindersStopOnUtc);
+          remindersStopEl.textContent = `Hard stop: ${isFinite(stop.getTime()) ? stop.toLocaleDateString() : data.settings.remindersStopOnUtc}`;
+        }
+        if (overallEl && data.overall) {
+          const o = data.overall;
+          overallEl.innerHTML = `
+            <div><strong>${o.partyCount}</strong> parties</div>
+            <div><strong>${o.fullyRespondedParties}</strong> fully responded</div>
+            <div><strong>${o.confirmedAttending}</strong> attending / <strong>${o.confirmedNotAttending}</strong> not / <strong>${o.totalGuests}</strong> total</div>
+            <div><strong>${o.optedOutCount}</strong> opted out · <strong>${o.hardFailedCount}</strong> SMS hard-failed</div>
+          `;
+        }
+        if (tbody) {
+          if (!data.rows || data.rows.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="admin-muted">No parties yet. Run the seed script or import a guest list.</td></tr>';
+          } else {
+            tbody.innerHTML = data.rows.map((row: any) => renderRow(row)).join('');
+            tbody.querySelectorAll('button[data-action]').forEach((btn) => {
+              btn.addEventListener('click', onActionClick);
+            });
+            tbody.querySelectorAll('tr[data-party-id]').forEach((tr) => {
+              tr.addEventListener('click', (ev) => {
+                if ((ev.target as HTMLElement).closest('button')) return;
+                renderDrilldown((tr as HTMLTableRowElement).dataset.partyId || '');
+              });
+            });
+          }
+        }
+      }
+
+      function escapeHtml(s: string): string {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c] as string));
+      }
+
+      function renderRow(row: any): string {
+        const p = row.party;
+        const stats = row.stats;
+        const phoneCell = p.phone ? escapeHtml(p.phone) : '<span class="admin-muted">—</span>';
+        const optBadge = p.optedOutOfSms ? ' <span class="admin-badge admin-badge--warn">opted out</span>' : '';
+        const hardBadge = p.smsHardFailedAt ? ' <span class="admin-badge admin-badge--warn">hard-fail</span>' : '';
+        const lastReminder = p.lastReminderSentAt
+          ? `${escapeHtml(new Date(p.lastReminderSentAt).toLocaleDateString())} (#${p.reminderCount || 0})`
+          : '<span class="admin-muted">—</span>';
+        const sendBtn = p.phoneNorm
+          ? `<button class="btn btn--ghost btn--small" data-action="send-reminder" data-party-id="${escapeHtml(p.partyId)}">Send reminder</button>`
+          : '';
+        const optOutBtn = p.optedOutOfSms
+          ? `<button class="btn btn--ghost btn--small" data-action="clear-optout" data-party-id="${escapeHtml(p.partyId)}">Clear opt-out</button>`
+          : '';
+        const hardClearBtn = p.smsHardFailedAt
+          ? `<button class="btn btn--ghost btn--small" data-action="clear-hardfail" data-party-id="${escapeHtml(p.partyId)}">Clear hard-fail</button>`
+          : '';
+        return `
+          <tr data-party-id="${escapeHtml(p.partyId)}" class="${stats.fullyResponded ? 'is-responded' : ''}">
+            <td>${escapeHtml(p.displayName || p.partyId)}${optBadge}${hardBadge}</td>
+            <td>${stats.memberCount}</td>
+            <td>${stats.responseCount}/${stats.memberCount}</td>
+            <td>${stats.attendingCount}</td>
+            <td>${phoneCell}${p.phone ? ` <span class="admin-muted">${escapeHtml(p.locale)}</span>` : ''}</td>
+            <td>${lastReminder}</td>
+            <td>${sendBtn} ${optOutBtn} ${hardClearBtn}</td>
+          </tr>
+        `;
+      }
+
+      function renderDrilldown(partyId: string) {
+        if (!LAST_DATA || !drilldownEl) return;
+        const row = LAST_DATA.rows.find((r: any) => r.party.partyId === partyId);
+        if (!row) return;
+        const memberList = row.members.map((m: any) => `
+          <li>
+            <strong>${escapeHtml(m.firstName)} ${escapeHtml(m.lastName)}</strong>
+            <span class="admin-muted">[${escapeHtml(m.role)}${m.isKid ? ', child' : ''}]</span>
+            — attending: <strong>${m.attending === true ? 'YES' : m.attending === false ? 'NO' : '—'}</strong>
+            ${m.attending === true && m.mealChoice ? ` · meal: ${escapeHtml(m.mealChoice)}` : ''}
+            ${m.dietary ? ` · dietary: ${escapeHtml(m.dietary)}` : ''}
+            ${m.songRequest ? ` · song: ${escapeHtml(m.songRequest)}` : ''}
+            ${m.plusOneName ? ` · plus-one: ${escapeHtml(m.plusOneName)}` : ''}
+            ${m.notes ? ` · notes: ${escapeHtml(m.notes)}` : ''}
+            ${m.submittedAt ? `<br><span class="admin-muted">submitted ${escapeHtml(new Date(m.submittedAt).toLocaleString())} via ${escapeHtml(m.submittedByMethod || 'web')}</span>` : ''}
+          </li>
+        `).join('');
+        const smsList = (row.recentSms || []).map((s: any) => `
+          <li>
+            <span class="admin-muted">${escapeHtml(new Date(s.sentAt).toLocaleString())}</span>
+            — ${escapeHtml(s.type)} → <strong>${escapeHtml(s.deliveryStatus)}</strong>${s.errorCode ? ` (${escapeHtml(s.errorCode)})` : ''}
+            ${s.bodyLen ? ` · ${s.bodyLen} chars` : ''}
+          </li>
+        `).join('') || '<li class="admin-muted">No SMS history.</li>';
+        drilldownEl.innerHTML = `
+          <h3>${escapeHtml(row.party.displayName || row.party.partyId)}</h3>
+          <ul class="admin-list">${memberList}</ul>
+          <h4>Recent SMS</h4>
+          <ul class="admin-list admin-list--small">${smsList}</ul>
+        `;
+      }
+
+      async function onActionClick(ev: Event) {
+        const btn = ev.currentTarget as HTMLButtonElement;
+        const action = btn.dataset.action || '';
+        const partyId = btn.dataset.partyId || '';
+        const original = btn.textContent;
+        btn.disabled = true; btn.textContent = '…';
+        try {
+          if (action === 'send-reminder') {
+            if (!confirm('Send an SMS reminder to this party now (bypasses 30-day cadence)?')) return;
+            const res = await fetch('/api/admin/send-reminder', {
+              method: 'POST', credentials: 'same-origin',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ partyId })
+            });
+            const data = await res.json();
+            if (res.ok && data.result && data.result.sent) {
+              setStatus(`Sent (${data.result.segmentCount} segments, ${data.result.bodyLen} chars).`, 'ok');
+            } else {
+              const reason = (data && data.result && (data.result.skipped || data.result.errorCode)) || `HTTP ${res.status}`;
+              setStatus(`Skipped: ${reason}`, 'warn');
+            }
+          } else if (action === 'clear-optout') {
+            const res = await fetch('/api/admin/update-party', {
+              method: 'POST', credentials: 'same-origin',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ partyId, patch: { optedOutOfSms: false } })
+            });
+            if (!res.ok) { setStatus(`Update failed (${res.status})`, 'warn'); }
+            else { setStatus('Opt-out cleared.', 'ok'); }
+          } else if (action === 'clear-hardfail') {
+            const res = await fetch('/api/admin/update-party', {
+              method: 'POST', credentials: 'same-origin',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ partyId, patch: { smsHardFailedAt: '' } })
+            });
+            if (!res.ok) { setStatus(`Update failed (${res.status})`, 'warn'); }
+            else { setStatus('Hard-fail flag cleared.', 'ok'); }
+          }
+        } catch (e: any) {
+          setStatus(`Action failed: ${e && e.message}`, 'warn');
+        } finally {
+          btn.disabled = false; btn.textContent = original;
+          loadGuests();
+        }
+      }
+
+      const refreshBtn = document.getElementById('btn-refresh');
+      if (refreshBtn) refreshBtn.addEventListener('click', loadGuests);
+
+      const sendTestBtn = document.getElementById('btn-send-test');
+      if (sendTestBtn) sendTestBtn.addEventListener('click', async () => {
+        const phone = window.prompt('Phone number to text (E.164 or 10 digits US):');
+        if (!phone) return;
+        const locale = window.prompt('Locale? "en" or "es" (default en):', 'en') || 'en';
+        try {
+          const res = await fetch('/api/admin/send-test', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone, locale })
+          });
+          const data = await res.json();
+          if (data.successful) {
+            setStatus(`Test SMS sent (id=${data.messageId}, ${data.segmentCount} seg, ${data.bodyLen} chars).`, 'ok');
+          } else {
+            setStatus(`Test SMS failed: ${data.errorCode || data.error || 'unknown'} ${data.errorMessage || ''}`, 'warn');
+          }
+        } catch (e: any) {
+          setStatus(`Test SMS failed: ${e && e.message}`, 'warn');
+        }
+      });
+
+      if (remindersChk) {
+        remindersChk.addEventListener('change', async () => {
+          const next = remindersChk.checked;
+          remindersChk.disabled = true;
+          try {
+            const res = await fetch('/api/admin/toggle-reminders', {
+              method: 'POST', credentials: 'same-origin',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ enabled: next })
+            });
+            if (!res.ok) {
+              setStatus(`Toggle failed (HTTP ${res.status})`, 'warn');
+              remindersChk.checked = !next;
+            } else {
+              setStatus(next ? 'Reminders enabled.' : 'Reminders disabled.', 'ok');
+            }
+          } catch (e: any) {
+            setStatus(`Toggle failed: ${e && e.message}`, 'warn');
+            remindersChk.checked = !next;
+          } finally {
+            remindersChk.disabled = false;
+          }
+        });
+      }
+
+      loadUser();
+      loadGuests();
+    })();
+  </script>
+
+  <style>
+    .admin { padding: var(--space-4) 0; }
+    .admin .container { max-width: 76rem; }
+    .admin-header { display:flex; justify-content:space-between; align-items:flex-start; gap: var(--space-3); margin-bottom: var(--space-3); }
+    .admin-header h1 { margin: 0; }
+    .admin-user { font-size: 0.9rem; color: var(--color-text-muted, #6b6b6b); display:flex; gap:0.5rem; align-items:center; }
+    .admin-card {
+      background: #fff;
+      border: 1px solid var(--color-rule, #e8e0c8);
+      border-radius: var(--radius-md, 8px);
+      padding: var(--space-3);
+      margin-bottom: var(--space-3);
+    }
+    .admin-card h2 { margin-top: 0; color: var(--color-gold-deep, #8a6a2c); }
+    .admin-card-header { display:flex; justify-content:space-between; align-items:center; }
+    .admin-row { display:flex; align-items:center; gap: 0.75rem; margin: 0.4rem 0; flex-wrap: wrap; }
+    .admin-row--actions { margin-top: 0.75rem; }
+    .admin-stats { display:flex; gap: var(--space-3); flex-wrap: wrap; }
+    .admin-stats > div { padding: 0.4rem 0.6rem; background: rgba(201,169,97,0.08); border-radius: var(--radius-sm, 4px); }
+    .admin-table-wrap { overflow-x:auto; }
+    .admin-table { width:100%; border-collapse: collapse; font-size: 0.95rem; }
+    .admin-table th, .admin-table td { padding: 0.5rem 0.6rem; text-align:left; border-bottom: 1px solid var(--color-rule, #eee); }
+    .admin-table th { background: rgba(201,169,97,0.08); }
+    .admin-table tr { cursor: pointer; }
+    .admin-table tr.is-responded { background: rgba(80, 160, 80, 0.04); }
+    .admin-table button { margin-right: 0.25rem; margin-bottom: 0.25rem; }
+    .admin-muted { color: var(--color-text-muted, #888); font-size: 0.85rem; }
+    .admin-loading { text-align:center; padding: var(--space-3); color: var(--color-text-muted, #888); }
+    .admin-badge { display:inline-block; padding: 0.1rem 0.4rem; border-radius: 999px; font-size: 0.75rem; }
+    .admin-badge--warn { background: rgba(200,60,60,0.12); color: #8a2c2c; }
+    .admin-error {
+      margin-bottom: var(--space-3);
+      padding: 0.6rem 0.8rem;
+      background: rgba(200,60,60,0.08);
+      border-left: 4px solid #c83c3c;
+      color: #8a2c2c;
+      border-radius: 4px;
+    }
+    .admin-status {
+      margin-top: var(--space-2);
+      min-height: 1.25rem;
+      font-size: 0.95rem;
+    }
+    .admin-status[data-tone="ok"] { color: #2c8a3c; }
+    .admin-status[data-tone="warn"] { color: #8a2c2c; }
+    .admin-toggle { display:inline-flex; gap: 0.5rem; align-items: center; cursor: pointer; }
+    .admin-list { list-style: none; padding-left: 0; }
+    .admin-list > li { padding: 0.4rem 0; border-bottom: 1px solid var(--color-rule, #f0f0f0); }
+    .admin-list--small > li { padding: 0.2rem 0; font-size: 0.9rem; }
+    .rsvp-link { color: var(--color-gold-deep, #8a6a2c); text-decoration: underline; }
+  </style>
+</Base>
