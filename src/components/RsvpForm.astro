@@ -201,6 +201,7 @@ const initData = {
   if (!dataNode) return;
   const INIT = JSON.parse(dataNode.textContent || '{}');
   const S: Record<string, string> = INIT.strings || {};
+  const LOCALE: string = INIT.locale || 'en';
   const MEAL_OPTIONS: Array<{ value: string; label: string }> = INIT.mealOptions || [];
   const MAX_GUESTS: number = INIT.maxAdditionalGuests || 20;
   const SCHEMA_VERSION = 1;
@@ -630,7 +631,7 @@ const initData = {
         return;
       }
 
-      window.appTelemetry?.trackEvent('rsvp_lookup_submitted', { locale, mode: submitMode });
+      window.appTelemetry?.trackEvent('rsvp_lookup_submitted', { locale: LOCALE, mode: submitMode });
       setBusy(btn, true);
       try {
         const res = await fetch('/api/rsvp/lookup', {
@@ -800,7 +801,7 @@ const initData = {
       };
 
       setBusy(btn, true);
-      window.appTelemetry?.trackEvent('rsvp_submit_started', { locale, partySize: additionalGuests.length + 1 });
+      window.appTelemetry?.trackEvent('rsvp_submit_started', { locale: LOCALE, partySize: additionalGuests.length + 1 });
       try {
         const res = await fetch('/api/rsvp/submit', {
           method: 'POST',
@@ -845,7 +846,7 @@ const initData = {
         const allGuests = [primary, ...additionalGuests];
         const attendingCount = allGuests.filter((g: any) => g.attending === true).length;
         window.appTelemetry?.trackEvent('rsvp_submit_success', {
-          locale,
+          locale: LOCALE,
           partySize: allGuests.length,
           attending: attendingCount,
           declined: allGuests.length - attendingCount,
