@@ -544,7 +544,20 @@ const locale = 'en';
         }
       }
 
-      document.getElementById('btn-refresh')?.addEventListener('click', loadGuests);
+      document.getElementById('btn-refresh')?.addEventListener('click', async (ev) => {
+        const btn = ev.currentTarget as HTMLButtonElement;
+        const orig = btn.textContent || 'Refresh';
+        btn.disabled = true;
+        btn.textContent = 'Refreshing…';
+        await loadGuests();
+        btn.textContent = '✓ Updated';
+        window.setTimeout(() => {
+          if (btn.textContent === '✓ Updated') {
+            btn.textContent = orig;
+            btn.disabled = false;
+          }
+        }, 1200);
+      });
       document.getElementById('btn-create-invite')?.addEventListener('click', () => openModal('create'));
 
       const sendTestBtn = document.getElementById('btn-send-test');
