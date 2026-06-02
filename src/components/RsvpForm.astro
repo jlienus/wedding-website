@@ -12,10 +12,7 @@ const permanentLockISO = '2027-01-15T23:59:59-05:00';
 const mealOptions = [
   { value: '', labelKey: 'rsvp.mealNone' },
   { value: 'chicken', labelKey: 'rsvp.mealChicken' },
-  { value: 'beef', labelKey: 'rsvp.mealBeef' },
-  { value: 'vegetarian', labelKey: 'rsvp.mealVegetarian' },
-  { value: 'vegan', labelKey: 'rsvp.mealVegan' },
-  { value: 'kids', labelKey: 'rsvp.mealKids' }
+  { value: 'beef', labelKey: 'rsvp.mealBeef' }
 ];
 
 const stringKeys = [
@@ -28,7 +25,7 @@ const stringKeys = [
   'rsvp.guestNameLabel','rsvp.guestNamePlaceholder','rsvp.isKidLabel',
   'rsvp.attendingQuestion','rsvp.attendingYes','rsvp.attendingNo',
   'rsvp.mealLabel','rsvp.mealHint','rsvp.mealNone',
-  'rsvp.mealChicken','rsvp.mealBeef','rsvp.mealVegetarian','rsvp.mealVegan','rsvp.mealKids',
+  'rsvp.mealChicken','rsvp.mealBeef',
   'rsvp.dietaryLabel','rsvp.dietaryPlaceholder','rsvp.songLabel','rsvp.songPlaceholder',
   'rsvp.notesLabel','rsvp.notesPlaceholder',
   'rsvp.submitError','rsvp.submitRateLimited','rsvp.submitClosed','rsvp.lateNotice',
@@ -384,7 +381,10 @@ const initData = {
         if (no) no.checked = true;
       }
       const sel = fieldset.querySelector('select[name="mealChoice"]') as HTMLSelectElement;
-      if (sel && data.mealChoice) sel.value = data.mealChoice;
+      if (sel && data.mealChoice) {
+        const valid = MEAL_OPTIONS.some(o => o.value === data.mealChoice);
+        sel.value = valid ? data.mealChoice : '';
+      }
       const fld = (n: string) => fieldset.querySelector(`[name="${n}"]`) as HTMLInputElement | HTMLTextAreaElement | null;
       const dietary = fld('dietary'); if (dietary && data.dietary) dietary.value = data.dietary;
       const song = fld('songRequest'); if (song && data.songRequest) song.value = data.songRequest;

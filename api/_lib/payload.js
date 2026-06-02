@@ -11,7 +11,7 @@
 //     "schemaVersion": 1,
 //     "primary": {
 //       "attending": true | false | null,
-//       "mealChoice": "" | "chicken" | "beef" | "vegetarian" | "vegan" | "kids",
+//       "mealChoice": "" | "chicken" | "beef",
 //       "dietary": "",
 //       "songRequest": "",
 //       "notes": ""
@@ -30,7 +30,7 @@ const MAX_NAME_CHARS = 100;
 const MAX_TEXT_CHARS = 500;
 const MAX_NOTES_CHARS = 800;
 
-const VALID_MEAL_CHOICES = new Set(['', 'chicken', 'beef', 'vegetarian', 'vegan', 'kids']);
+const VALID_MEAL_CHOICES = new Set(['', 'chicken', 'beef']);
 
 function clip(value, max) {
   if (typeof value !== 'string') return '';
