@@ -17,9 +17,8 @@ Guests           SMS (ACS toll-free)        Admin (jlienus@github)
 └─────────┘         └──────┬───────┘          └──────┬───────┘
                            ▼                          ▼
                   ┌──────────────────────────────────────┐
-                  │  Azure Table Storage (5 tables)      │
-                  │  rsvpParties / rsvpMembers /         │
-                  │  rsvpResponses / rsvpSmsLog /        │
+                  │  Azure Table Storage (3 tables)      │
+                  │  rsvpInvites / rsvpSmsLog /          │
                   │  rsvpSettings                        │
                   └──────────────────────────────────────┘
 ```
@@ -29,14 +28,61 @@ Guests           SMS (ACS toll-free)        Admin (jlienus@github)
 - **Backend**: `api/_lib/{auth,cors,ratelimit,storage,sms,reminders}.js` shared
   libs; per-route folders under `api/rsvp_*`, `api/admin_*`, `api/sms_webhook`,
   `api/cron_reminders`.
-- **Data**: party-level model. One row in `rsvpParties` per household; nested
-  members in `rsvpMembers`; one response per member in `rsvpResponses`.
+- **Data**: **invitation-level model** (v2 — see migration note below). One row
+  in `rsvpInvites` per invitation; the entire RSVP response (primary's answer
+  plus a self-managed list of additional guests they add at submit time) lives
+  in a single JSON `payload` blob on that row. There is no `members` or
+  `responses` side-table — the invitation IS the unit of identity, and the
+  primary invitee owns the full response payload.
 - **SMS**: Azure Communication Services toll-free, US-only. Phone numbers are
   optional — guests without a phone simply don't get reminders.
 - **Scheduling**: SWA Free Functions don't support timer triggers, so we use a
   GitHub Actions cron workflow (`.github/workflows/rsvp-reminders.yml`) that
   POSTs `/api/cron/reminders` daily with a shared secret header. The endpoint
-  enforces a 30-day per-party cadence, so daily polling is safe.
+  enforces a 30-day per-invite cadence, so daily polling is safe.
+
+### Data model (v2)
+
+Single table `rsvpInvites`. Partition key = invite id (e.g. `i_johndiana`),
+row key = `'invite'`. Schema:
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `inviteId` | string | Stable id, `i_<10char>`. Never reused (see Operational rules). |
+| `primaryFirstName`, `primaryLastName` | string | The single person who looks up this invitation. Lookup is exact-match, case-insensitive, accent-stripped. |
+| `phone`, `phoneNorm` | string | Optional. `phoneNorm` is digits-only US E.164. |
+| `locale` | `'en'` \| `'es'` | Drives SMS language + magic-link redirect target. |
+| `payload` | JSON | `{ schemaVersion: 1, primary: { attending, isKid?, mealChoice?, dietary?, songRequest? }, additionalGuests: [{ id, name, attending, isKid?, mealChoice?, dietary? }], notes? }`. |
+| `responded`, `respondedAt` | bool / iso8601 | Server auto-derives `responded` from `payload` completeness at submit time. |
+| `optedOutOfSms`, `smsHardFailedAt` | bool / iso8601 | Suppress reminder fan-out. |
+| `lastReminderSentAt`, `reminderCount` | iso8601 / int | Cadence accounting. |
+| `adminNotes` | string | Admin-only free text. |
+
+The `publicInvite()` projection in `api/_lib/storage.js` strips `adminNotes`,
+raw `phone`, and any non-public flags before returning to the browser.
+
+## Migration from v1 (3-table) to v2 (single-table)
+
+The original system used `rsvpParties` + `rsvpMembers` + `rsvpResponses`. v2
+collapses those into the single `rsvpInvites` table above. The obsolete tables
+are dropped by `node scripts/seed-rsvp.cjs --drop-old`. **There is no
+in-place migration** — v1 data is wiped, v2 seeds fresh.
+
+## Operational rules
+
+- **Never rename a primary invitee to a different real person.** Session
+  cookies and magic-link tokens are bearer credentials keyed only on
+  `inviteId` — they don't carry the primary name. If you rename
+  `i_johndiana` from "John Lien" to "Bob Smith", any cookie or magic link
+  previously issued to John will continue to open Bob's invitation. Always
+  Delete + Create New Invitation instead. The admin UI will warn you with
+  a confirm dialog if you change the primary name on an existing invite.
+- **Spelling fixes are fine** ("Jon" → "John"), as long as the invite still
+  belongs to the same person.
+- **Same-phone households**: STOP/START SMS keywords apply to *all*
+  invitations sharing that `phoneNorm`. Cron-fan-out dedupes by
+  `phoneNorm` so a household with one shared phone only gets one reminder
+  text per cycle.
 
 ## Deadlines
 
@@ -151,20 +197,26 @@ The workflow at `.github/workflows/rsvp-reminders.yml` runs daily at 16:00 UTC
 
 ```powershell
 $env:RSVP_STORAGE_CONNECTION = "<connection string>"
-# Optional: real phone for SMS testing
+
+# Default: create the i_johndiana invite (John Lien, en)
+node scripts/seed-rsvp.cjs
+
+# With a real phone for SMS testing:
 node scripts/seed-rsvp.cjs --phone +15551234567
 
-# Reset (delete + reinsert) just the seeded parties:
+# Reset (delete + recreate) just the seeded invite:
 node scripts/seed-rsvp.cjs --reset --phone +15551234567
+
+# Drop the obsolete v1 tables (rsvpParties / rsvpMembers / rsvpResponses).
+# Safe to re-run; idempotent.
+node scripts/seed-rsvp.cjs --drop-old
+
+# Preview without writing:
+node scripts/seed-rsvp.cjs --dry-run --reset --drop-old --phone +15551234567
 ```
 
-Creates three test parties:
-
-- `p_johndiana` — John + Diana (with phone)
-- `p_testfam_garcia` — placeholder family of 3 (no phone — tests silent path)
-- `p_testsolo_smith` — placeholder solo with plus-one allowed
-
-Replace these with the real guest list when you import it.
+Seeds a single starter invite (`i_johndiana` — John Lien). Use the admin
+dashboard at `/admin` to create additional invitations for real guests.
 
 ## Admin walkthrough
 
@@ -173,12 +225,19 @@ Replace these with the real guest list when you import it.
 2. **Toggle reminders ON** to start the monthly cadence (or leave OFF for now).
 3. **Send test SMS** — verifies ACS provisioning by texting any number you
    specify. Doesn't touch guest data.
-4. **Send reminder** (per-row button) — fires an immediate SMS to that party,
-   overriding the 30-day cadence. Useful for individual nudges.
-5. **Clear opt-out / hard-fail** — if a guest changes their mind after STOPing,
-   or if you fixed a wrong phone number on their party record, clear the flag.
-6. **Click a row** — drill down to see member-level responses and recent SMS
-   history.
+4. **+ New invitation** — adds a row for one primary invitee (the person whose
+   name guests will type to look up). They can self-add their own guests at
+   submit time, so you only need to know the head-of-household.
+5. **Edit a row** — change phone, locale, notes, opted-out flag. You can also
+   hand-edit the raw payload JSON (skips re-derivation if you don't touch
+   the textarea). **Don't rename the primary invitee to a different person**
+   — use Delete + New instead. The UI will confirm before any rename.
+6. **Send reminder** (per-row button) — fires an immediate SMS to that
+   invitation, overriding the 30-day cadence. Useful for individual nudges.
+7. **Clear hard-fail** — if you fixed a wrong phone number on a row, edit it
+   and check "Clear SMS hard-fail" to let reminders resume.
+8. **Click a row's "View"** — drill down to see the primary + each additional
+   guest from the payload + recent SMS history.
 
 ## Privacy & data retention
 
@@ -198,13 +257,17 @@ link in the form `https://johnanddianaswedding.com/api/rsvp/magic?t=<token>`.
 Clicking it:
 
 1. Verifies the HMAC signature.
-2. Sets a 60-day session cookie scoped to the party.
-3. Redirects to `/rsvp` or `/es/rsvp` (based on the party's locale) with
+2. Sets a 60-day session cookie scoped to the invite.
+3. Redirects to `/rsvp` or `/es/rsvp` (based on the invite's locale) with
    `?magic=ok` so the page shows a "we signed you in" banner.
 
 Tokens have no expiry. The threat model assumes a guest forwarding their SMS
 to a friend has implicitly delegated RSVP power; we accept that trade-off in
 exchange for friction-free return visits.
+
+**Caveat:** the token + cookie are bearer credentials over `inviteId` only.
+They survive a primary-name change on the invite. See **Operational rules**
+above — never rename a primary invitee to a different real person.
 
 ## Local development
 
