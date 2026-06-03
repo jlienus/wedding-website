@@ -177,6 +177,7 @@
   },
   "rsvp": {
     "heading": "Confirmar asistencia",
+    "heroAlt": "Una procesión comunitaria durante la fiesta del Inti Raymi en Imbabura, la provincia andina de donde es la familia de Diana.",
     "intro": "Nos encantaría celebrar con ustedes. Por favor indíquennos si podrán acompañarnos en Quito y compartan cualquier necesidad alimentaria o de accesibilidad en el formulario.",
     "deadlineCallout": "Por favor confirmen su asistencia hasta el domingo, 15 de noviembre de 2026.",
     "contactIssues": "Si tienen algún problema, por favor contáctennos a John o Diana directamente.",
@@ -272,6 +273,7 @@
   },
   "registry": {
     "heading": "Mesa de regalos",
+    "heroAlt": "Un telar manual de madera tradicional, usado por el pueblo Kichwa Otavalo para tejer los textiles multicolores que distinguen a su comunidad.",
     "title": "Mesa de regalos",
     "intro": "Su presencia en Quito es nuestro mejor regalo. Para quienes deseen tener un detalle adicional, agradeceremos mucho contribuciones para nuestra luna de miel y nuestro futuro hogar.",
     "amazonButtonLabel": "Ver mesa de regalos en Amazon",
@@ -281,6 +283,7 @@
   },
   "faq": {
     "heading": "Preguntas frecuentes",
+    "heroAlt": "El Volcán Imbabura — conocido por el pueblo Kichwa como Tayta Imbabura — sobre el lago San Pablo, en la sierra norte del Ecuador.",
     "categories": {
       "weddingDay": "Día de la boda",
       "travelLogistics": "Viaje y logística",

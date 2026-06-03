@@ -177,6 +177,7 @@
   },
   "rsvp": {
     "heading": "RSVP",
+    "heroAlt": "A community procession during the Inti Raymi solstice festival in Imbabura, the highland province where Diana's family is from.",
     "intro": "We would be honored to celebrate with you. Please let us know whether you can join us in Quito and share any meal or accessibility notes through the form below.",
     "deadlineCallout": "Please RSVP by Sunday, November 15, 2026.",
     "contactIssues": "If you have any issues, please reach out to John or Diana directly.",
@@ -272,6 +273,7 @@
   },
   "registry": {
     "heading": "Registry",
+    "heroAlt": "A traditional wooden handloom used by the Kichwa Otavalo people to weave the multicolored textiles their community is known for.",
     "title": "Registry",
     "intro": "Your presence in Quito is the greatest gift. For guests who would like to give something more, we are grateful for contributions toward our honeymoon and future home.",
     "amazonButtonLabel": "View Amazon registry",
@@ -281,6 +283,7 @@
   },
   "faq": {
     "heading": "Frequently Asked Questions",
+    "heroAlt": "Volcán Imbabura — known to the Kichwa people as Tayta Imbabura — rising above Lago San Pablo in the highlands of northern Ecuador.",
     "categories": {
       "weddingDay": "Wedding Day",
       "travelLogistics": "Travel & Logistics",

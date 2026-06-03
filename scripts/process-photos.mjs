@@ -108,6 +108,45 @@ const jobs = [
         .toFile(outFile);
     },
   },
+  {
+    // RSVP hero: Inti Raymi festival in Imbabura (Diana's home province).
+    // Wide ultra-wide-angle crowd shot from Agencia ANDES / Carlos Rodríguez.
+    // Centered crop preserves the procession's depth into the frame.
+    name: 'rsvp-hero (Inti Raymi Imbabura)',
+    in: 'rsvp-hero-source.jpg',
+    out: path.join(outImg, 'rsvp-hero.jpg'),
+    width: 2000,
+    height: 1100,
+    fit: 'cover',
+    position: 'attention',
+    quality: 72,
+  },
+  {
+    // Registry hero: traditional Kichwa Otavalo wooden handloom.
+    // Uploaded by a Kichwa Otavalo community member. Center crop keeps
+    // the loom geometry intact.
+    name: 'registry-hero (Otavalo handloom)',
+    in: 'registry-hero-source.jpg',
+    out: path.join(outImg, 'registry-hero.jpg'),
+    width: 2000,
+    height: 1100,
+    fit: 'cover',
+    position: 'center',
+    quality: 75,
+  },
+  {
+    // FAQ hero: Volcán Imbabura ("Tayta Imbabura") above Lago San Pablo —
+    // the sacred volcano of the Otavalo valley. Source is nearly 16:9 so
+    // the cover-crop is gentle.
+    name: 'faq-hero (Imbabura + Lago San Pablo)',
+    in: 'faq-hero-source.jpg',
+    out: path.join(outImg, 'faq-hero.jpg'),
+    width: 2000,
+    height: 1100,
+    fit: 'cover',
+    position: 'center',
+    quality: 72,
+  },
 ];
 
 for (const j of jobs) {
