@@ -1093,17 +1093,24 @@ const initData = {
   .rsvp-form-wrap textarea {
     width: 100%;
     padding: 0.55rem 0.75rem;
-    border: 1px solid var(--color-rule, #d6cdb6);
+    border: 1px solid var(--color-silver, #C5C7CC);
     border-radius: var(--radius-md, 8px);
     font: inherit;
     background: #fff;
     box-sizing: border-box;
+    transition: border-color var(--transition, 180ms ease), box-shadow var(--transition, 180ms ease);
+  }
+  .rsvp-form-wrap input:hover,
+  .rsvp-form-wrap select:hover,
+  .rsvp-form-wrap textarea:hover {
+    border-color: var(--color-gold, #c9a961);
   }
   .rsvp-form-wrap input:focus,
   .rsvp-form-wrap select:focus,
   .rsvp-form-wrap textarea:focus {
     outline: 2px solid var(--color-gold, #c9a961);
     outline-offset: 1px;
+    border-color: var(--color-gold, #c9a961);
   }
   .rsvp-form-wrap textarea { resize: vertical; min-height: 3.5rem; }
 
