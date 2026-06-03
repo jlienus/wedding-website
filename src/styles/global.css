@@ -95,11 +95,28 @@ main:not(.admin) .travel-tips dd,
 main:not(.admin) .altitude-advisory__card p,
 main:not(.admin) .altitude-compact__body,
 main:not(.admin) .story-timeline .content p,
-main:not(.admin) .altitude-advisory__intro {
+main:not(.admin) .altitude-advisory__intro,
+main:not(.admin) .rsvp-deadline-callout p {
   text-align: start;
   text-justify: initial;
   hyphens: initial;
   -webkit-hyphens: initial;
+}
+
+main:not(.admin) .rsvp-deadline-callout p { text-align: center; }
+
+.rsvp-deadline-callout {
+  padding: var(--space-3);
+  border-left: 4px solid var(--color-gold);
+  background: rgba(201, 169, 97, 0.08);
+  margin: var(--space-3) auto;
+  border-radius: 0 var(--radius-md, 8px) var(--radius-md, 8px) 0;
+}
+.rsvp-deadline-callout p { margin: 0; }
+.rsvp-deadline-callout p + p { margin-top: 0.5rem; }
+.rsvp-deadline-callout__note {
+  font-size: 0.92rem;
+  color: var(--color-text-muted);
 }
 
 .btn {

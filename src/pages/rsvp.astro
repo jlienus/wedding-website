@@ -14,7 +14,10 @@ const locale: Locale = 'en';
       <h1>{t(locale, 'rsvp.heading')}</h1>
       <p>{t(locale, 'rsvp.intro')}</p>
     </PageHero>
-    <aside class="container container--narrow reveal" style="text-align:center; padding: var(--space-3); border-left: 4px solid var(--color-gold); background: rgba(201,169,97,0.08); margin: var(--space-3) auto;">{t(locale, 'rsvp.deadlineCallout')}</aside>
+    <aside class="container container--narrow reveal rsvp-deadline-callout">
+      <p>{t(locale, 'rsvp.deadlineCallout')}</p>
+      <p class="rsvp-deadline-callout__note">{t(locale, 'rsvp.editAnytimeNote')}</p>
+    </aside>
     <section class="section"><RsvpForm locale={locale} /></section>
     <p class="container container--narrow reveal" style="text-align:center;">{t(locale, 'rsvp.contactIssues')}</p>
   </main>
