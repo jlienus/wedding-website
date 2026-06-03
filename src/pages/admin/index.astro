@@ -64,6 +64,18 @@ const locale = 'en';
         </div>
       </section>
 
+      <section class="admin-card">
+        <div class="admin-card-header">
+          <h2>Recent activity</h2>
+          <span id="events-count" class="admin-muted"></span>
+        </div>
+        <div class="admin-events-wrap">
+          <ul id="admin-events" class="admin-events">
+            <li class="admin-events-empty">Loading…</li>
+          </ul>
+        </div>
+      </section>
+
     </section>
   </main>
 
@@ -204,6 +216,115 @@ const locale = 'en';
           render(data);
         } catch (e: any) {
           showError(`Couldn't load invites: ${e && e.message}`);
+        }
+      }
+
+      // --- Recent activity panel -----------------------------------------
+      // Builds DOM via createElement + textContent only. Event fields can
+      // contain user-provided strings (invitee names, commit messages, even
+      // forged values if a secret leaks), so we MUST NOT interpolate them
+      // into innerHTML.
+
+      function badgeKind(type: string): string {
+        if (type.startsWith('rsvp.')) return 'rsvp';
+        if (type.startsWith('admin.')) return 'admin';
+        if (type.startsWith('deploy.')) return 'deploy';
+        if (type.startsWith('backup.')) return 'backup';
+        if (type.startsWith('cron.')) return 'cron';
+        if (type.startsWith('sms.')) return 'sms';
+        return 'other';
+      }
+
+      function relativeTime(d: Date): string {
+        const ms = Date.now() - d.getTime();
+        if (!isFinite(ms)) return '';
+        if (ms < 0) return 'just now';
+        const s = Math.round(ms / 1000);
+        if (s < 60) return `${s}s ago`;
+        const m = Math.round(s / 60);
+        if (m < 60) return `${m}m ago`;
+        const h = Math.round(m / 60);
+        if (h < 24) return `${h}h ago`;
+        const dys = Math.round(h / 24);
+        if (dys < 30) return `${dys}d ago`;
+        return d.toLocaleDateString();
+      }
+
+      function renderEvent(ev: any): HTMLLIElement {
+        const li = document.createElement('li');
+        li.className = 'admin-event';
+
+        const time = document.createElement('time');
+        time.className = 'admin-event-time';
+        const d = new Date(ev.createdAt);
+        if (isFinite(d.getTime())) {
+          time.dateTime = ev.createdAt;
+          time.title = d.toLocaleString();
+          time.textContent = relativeTime(d);
+        } else {
+          time.textContent = String(ev.createdAt || '');
+        }
+        li.appendChild(time);
+
+        const badge = document.createElement('span');
+        const type = String(ev.type || '');
+        badge.className = `admin-event-badge admin-event-badge--${badgeKind(type)}`;
+        badge.textContent = type;
+        li.appendChild(badge);
+
+        const actor = document.createElement('span');
+        actor.className = 'admin-event-actor';
+        actor.textContent = String(ev.actor || '');
+        li.appendChild(actor);
+
+        const summary = document.createElement('span');
+        summary.className = 'admin-event-summary';
+        summary.textContent = String(ev.summary || '');
+        li.appendChild(summary);
+
+        return li;
+      }
+
+      async function loadEvents() {
+        const listEl = document.getElementById('admin-events') as HTMLUListElement | null;
+        const countEl = document.getElementById('events-count') as HTMLSpanElement | null;
+        if (!listEl) return;
+        try {
+          const res = await fetch(`/api/mgmt/events?_=${Date.now()}`, {
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache' },
+          });
+          if (!res.ok) {
+            listEl.replaceChildren();
+            const li = document.createElement('li');
+            li.className = 'admin-events-empty';
+            li.textContent = `Could not load events (HTTP ${res.status})`;
+            listEl.appendChild(li);
+            if (countEl) countEl.textContent = '';
+            return;
+          }
+          const data = await res.json();
+          const events = Array.isArray(data.events) ? data.events : [];
+          if (countEl) countEl.textContent = events.length ? `${events.length} events` : '';
+          listEl.replaceChildren();
+          if (events.length === 0) {
+            const li = document.createElement('li');
+            li.className = 'admin-events-empty';
+            li.textContent = 'No activity yet.';
+            listEl.appendChild(li);
+            return;
+          }
+          for (const ev of events) {
+            listEl.appendChild(renderEvent(ev));
+          }
+        } catch (e: any) {
+          listEl.replaceChildren();
+          const li = document.createElement('li');
+          li.className = 'admin-events-empty';
+          li.textContent = `Load failed: ${e && e.message}`;
+          listEl.appendChild(li);
+          if (countEl) countEl.textContent = '';
         }
       }
 
@@ -575,7 +696,7 @@ const locale = 'en';
         const orig = btn.textContent || 'Refresh';
         btn.disabled = true;
         btn.textContent = 'Refreshing…';
-        await loadGuests();
+        await Promise.all([loadGuests(), loadEvents()]);
         btn.textContent = '✓ Updated';
         window.setTimeout(() => {
           if (btn.textContent === '✓ Updated') {
@@ -636,7 +757,7 @@ const locale = 'en';
       (async () => {
         const ok = await ensureAuthed();
         if (!ok) return;
-        await loadGuests();
+        await Promise.all([loadGuests(), loadEvents()]);
       })();
     })();
   </script>
@@ -725,6 +846,65 @@ const locale = 'en';
     .admin-list li { margin-bottom: 0.4rem; }
     .admin-list--small li { margin-bottom: 0.2rem; font-size: 0.9rem; }
     code { background: rgba(0,0,0,0.04); padding: 1px 4px; border-radius: 3px; }
+
+    /* Recent activity panel */
+    .admin-events-wrap {
+      max-height: 360px;
+      overflow-y: auto;
+      border: 1px solid var(--color-rule, #e8e0c8);
+      border-radius: var(--radius-sm, 4px);
+      background: rgba(252, 251, 247, 0.6);
+    }
+    .admin-events { list-style: none; padding: 0; margin: 0; font-size: 0.9rem; }
+    .admin-events-empty { padding: 0.85rem 1rem; color: var(--color-text-muted, #888); font-style: italic; }
+    .admin-event {
+      display: grid;
+      grid-template-columns: 5.5rem auto auto 1fr;
+      gap: 0.6rem;
+      align-items: baseline;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid rgba(232, 224, 200, 0.5);
+    }
+    .admin-event:last-child { border-bottom: 0; }
+    .admin-event-time {
+      color: var(--color-text-muted, #888);
+      font-variant-numeric: tabular-nums;
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+    .admin-event-badge {
+      display: inline-block;
+      padding: 0.1rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      white-space: nowrap;
+      letter-spacing: 0.02em;
+    }
+    .admin-event-badge--rsvp   { background: rgba(80, 160, 80, 0.14); color: #2a6a2c; }
+    .admin-event-badge--admin  { background: rgba(201, 169, 97, 0.20); color: #8a6a2c; }
+    .admin-event-badge--deploy { background: rgba(60, 120, 200, 0.14); color: #2a4a8a; }
+    .admin-event-badge--backup { background: rgba(120, 80, 160, 0.14); color: #5a2a8a; }
+    .admin-event-badge--cron   { background: rgba(0, 0, 0, 0.06);     color: #4a4a4a; }
+    .admin-event-badge--sms    { background: rgba(200, 60, 60, 0.12); color: #8a2c2c; }
+    .admin-event-badge--other  { background: rgba(0, 0, 0, 0.06);     color: #4a4a4a; }
+    .admin-event-actor {
+      color: var(--color-text-muted, #6b6b6b);
+      font-size: 0.8rem;
+      white-space: nowrap;
+    }
+    .admin-event-summary { color: #333; }
+    @media (max-width: 40rem) {
+      .admin-event {
+        grid-template-columns: auto 1fr;
+        row-gap: 0.2rem;
+      }
+      .admin-event-time { grid-column: 1; grid-row: 1; }
+      .admin-event-badge { grid-column: 2; grid-row: 1; justify-self: start; }
+      .admin-event-actor { grid-column: 1 / -1; grid-row: 2; }
+      .admin-event-summary { grid-column: 1 / -1; grid-row: 3; }
+    }
 
     /* Modal */
     .admin-modal { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: var(--space-3); }
