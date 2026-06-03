@@ -33,7 +33,12 @@ const locale = 'en';
       </section>
 
       <section class="admin-card">
-        <h2>Overall</h2>
+        <div class="admin-card-header">
+          <h2>Overall</h2>
+          <div class="admin-card-actions">
+            <button id="btn-export-csv" class="btn btn--ghost btn--small" disabled title="Aggregate counts only — no names, phones, or free-text answers.">Export summary CSV</button>
+          </div>
+        </div>
         <div id="admin-overall" class="admin-stats">…</div>
       </section>
 
@@ -148,6 +153,7 @@ const locale = 'en';
       const modalErrorEl = document.getElementById('admin-modal-error') as HTMLDivElement | null;
       const modalSaveBtn = document.getElementById('admin-modal-save') as HTMLButtonElement | null;
       const payloadRow = document.getElementById('admin-payload-row') as HTMLLabelElement | null;
+      const exportBtn = document.getElementById('btn-export-csv') as HTMLButtonElement | null;
 
       function showError(msg: string) {
         if (!errorEl) return;
@@ -337,6 +343,105 @@ const locale = 'en';
         return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c] as string));
       }
 
+      // Build an aggregate-only CSV from the admin payload. Safe to share with
+      // third parties (caterer, venue) — never emits names, phones, or any
+      // free-text answer. Choice labels are hardcoded; unknown payload values
+      // are bucketed into a single "Invalid/unknown selection" row.
+      function buildSummaryCsv(data: any): string {
+        const overall = (data && data.overall) || {};
+        const rows: any[] = Array.isArray(data && data.rows) ? data.rows : [];
+
+        const ENTRADA: Record<string, string> = { salpicon: 'Salpicon', hojaldre: 'Beef puff pastry', causa: 'Causa' };
+        const SORBET: Record<string, string> = { maracuya: 'Passion fruit', mandarina: 'Mandarin mint' };
+        const MEAL: Record<string, string> = { chicken: 'Chicken', beef: 'Beef' };
+        const POSTRE: Record<string, string> = { chocolate: 'Chocolate', cheesecake: 'Cheesecake', tiramisu: 'Tiramisu' };
+
+        function eachAttendingGuest(cb: (a: any) => void) {
+          for (const r of rows) {
+            const p = (r && r.invite && r.invite.payload) || {};
+            if (p.primary && p.primary.attending === true) cb(p.primary);
+            if (Array.isArray(p.additionalGuests)) {
+              for (const g of p.additionalGuests) {
+                if (g && g.attending === true) cb(g);
+              }
+            }
+          }
+        }
+
+        function tally(key: string, allowed: Record<string, string>) {
+          const counts: Record<string, number> = {};
+          for (const k of Object.keys(allowed)) counts[k] = 0;
+          let missing = 0;
+          let unknown = 0;
+          eachAttendingGuest((a) => {
+            const v = a[key];
+            if (!v) { missing += 1; return; }
+            if (Object.prototype.hasOwnProperty.call(allowed, v)) counts[v] += 1;
+            else unknown += 1;
+          });
+          return { counts, missing, unknown };
+        }
+
+        let dietaryFollowup = 0;
+        eachAttendingGuest((a) => {
+          if (typeof a.dietary === 'string' && a.dietary.trim().length > 0) dietaryFollowup += 1;
+        });
+
+        const out: Array<[string, string, number | string]> = [];
+        const now = new Date();
+        const generatedAt = now.toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+        out.push(['Snapshot', 'Generated at (UTC)', generatedAt]);
+        out.push(['Invitations', 'Total invitations', overall.inviteCount || 0]);
+        out.push(['Invitations', 'Responded', overall.respondedCount || 0]);
+        out.push(['Invitations', 'Awaiting response', overall.pendingCount || 0]);
+        out.push(['Guests', 'Attending (yes)', overall.totalYes || 0]);
+        out.push(['Guests', 'Declined (no)', overall.totalNo || 0]);
+        out.push(['Guests', 'Attendance unknown', overall.totalPending || 0]);
+        out.push(['Guests', 'Adults attending', overall.totalAdults || 0]);
+        out.push(['Guests', 'Kids attending', overall.totalKids || 0]);
+
+        const courses: Array<[string, string, Record<string, string>]> = [
+          ['Appetizer', 'entradaChoice', ENTRADA],
+          ['Sorbet', 'sorbetChoice', SORBET],
+          ['Main', 'mealChoice', MEAL],
+          ['Dessert', 'postreChoice', POSTRE]
+        ];
+        for (const [section, key, allowed] of courses) {
+          const { counts, missing, unknown } = tally(key, allowed);
+          for (const k of Object.keys(allowed)) {
+            out.push([section, allowed[k], counts[k]]);
+          }
+          out.push([section, `Attending guests missing ${section.toLowerCase()} selection`, missing]);
+          if (unknown > 0) out.push([section, 'Invalid/unknown selection', unknown]);
+        }
+
+        out.push(['Dietary', 'Attending guests needing dietary follow-up', dietaryFollowup]);
+
+        function esc(v: string): string {
+          if (/[",\r\n]/.test(v)) return '"' + v.replace(/"/g, '""') + '"';
+          return v;
+        }
+        const lines: string[] = ['Section,Option,Count'];
+        for (const [s, o, c] of out) {
+          lines.push([s, o, String(c)].map(esc).join(','));
+        }
+        // BOM + CRLF for Excel friendliness (RFC 4180).
+        return '\ufeff' + lines.join('\r\n') + '\r\n';
+      }
+
+      function downloadCsv(filename: string, csv: string) {
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.setTimeout(() => URL.revokeObjectURL(url), 0);
+      }
+
       function render(data: any) {
         if (remindersChk) remindersChk.checked = !!(data.settings && data.settings.remindersEnabled);
         if (remindersStopEl && data.settings && data.settings.remindersStopOnUtc) {
@@ -353,6 +458,7 @@ const locale = 'en';
             <div><strong>${o.withPhone}</strong> with phone · <strong>${o.optedOutCount}</strong> opted out · <strong>${o.hardFailedCount}</strong> hard-fail</div>
           `;
         }
+        if (exportBtn) exportBtn.disabled = false;
         if (!tbody) return;
         if (!data.rows || data.rows.length === 0) {
           tbody.innerHTML = '<tr><td colspan="6" class="admin-muted">No invitations yet. Create one with the button above, or run the seed script.</td></tr>';
@@ -717,6 +823,18 @@ const locale = 'en';
         }, 1200);
       });
       document.getElementById('btn-create-invite')?.addEventListener('click', () => openModal('create'));
+
+      exportBtn?.addEventListener('click', () => {
+        if (!LAST_DATA) return;
+        try {
+          const csv = buildSummaryCsv(LAST_DATA);
+          const today = new Date().toISOString().slice(0, 10);
+          downloadCsv(`rsvp-summary-${today}.csv`, csv);
+          setStatus('Summary CSV downloaded.', 'ok');
+        } catch (e: any) {
+          setStatus(`Export failed: ${e && e.message}`, 'warn');
+        }
+      });
 
       const sendTestBtn = document.getElementById('btn-send-test');
       sendTestBtn?.addEventListener('click', async () => {
