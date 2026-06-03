@@ -63,9 +63,16 @@ img, picture, svg, video { display: block; max-width: 100%; height: auto; }
 .container--narrow { max-width: var(--container-narrow); }
 .container--wide { max-width: var(--container-wide); }
 
-.section { padding: var(--space-6) 0; }
-.section--tight { padding: var(--space-4) 0; }
-.section--loose { padding: var(--space-7) 0; }
+.section { padding-top: var(--space-6); padding-bottom: var(--space-6); }
+.section--tight { padding-top: var(--space-4); padding-bottom: var(--space-4); }
+.section--loose { padding-top: var(--space-7); padding-bottom: var(--space-7); }
+
+.text-justify {
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
 
 .btn {
   display: inline-flex;
