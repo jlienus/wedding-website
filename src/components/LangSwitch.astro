@@ -35,6 +35,7 @@ const esHref = currentLocale === 'es' ? normalizedPath : enToEs[normalizedPath] 
       const to = link.dataset.targetLocale ?? 'unknown';
       if (from !== to) {
         window.appTelemetry?.trackEvent('language_switched', { from, to });
+        try { localStorage.setItem('preferredLocale', to); } catch { /* storage blocked: best-effort */ }
       }
     });
   });

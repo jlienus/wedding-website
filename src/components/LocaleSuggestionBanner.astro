@@ -1,0 +1,218 @@
+---
+// Locale auto-detect banner. Renders only on the EN or ES homepage.
+// Detection runs client-side: browser language first, then optional IP-geo
+// fallback (api.country.is) only when the browser language is neither EN nor ES.
+//
+// Storage model (intentional split — see code-review notes):
+//   preferredLocale       → ONLY explicit choice (banner accept or LangSwitch click)
+//   localeBannerDismissed → set on dismiss OR when detection matches current locale
+// Detection skips when EITHER key is present.
+
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+const isHomepage = path === '/' || path === '/es';
+---
+{isHomepage && (
+  <aside
+    class="locale-banner"
+    data-locale-banner
+    role="region"
+    aria-live="polite"
+    aria-label="Language suggestion"
+    hidden
+  >
+    <div data-suggest-es hidden>
+      <p lang="es" class="locale-banner__text">
+        ¿Prefieres ver el sitio en <strong>español</strong>?
+      </p>
+      <div class="locale-banner__actions">
+        <a class="locale-banner__btn locale-banner__btn--primary" href="/es/" data-accept="es" lang="es">Sí, en español</a>
+        <button class="locale-banner__btn locale-banner__btn--ghost" type="button" data-dismiss lang="es">No, gracias</button>
+      </div>
+    </div>
+    <div data-suggest-en hidden>
+      <p lang="en" class="locale-banner__text">
+        Prefer to view this site in <strong>English</strong>?
+      </p>
+      <div class="locale-banner__actions">
+        <a class="locale-banner__btn locale-banner__btn--primary" href="/" data-accept="en" lang="en">Yes, switch to English</a>
+        <button class="locale-banner__btn locale-banner__btn--ghost" type="button" data-dismiss lang="en">No, thanks</button>
+      </div>
+    </div>
+  </aside>
+)}
+
+{isHomepage && (
+  <script>
+    (async () => {
+      const path = location.pathname.replace(/\/$/, '') || '/';
+      const isHomeEn = path === '/';
+      const isHomeEs = path === '/es';
+      if (!isHomeEn && !isHomeEs) return;
+      const currentLocale: 'en' | 'es' = isHomeEs ? 'es' : 'en';
+
+      function readStore(key: string): string | null {
+        try {
+          const v = localStorage.getItem(key);
+          if (v) return v;
+        } catch { /* ignore */ }
+        try {
+          return sessionStorage.getItem(key);
+        } catch { /* ignore */ }
+        return null;
+      }
+      function writeStore(key: string, value: string): void {
+        try { localStorage.setItem(key, value); return; } catch { /* ignore */ }
+        try { sessionStorage.setItem(key, value); } catch { /* ignore */ }
+      }
+
+      const pref = readStore('preferredLocale');
+      if (pref === 'en' || pref === 'es') return;
+      if (readStore('localeBannerDismissed')) return;
+
+      // Step A: browser language. Only match supported locales.
+      let detected: 'en' | 'es' | null = null;
+      const langs = (navigator.languages && navigator.languages.length)
+        ? navigator.languages
+        : [navigator.language];
+      for (const l of langs) {
+        const code = String(l || '').toLowerCase().split('-')[0];
+        if (code === 'es') { detected = 'es'; break; }
+        if (code === 'en') { detected = 'en'; break; }
+      }
+
+      // Step B: IP-geo fallback ONLY when browser language is neither EN nor ES.
+      // Narrowly scoped to avoid sending user IP to a third party in the common case.
+      if (!detected) {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 1000);
+        try {
+          const res = await fetch('https://api.country.is/', {
+            signal: ctrl.signal,
+            credentials: 'omit',
+            referrerPolicy: 'no-referrer',
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const country = String((data && data.country) || '').toUpperCase();
+            const SPANISH = new Set([
+              'EC','ES','MX','AR','CO','PE','VE','CL','BO',
+              'GT','DO','HN','NI','CR','PA','UY','PY','SV','CU','PR'
+            ]);
+            if (country) {
+              detected = SPANISH.has(country) ? 'es' : 'en';
+            }
+          }
+        } catch {
+          // Timeout / CSP / network / CORS — silent skip
+        } finally {
+          clearTimeout(tid);
+        }
+        if (!detected) return; // give up cleanly
+      }
+
+      if (detected === currentLocale) {
+        // Suppress future detection; nothing to suggest.
+        writeStore('localeBannerDismissed', '1');
+        return;
+      }
+
+      const banner = document.querySelector<HTMLElement>('[data-locale-banner]');
+      if (!banner) return;
+      const block = banner.querySelector<HTMLElement>(
+        detected === 'es' ? '[data-suggest-es]' : '[data-suggest-en]'
+      );
+      if (!block) return;
+      block.hidden = false;
+      banner.hidden = false;
+      banner.classList.add('is-visible');
+
+      window.appTelemetry?.trackEvent('locale_banner_shown', {
+        from: currentLocale,
+        suggested: detected,
+      });
+
+      const dismissBtn = block.querySelector<HTMLElement>('[data-dismiss]');
+      dismissBtn?.addEventListener('click', () => {
+        writeStore('localeBannerDismissed', '1');
+        banner.hidden = true;
+        banner.classList.remove('is-visible');
+        window.appTelemetry?.trackEvent('locale_banner_dismissed', {
+          from: currentLocale,
+          suggested: detected,
+        });
+      });
+
+      const acceptBtn = block.querySelector<HTMLAnchorElement>('[data-accept]');
+      acceptBtn?.addEventListener('click', () => {
+        writeStore('preferredLocale', detected as string);
+        window.appTelemetry?.trackEvent('locale_banner_accepted', {
+          from: currentLocale,
+          to: detected,
+        });
+        // Native <a> navigation continues to /es/ or /
+      });
+    })();
+  </script>
+)}
+
+<style>
+  .locale-banner {
+    position: fixed;
+    left: 50%;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 5rem);
+    transform: translateX(-50%);
+    width: min(28rem, calc(100vw - 2rem));
+    padding: var(--space-3);
+    background: var(--color-surface);
+    border: 1px solid var(--color-gold);
+    border-radius: var(--radius-lg, 14px);
+    box-shadow: var(--shadow-lg, 0 12px 32px rgba(0, 0, 0, 0.18));
+    z-index: 80;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 220ms ease;
+  }
+  .locale-banner.is-visible { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) {
+    .locale-banner { transition: none; }
+  }
+  .locale-banner__text {
+    margin: 0 0 var(--space-2);
+    font-size: 0.95rem;
+    color: var(--color-text);
+    text-align: center;
+  }
+  .locale-banner__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-2);
+  }
+  .locale-banner__btn {
+    display: inline-block;
+    padding: 0.55rem 1.1rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all var(--transition, 180ms ease);
+  }
+  .locale-banner__btn--primary {
+    background: var(--gradient-gold-fill);
+    color: var(--color-surface);
+    border-color: var(--color-gold);
+  }
+  .locale-banner__btn--primary:hover { filter: brightness(1.05); }
+  .locale-banner__btn--ghost {
+    background: transparent;
+    color: var(--color-text-muted);
+    border-color: var(--color-silver);
+  }
+  .locale-banner__btn--ghost:hover { color: var(--color-gold-deep); border-color: var(--color-gold); }
+  @media (max-width: 480px) {
+    .locale-banner { width: calc(100vw - 1.5rem); padding: var(--space-2); }
+    .locale-banner__text { font-size: 0.9rem; }
+  }
+</style>
