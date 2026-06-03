@@ -23,12 +23,14 @@ const { TableClient, AzureNamedKeyCredential } = require('@azure/data-tables');
 const TABLE_INVITES = 'rsvpInvites';
 const TABLE_SMSLOG = 'rsvpSmsLog';
 const TABLE_SETTINGS = 'rsvpSettings';
+const TABLE_EVENTS = 'rsvpEvents';
 
 // Tables to drop on migration cutover.
 const OBSOLETE_TABLES = ['rsvpParties', 'rsvpMembers', 'rsvpResponses'];
 
 const INVITES_PARTITION = 'invites'; // single fixed partition
-const ALL_TABLES = [TABLE_INVITES, TABLE_SMSLOG, TABLE_SETTINGS];
+const EVENTS_PARTITION = 'events';   // single fixed partition; small (~5k rows lifetime)
+const ALL_TABLES = [TABLE_INVITES, TABLE_SMSLOG, TABLE_SETTINGS, TABLE_EVENTS];
 
 let _clients = null;
 
@@ -62,8 +64,10 @@ function getClients() {
     invites: make(TABLE_INVITES),
     smslog: make(TABLE_SMSLOG),
     settings: make(TABLE_SETTINGS),
+    events: make(TABLE_EVENTS),
     _accountName: name,
     _endpoint: endpoint,
+    _key: key,
     _make: make
   };
   return _clients;
@@ -75,7 +79,7 @@ async function ensureTables() {
   // it means the schema is already set up. Swallow that one specific error
   // per table so this function is safely idempotent.
   await Promise.all(
-    [c.invites, c.smslog, c.settings].map(async (tc) => {
+    [c.invites, c.smslog, c.settings, c.events].map(async (tc) => {
       try {
         await tc.createTable();
       } catch (err) {
@@ -418,6 +422,123 @@ async function findSmsLogByCorrelationId(correlationId, scanLimit = 10000) {
   return null;
 }
 
+// --- Events (audit log) ---------------------------------------------------
+//
+// Append-only activity log surfaced in the admin "Recent activity" panel and
+// included in nightly backup snapshots. Single fixed partition; row key is a
+// padded reverse-timestamp so listEntities returns newest-first lexically.
+//
+// Types are namespaced by source:
+//   rsvp.*    public RSVP submissions
+//   admin.*   admin-page actions
+//   cron.*    scheduled jobs (reminders, backup)
+//   deploy.*  GitHub Actions deploy outcomes (via /api/internal/event)
+//   backup.*  GitHub Actions backup outcomes (also via cron_backup itself)
+//   sms.*     SMS webhook state transitions (failures only — success is noise)
+//
+// Field caps keep one row well under Table Storage's 64KB per-property and
+// 1MB per-entity limits, and bound admin-panel render cost.
+
+const EVENT_TYPE_MAX = 64;
+const EVENT_ACTOR_MAX = 128;
+const EVENT_SUMMARY_MAX = 500;
+const EVENT_META_MAX = 4096;
+
+function buildEventRowKey() {
+  // padStart(13,'0') keeps newest-first order stable across the next ~317
+  // years (Number.MAX_SAFE_INTEGER ~= 9e15). Random suffix gives ~36^6
+  // (~2 billion) collision resistance per millisecond — plenty for our
+  // single-digit-per-second peak rate.
+  const revTs = (10_000_000_000_000 - Date.now()).toString().padStart(13, '0');
+  const rand = Math.random().toString(36).slice(2, 8);
+  return `${revTs}_${rand}`;
+}
+
+function clampStr(v, max) {
+  if (typeof v !== 'string') return '';
+  return v.length > max ? v.slice(0, max) : v;
+}
+
+function entityToEvent(e) {
+  let meta = null;
+  if (typeof e.meta === 'string' && e.meta.length > 0) {
+    try { meta = JSON.parse(e.meta); } catch { meta = null; }
+  }
+  return {
+    rowKey: e.rowKey,
+    type: e.type || '',
+    actor: e.actor || '',
+    summary: e.summary || '',
+    meta,
+    createdAt: e.createdAt || ''
+  };
+}
+
+// Writes one event. Caller must `await`; we never silently fire-and-forget
+// because Azure Functions can freeze the Node event loop on early return.
+// Idempotently creates the table on the first cold-start where it doesn't
+// exist yet (handles 404 then retries once).
+async function appendEvent({ type, actor, summary, meta }) {
+  if (!type || typeof type !== 'string') {
+    throw new Error('appendEvent requires a string `type`');
+  }
+  const c = getClients();
+  const metaStr = (() => {
+    if (meta == null) return '';
+    try {
+      const s = typeof meta === 'string' ? meta : JSON.stringify(meta);
+      return clampStr(s, EVENT_META_MAX);
+    } catch {
+      return '';
+    }
+  })();
+  const entity = {
+    partitionKey: EVENTS_PARTITION,
+    rowKey: buildEventRowKey(),
+    type: clampStr(type, EVENT_TYPE_MAX),
+    actor: clampStr(actor || '', EVENT_ACTOR_MAX),
+    summary: clampStr(summary || '', EVENT_SUMMARY_MAX),
+    meta: metaStr,
+    createdAt: new Date().toISOString()
+  };
+  try {
+    await c.events.createEntity(entity);
+  } catch (err) {
+    // Table missing → lazy-create once (handles brand-new deploys where
+    // ensureTables hasn't been run yet) then retry the original insert.
+    const code = err && (err.code || err.errorCode || '');
+    const status = err && err.statusCode;
+    const isTableMissing = status === 404 || code === 'TableNotFound';
+    if (!isTableMissing) throw err;
+    try { await c.events.createTable(); }
+    catch (e2) {
+      if (!(e2 && (e2.statusCode === 409 || e2.code === 'TableAlreadyExists'))) throw e2;
+    }
+    await c.events.createEntity(entity);
+  }
+  return entity.rowKey;
+}
+
+async function listEvents(limit = 200) {
+  const c = getClients();
+  const out = [];
+  const filter = `PartitionKey eq '${EVENTS_PARTITION}'`;
+  try {
+    for await (const e of c.events.listEntities({ queryOptions: { filter } })) {
+      out.push(entityToEvent(e));
+      if (out.length >= limit) break;
+    }
+  } catch (err) {
+    // Empty table on first deploy — return [] rather than 503'ing the admin
+    // page. Caller still sees the panel; it just says "no activity yet".
+    const status = err && err.statusCode;
+    const code = err && (err.code || err.errorCode || '');
+    if (status === 404 || code === 'TableNotFound') return [];
+    throw err;
+  }
+  return out;
+}
+
 // --- Settings -------------------------------------------------------------
 
 const DEFAULT_SETTINGS = Object.freeze({
@@ -486,6 +607,7 @@ module.exports = {
   // tables / constants
   ALL_TABLES,
   INVITES_PARTITION,
+  EVENTS_PARTITION,
   OBSOLETE_TABLES,
   // setup
   ensureTables,
@@ -513,6 +635,9 @@ module.exports = {
   getSettings,
   setSettings,
   DEFAULT_SETTINGS,
+  // events
+  appendEvent,
+  listEvents,
   // migration
   dropObsoleteTables
 };
