@@ -35,6 +35,73 @@ jobs:
           api_location: 'api'
           output_location: 'dist'
 
+      # Best-effort: log a deploy.succeeded event into the admin Recent-activity
+      # feed via the internal-event endpoint. Deploy success matters more than
+      # event-log success, so this step is `continue-on-error` and won't fail
+      # the workflow. Skipped on PR previews; only runs for pushes to main.
+      # Retry loop tolerates the brief window where the freshly-uploaded
+      # function host is still warming up.
+      - name: Log deploy event
+        if: success() && github.event_name == 'push'
+        continue-on-error: true
+        env:
+          INTERNAL_SECRET: ${{ secrets.RSVP_INTERNAL_SECRET }}
+          ENDPOINT: https://johnanddianaswedding.com/api/internal/event
+          GH_SHA: ${{ github.sha }}
+          GH_ACTOR: ${{ github.actor }}
+          GH_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          GH_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$INTERNAL_SECRET" ]; then
+            echo "::warning::RSVP_INTERNAL_SECRET not set; skipping deploy event log"
+            exit 0
+          fi
+          SHA_SHORT="${GH_SHA:0:7}"
+          # First line of the commit message, truncated to keep the summary
+          # under the SUMMARY_MAX (500) on the API side.
+          COMMIT_FIRST_LINE=$(printf '%s' "$GH_COMMIT_MESSAGE" | head -n1 | cut -c1-200)
+          SUMMARY="Deployed ${SHA_SHORT} by ${GH_ACTOR}: ${COMMIT_FIRST_LINE}"
+          BODY=$(jq -n \
+            --arg type "deploy.succeeded" \
+            --arg actor "github:${GH_ACTOR}" \
+            --arg summary "$SUMMARY" \
+            --arg sha "$GH_SHA" \
+            --arg shaShort "$SHA_SHORT" \
+            --arg commitMessage "$GH_COMMIT_MESSAGE" \
+            --arg workflowRunUrl "$GH_RUN_URL" \
+            '{type:$type, actor:$actor, summary:$summary, meta:{sha:$sha, shaShort:$shaShort, commitMessage:$commitMessage, workflowRunUrl:$workflowRunUrl}}')
+          echo "POST $ENDPOINT"
+          ATTEMPT=0
+          MAX_ATTEMPTS=3
+          SLEEPS=(10 20 30)
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            set +e
+            HTTP_CODE=$(curl -sS -o /tmp/resp.json -w "%{http_code}" \
+              -X POST "$ENDPOINT" \
+              -H "X-Internal-Secret: $INTERNAL_SECRET" \
+              -H "Content-Type: application/json" \
+              --data-binary "$BODY" \
+              --max-time 30)
+            CURL_RC=$?
+            set -e
+            echo "attempt $ATTEMPT: HTTP $HTTP_CODE (curl rc=$CURL_RC)"
+            if [ "$CURL_RC" -eq 0 ] && [ "$HTTP_CODE" = "200" ]; then
+              echo "deploy event logged"
+              cat /tmp/resp.json || true
+              echo
+              exit 0
+            fi
+            cat /tmp/resp.json 2>/dev/null || true
+            echo
+            if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+              SLEEP=${SLEEPS[$((ATTEMPT - 1))]}
+              echo "retrying in ${SLEEP}s…"
+              sleep "$SLEEP"
+            fi
+          done
+          echo "::warning::Could not log deploy event after ${MAX_ATTEMPTS} attempts"
+
   close_pr:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
