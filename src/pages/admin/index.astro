@@ -259,8 +259,13 @@ const locale = 'en';
         const d = new Date(ev.createdAt);
         if (isFinite(d.getTime())) {
           time.dateTime = ev.createdAt;
-          time.title = d.toLocaleString();
-          time.textContent = relativeTime(d);
+          // Show exact local timestamp (date + time) as the visible value;
+          // keep the relative form as the hover title for quick scanning.
+          time.textContent = d.toLocaleString(undefined, {
+            year: 'numeric', month: 'short', day: '2-digit',
+            hour: 'numeric', minute: '2-digit',
+          });
+          time.title = relativeTime(d);
         } else {
           time.textContent = String(ev.createdAt || '');
         }
@@ -859,7 +864,7 @@ const locale = 'en';
     .admin-events-empty { padding: 0.85rem 1rem; color: var(--color-text-muted, #888); font-style: italic; }
     .admin-event {
       display: grid;
-      grid-template-columns: 5.5rem auto auto 1fr;
+      grid-template-columns: 10rem auto auto 1fr;
       gap: 0.6rem;
       align-items: baseline;
       padding: 0.5rem 0.75rem;
