@@ -39,7 +39,12 @@ const locale = 'en';
             <button id="btn-export-csv" class="btn btn--ghost btn--small" disabled title="Aggregate counts only — no names, phones, or free-text answers.">Export summary CSV</button>
           </div>
         </div>
-        <div id="admin-overall" class="admin-stats">…</div>
+        <div id="admin-overall" class="admin-stats">
+          <span class="admin-loader" role="status" aria-live="polite">
+            <span class="admin-loader__ring" aria-hidden="true"></span>
+            <span class="admin-loader__text">Loading summary…</span>
+          </span>
+        </div>
       </section>
 
       <section class="admin-card">
@@ -63,7 +68,12 @@ const locale = 'en';
               </tr>
             </thead>
             <tbody id="admin-tbody">
-              <tr><td colspan="6" class="admin-loading">Loading…</td></tr>
+              <tr><td colspan="6" class="admin-loading">
+                <span class="admin-loader" role="status" aria-live="polite">
+                  <span class="admin-loader__ring" aria-hidden="true"></span>
+                  <span class="admin-loader__text">Loading invitations…</span>
+                </span>
+              </td></tr>
             </tbody>
           </table>
         </div>
@@ -76,7 +86,12 @@ const locale = 'en';
         </div>
         <div class="admin-events-wrap">
           <ul id="admin-events" class="admin-events">
-            <li class="admin-events-empty">Loading…</li>
+            <li class="admin-events-empty">
+              <span class="admin-loader" role="status" aria-live="polite">
+                <span class="admin-loader__ring" aria-hidden="true"></span>
+                <span class="admin-loader__text">Loading recent activity…</span>
+              </span>
+            </li>
           </ul>
         </div>
       </section>
@@ -957,6 +972,52 @@ const locale = 'en';
     .admin-btn-danger { color: #8a2c2c; border-color: rgba(200, 60, 60, 0.4); }
     .admin-muted { color: var(--color-text-muted, #888); font-size: 0.85rem; }
     .admin-loading { text-align:center; padding: var(--space-3); color: var(--color-text-muted, #888); }
+    /* Higher-specificity override: .admin-table td defaults to text-align:left,
+       but the loading cell needs to centre its inline-flex loader. */
+    .admin-table td.admin-loading { text-align: center; }
+
+    /* Compact gold-ring loader, used inline inside table cells / list items
+       on initial admin page load. Same motif as the RSVP page loader but
+       smaller and horizontal so it fits inside a <td> / <li>. */
+    .admin-loader {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.65rem;
+      padding: 0.25rem 0;
+      font-family: var(--font-display, 'Cormorant Garamond', serif);
+      font-style: italic;
+      font-size: 1rem;
+      color: var(--color-text-muted, #6b6259);
+      /* Delay reveal so the spinner doesn't flash for fast responses */
+      animation: admin-loader-fadein 0.4s ease-out 0.25s both;
+    }
+    .admin-loader__ring {
+      display: inline-block;
+      width: 1.25rem;
+      height: 1.25rem;
+      border-radius: 50%;
+      border: 2px solid var(--color-gold-light, #ebd7a1);
+      border-top-color: var(--color-gold-deep, #a8842f);
+      border-right-color: var(--color-gold, #d4af37);
+      opacity: 0.9;
+      animation: admin-loader-spin 1.4s linear infinite;
+      flex: 0 0 auto;
+    }
+    .admin-loader__text { line-height: 1.2; }
+    @keyframes admin-loader-spin { to { transform: rotate(360deg); } }
+    @keyframes admin-loader-fadein {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .admin-loader { animation: none; opacity: 1; }
+      .admin-loader__ring {
+        animation: none;
+        border-color: var(--color-gold-light, #ebd7a1);
+        border-top-color: var(--color-gold, #d4af37);
+      }
+    }
     .admin-badge { display:inline-block; padding: 0.1rem 0.4rem; border-radius: 999px; font-size: 0.75rem; }
     .admin-badge--warn { background: rgba(200,60,60,0.12); color: #8a2c2c; }
     .admin-badge--ok { background: rgba(80, 160, 80, 0.12); color: #2a6a2c; }
