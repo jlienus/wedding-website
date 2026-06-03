@@ -61,6 +61,7 @@ const tbdLabel = locale === 'es' ? 'Por confirmar' : 'TBD';
     background: var(--color-bg);
     border: 2px solid var(--color-gold);
     box-shadow: 0 0 0 4px var(--color-bg);
+    transition: background var(--transition), border-color var(--transition), transform var(--transition);
   }
   .milestone[data-final="true"]::before {
     background: var(--color-gold);
@@ -74,6 +75,7 @@ const tbdLabel = locale === 'es' ? 'Por confirmar' : 'TBD';
     padding-top: 0.55rem;
     text-align: right;
     padding-right: var(--space-2);
+    transition: color var(--transition);
   }
   .content {
     padding: var(--space-2) var(--space-3);
@@ -81,6 +83,24 @@ const tbdLabel = locale === 'es' ? 'Por confirmar' : 'TBD';
     border: 1px solid var(--color-rule);
     border-radius: var(--radius-md);
     background: rgba(255,255,255,0.55);
+    transition: background var(--transition), border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+  }
+  .milestone:hover .content,
+  .milestone:focus-within .content {
+    background: var(--color-surface-pearl);
+    border-color: var(--color-gold-light);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+  .milestone:hover .year,
+  .milestone:focus-within .year {
+    color: var(--color-gold);
+  }
+  .milestone:hover::before,
+  .milestone:focus-within::before {
+    background: var(--color-gold);
+    border-color: var(--color-gold-deep);
+    transform: scale(1.15);
   }
   .content h3 {
     margin: 0 0 0.3rem;
