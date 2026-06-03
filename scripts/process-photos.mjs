@@ -136,16 +136,20 @@ const jobs = [
   },
   {
     // FAQ hero: Volcán Imbabura ("Tayta Imbabura") above Lago San Pablo —
-    // the sacred volcano of the Otavalo valley. Source is nearly 16:9 so
-    // the cover-crop is gentle.
+    // the sacred volcano of the Otavalo valley. Source is nearly 16:9
+    // (5312x2988) but the rendered hero band is closer to 3:1, so
+    // cover-cropping a 16:9 source vertically reads as "zoomed in on
+    // the mountain". Output a 3:1 panoramic band instead so the natural
+    // horizon (volcano summit + lake reflection) is what survives the
+    // hero's object-fit: cover.
     name: 'faq-hero (Imbabura + Lago San Pablo)',
     in: 'faq-hero-source.jpg',
     out: path.join(outImg, 'faq-hero.jpg'),
-    width: 2000,
-    height: 1100,
+    width: 2400,
+    height: 800,
     fit: 'cover',
     position: 'center',
-    quality: 72,
+    quality: 75,
   },
 ];
 
