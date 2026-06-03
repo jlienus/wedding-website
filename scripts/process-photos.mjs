@@ -76,15 +76,49 @@ const jobs = [
     position: 'center',
     quality: 70,
   },
+  {
+    name: 'our-story-hero (our story page hero)',
+    in: 'our-story-hero-source.jpg',
+    out: path.join(outImg, 'our-story-hero.jpg'),
+    width: 2400,
+    height: 1500,
+    fit: 'cover',
+    position: 'attention',
+    quality: 78,
+    // Override: portrait source (2722×3629) needs explicit extract to keep
+    // faces in frame AND retain enough vertical context that the hero's
+    // cover-fit doesn't crop to faces-only. Resize source to 2400 wide
+    // (height ~3200), then extract a 1500-tall band that places the kiss
+    // at ~55% of the output height so cover-cropping in a wide hero band
+    // still surfaces faces + veil drape + shoulders.
+    customPipeline: async (sharp, inFile, outFile) => {
+      const resized = await sharp(inFile).rotate().resize({ width: 2400 }).toBuffer();
+      const { height } = await sharp(resized).metadata();
+      // Kiss point sits at ~47% from top of the full resized source.
+      // We want it at ~55% of the output band so faces stay above the
+      // visual center after object-position: center 45% cropping.
+      const kissY = Math.round(height * 0.47);
+      const targetH = 1500;
+      const top = Math.max(0, Math.min(height - targetH, kissY - Math.round(targetH * 0.55)));
+      return sharp(resized)
+        .extract({ left: 0, top, width: 2400, height: targetH })
+        .jpeg({ quality: 78, mozjpeg: true, progressive: true })
+        .toFile(outFile);
+    },
+  },
 ];
 
 for (const j of jobs) {
   const inFile = path.join(src, j.in);
-  await sharp(inFile)
-    .rotate()
-    .resize({ width: j.width, height: j.height, fit: j.fit, position: j.position })
-    .jpeg({ quality: j.quality, mozjpeg: true, progressive: true })
-    .toFile(j.out);
+  if (j.customPipeline) {
+    await j.customPipeline(sharp, inFile, j.out);
+  } else {
+    await sharp(inFile)
+      .rotate()
+      .resize({ width: j.width, height: j.height, fit: j.fit, position: j.position })
+      .jpeg({ quality: j.quality, mozjpeg: true, progressive: true })
+      .toFile(j.out);
+  }
   const stat = await fs.stat(j.out);
   console.log(`${j.name.padEnd(40)} → ${j.out.replace(repo, '')}  ${(stat.size/1024).toFixed(1)} KB`);
 }

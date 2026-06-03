@@ -1,42 +1,50 @@
 [
   {
-    "id": "we-met",
-    "year": "TBD",
-    "labelEn": "How we met",
-    "labelEs": "Cómo nos conocimos",
-    "bodyEn": "The beginning of our story — to be filled in soon.",
-    "bodyEs": "El comienzo de nuestra historia — pronto añadiremos los detalles."
+    "id": "first-date",
+    "year": "2021",
+    "labelEn": "Our first date",
+    "labelEs": "Nuestra primera cita",
+    "bodyEn": "March 13 — errands at Home Depot, sushi, the mall, and macarons. The day everything began.",
+    "bodyEs": "13 de marzo — mandados en Home Depot, sushi, el centro comercial y macarons. El día en que todo comenzó."
   },
   {
     "id": "first-trip",
-    "year": "TBD",
+    "year": "2021",
     "labelEn": "Our first trip together",
     "labelEs": "Nuestro primer viaje juntos",
-    "bodyEn": "Our first adventure as a couple — details coming soon.",
-    "bodyEs": "Nuestra primera aventura como pareja — pronto compartiremos más."
+    "bodyEn": "August 19 — Tampa, Florida. Visiting friends and starting our first adventure as a couple.",
+    "bodyEs": "19 de agosto — Tampa, Florida. Visitamos a unos amigos y comenzamos nuestra primera aventura como pareja."
   },
   {
-    "id": "meeting-families",
-    "year": "TBD",
-    "labelEn": "Meeting each other's families",
-    "labelEs": "Conocer a nuestras familias",
-    "bodyEn": "Bringing our families together for the first time.",
-    "bodyEs": "Reunir a nuestras familias por primera vez."
+    "id": "first-thanksgiving",
+    "year": "2021",
+    "labelEn": "Our first Thanksgiving together",
+    "labelEs": "Nuestro primer Día de Acción de Gracias",
+    "bodyEn": "November 25 — celebrating with family, the first of many holidays we'd share.",
+    "bodyEs": "25 de noviembre — celebrando en familia, el primero de muchos días festivos juntos."
+  },
+  {
+    "id": "meeting-family",
+    "year": "2022",
+    "labelEn": "Meeting Diana's family in Ecuador",
+    "labelEs": "Conociendo a la familia de Diana en Ecuador",
+    "bodyEn": "May 20 — John traveled to Otavalo to meet Diana's family in the Andes.",
+    "bodyEs": "20 de mayo — John viajó a Otavalo para conocer a la familia de Diana en los Andes."
   },
   {
     "id": "proposal",
-    "year": "TBD",
+    "year": "2025",
     "labelEn": "The proposal",
     "labelEs": "La propuesta",
-    "bodyEn": "The day we said yes — story to come.",
-    "bodyEs": "El día que dijimos sí — pronto contaremos la historia."
+    "bodyEn": "March 13 — on our four-year anniversary, the day we said yes to forever.",
+    "bodyEs": "13 de marzo — en nuestro aniversario de cuatro años, el día en que dijimos sí para siempre."
   },
   {
     "id": "wedding",
     "year": "2027",
     "labelEn": "March 13 — We say \"I do\" in Quito",
     "labelEs": "13 de marzo — Nos casamos en Quito",
-    "bodyEn": "Celebrating in the heart of Ecuador with the people we love most.",
-    "bodyEs": "Celebrando en el corazón del Ecuador con las personas que más queremos."
+    "bodyEn": "Six years to the day from our first date — our families come together in the heart of Ecuador to celebrate with the people we love most.",
+    "bodyEs": "Seis años exactos desde nuestra primera cita — nuestras familias se reúnen en el corazón del Ecuador para celebrar con las personas que más queremos."
   }
 ]

@@ -2,11 +2,12 @@
 interface Props {
   photoSlot: string;
   imageAlt: string;
+  variant?: 'default' | 'showcase';
 }
-const { photoSlot, imageAlt } = Astro.props;
+const { photoSlot, imageAlt, variant = 'default' } = Astro.props;
 ---
 
-<section class="page-hero" aria-label={imageAlt}>
+<section class:list={['page-hero', `page-hero--${variant}`]} aria-label={imageAlt}>
   <picture>
     <img src={`/images/${photoSlot}`} alt={imageAlt} loading="eager" decoding="async" onerror="this.style.display='none'; this.closest('.page-hero')?.classList.add('image-missing');" />
   </picture>
@@ -72,5 +73,30 @@ const { photoSlot, imageAlt } = Astro.props;
   }
   .page-hero-inner :global(p) {
     text-shadow: 0 1px 10px rgba(252, 251, 247, 0.85);
+  }
+
+  /* Showcase variant: for personal photos that deserve to be seen, not
+     used as ambient texture. Taller band, lighter fade, position-biased
+     to keep portrait-source subjects in frame on wide aspect ratios. */
+  .page-hero--showcase { min-height: clamp(440px, 62vh, 620px); }
+  .page-hero--showcase > picture img {
+    opacity: 0.62;
+    filter: saturate(0.95) brightness(1.04) contrast(0.96);
+    mix-blend-mode: normal;
+    object-position: center 45%;
+  }
+  .page-hero--showcase::before {
+    background:
+      radial-gradient(ellipse 70% 55% at 50% 50%,
+        rgba(252, 251, 247, 0.62) 0%,
+        rgba(252, 251, 247, 0.38) 45%,
+        rgba(252, 251, 247, 0.12) 75%,
+        transparent 100%),
+      linear-gradient(180deg, rgba(255, 254, 251, 0.45) 0%, transparent 25%, transparent 72%, rgba(252, 251, 247, 0.72) 100%);
+  }
+  .page-hero--showcase .page-hero-inner :global(h1),
+  .page-hero--showcase .page-hero-inner :global(.eyebrow),
+  .page-hero--showcase .page-hero-inner :global(p) {
+    text-shadow: 0 1px 14px rgba(252, 251, 247, 0.95), 0 0 28px rgba(252, 251, 247, 0.75);
   }
 </style>

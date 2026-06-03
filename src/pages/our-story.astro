@@ -5,6 +5,7 @@ import HeritageSection from '../components/HeritageSection.astro';
 import OurStoryTimeline from '../components/OurStoryTimeline.astro';
 import SectionDivider from '../components/SectionDivider.astro';
 import PageAnchors from '../components/PageAnchors.astro';
+import PageHero from '../components/PageHero.astro';
 import { t, type Locale } from '../lib/i18n';
 
 const locale: Locale = 'en';
@@ -19,11 +20,11 @@ const storyParagraphs = ['howWeMetP1', 'howWeMetP2', 'howWeMetP3', 'howWeMetP4',
 
 <Base title={t(locale, 'nav.ourStory') + ' · John & Diana'} description={t(locale, 'ourStory.howWeMetDescription')} lang={locale}>
   <main>
-    <section class="section container container--narrow reveal" style="text-align:center;">
+    <PageHero photoSlot="our-story-hero.jpg" imageAlt={t(locale, 'ourStory.heroAlt')} variant="showcase">
       <p class="eyebrow">{t(locale, 'heritage.header')}</p>
       <h1>{t(locale, 'ourStory.heading')}</h1>
       <PageAnchors locale={locale} links={anchorLinks} />
-    </section>
+    </PageHero>
     <section id="how-we-met" class="section container container--narrow reveal anchor-target">
       <h2 style="text-align:center;">{t(locale, 'ourStory.howWeMetHeading')}</h2>
       {storyParagraphs.map((key) => (

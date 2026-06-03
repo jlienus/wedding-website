@@ -17,6 +17,7 @@ to comply with the share-alike terms.
 | `images/basilica-aisle.jpg` | Wikimedia Commons | Arabsalam | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Bas%C3%ADlica_del_Voto_Nacional_Ecuador_895.jpg |
 | `images/cotopaxi.jpg` | Wikimedia Commons | Ymblanter | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Cotopaxi_National_Park_Cotopaxi_seen_from_the_trail_around_Laguna_de_Limpiopungo_05.jpg |
 | `images/quito-panorama.jpg` | Wikimedia Commons | Diego Delso | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Vista_de_Quito_desde_El_Panecillo,_Ecuador,_2015-07-22,_DD_25-29_PAN.JPG |
+| `images/our-story-hero.jpg` | Personal photo supplied by John & Diana (2026) | © John & Diana Lien-Guajan | Used by permission of the couple — all rights reserved | — |
 
 Photos were cropped and re-encoded for web delivery via `scripts/process-photos.mjs`;
 the underlying images are unchanged in substance and remain available at the
