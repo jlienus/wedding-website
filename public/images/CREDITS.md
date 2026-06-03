@@ -18,6 +18,7 @@ to comply with the share-alike terms.
 | `images/cotopaxi.jpg` | Wikimedia Commons | Ymblanter | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Cotopaxi_National_Park_Cotopaxi_seen_from_the_trail_around_Laguna_de_Limpiopungo_05.jpg |
 | `images/quito-panorama.jpg` | Wikimedia Commons | Diego Delso | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Vista_de_Quito_desde_El_Panecillo,_Ecuador,_2015-07-22,_DD_25-29_PAN.JPG |
 | `images/our-story-hero.jpg` | Personal photo supplied by John & Diana (2026) | © John & Diana Lien-Guajan | Used by permission of the couple — all rights reserved | — |
+| `images/couple-gallery-1.jpg` … `couple-gallery-6.jpg` | Personal photos supplied by John & Diana (2026) | © John & Diana Lien-Guajan | Used by permission of the couple — all rights reserved | — |
 | `images/rsvp-hero.jpg` | Wikimedia Commons | Carlos Rodríguez / Agencia de Noticias ANDES (uploaded via Flickr2Commons by David C.S.) | CC BY-SA 2.0 | https://commons.wikimedia.org/wiki/File:INTI_RAYMI_-_IMBABURA_(35128647290).jpg |
 | `images/registry-hero.jpg` | Wikimedia Commons | TupakAmaruIshkay (Kichwa Otavalo community member) | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Telar_manual_de_madera.jpg |
 | `images/faq-hero.jpg` | Wikimedia Commons | David C. S. | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Volc%C3%A1n_Imbabura_y_lago_San_Pablo.jpg |
