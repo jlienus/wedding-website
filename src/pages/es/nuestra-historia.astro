@@ -14,9 +14,10 @@ const anchorLinks = [
   { href: '#moments', label: t(locale, 'ourStory.anchorMoments') },
   { href: '#heritage', label: t(locale, 'ourStory.anchorHeritage') },
 ];
+const storyParagraphs = ['howWeMetP1', 'howWeMetP2', 'howWeMetP3', 'howWeMetP4', 'howWeMetP5'];
 ---
 
-<Base title={t(locale, 'nav.ourStory') + ' · John & Diana'} description={t(locale, 'ourStory.howWeMetBody')} lang={locale}>
+<Base title={t(locale, 'nav.ourStory') + ' · John & Diana'} description={t(locale, 'ourStory.howWeMetDescription')} lang={locale}>
   <main>
     <section class="section container container--narrow reveal" style="text-align:center;">
       <p class="eyebrow">{t(locale, 'heritage.header')}</p>
@@ -25,7 +26,10 @@ const anchorLinks = [
     </section>
     <section id="how-we-met" class="section container container--narrow reveal anchor-target">
       <h2 style="text-align:center;">{t(locale, 'ourStory.howWeMetHeading')}</h2>
-      <p>{t(locale, 'ourStory.howWeMetBody')}</p>
+      {storyParagraphs.map((key) => (
+        <p>{t(locale, `ourStory.${key}`)}</p>
+      ))}
+      <p class="story-closing" style="font-style: italic; text-align: center; color: var(--color-text-muted); margin-top: var(--space-4);">{t(locale, 'ourStory.howWeMetClosing')}</p>
     </section>
     <SectionDivider />
     <section id="journey" class="section container anchor-target">
