@@ -164,6 +164,9 @@ const initData = {
   <div id="rsvp-confirmation" class="rsvp-phase rsvp-confirmation" hidden>
     <div class="rsvp-confirm-card">
       <h3>{t(locale, 'rsvp.thanks')}</h3>
+      <div class="rsvp-confirm-flourish" aria-hidden="true">
+        <span></span><strong>✦</strong><span></span>
+      </div>
       <p id="rsvp-confirm-summary"></p>
       <div class="rsvp-actions">
         <button type="button" id="rsvp-edit" class="btn btn--ghost">{t(locale, 'rsvp.edit')}</button>
@@ -1289,8 +1292,49 @@ const initData = {
     font-size: 0.95rem;
   }
 
-  .rsvp-confirm-card { text-align: center; }
-  .rsvp-confirm-card .rsvp-actions { justify-content: center; }
+  .rsvp-confirm-card { text-align: center; padding: var(--space-2) 0; }
+  .rsvp-confirm-card .rsvp-actions { justify-content: center; margin-top: var(--space-3); }
+  .rsvp-confirm-card h3 {
+    font-family: var(--font-display, 'Cormorant Garamond', serif);
+    font-size: 1.85rem;
+    font-weight: 500;
+    margin: 0 0 var(--space-2);
+    letter-spacing: 0.005em;
+  }
+  .rsvp-confirm-card #rsvp-confirm-summary {
+    font-size: 1.05rem;
+    font-style: italic;
+    color: var(--color-text);
+    max-width: 32rem;
+    margin: 0 auto;
+  }
+  .rsvp-confirm-flourish {
+    display: grid;
+    grid-template-columns: minmax(2rem, 1fr) auto minmax(2rem, 1fr);
+    align-items: center;
+    gap: var(--space-3);
+    max-width: 18rem;
+    margin: 0 auto var(--space-3);
+  }
+  .rsvp-confirm-flourish span {
+    height: 1px;
+    background: var(--gradient-gold-line, linear-gradient(90deg, transparent, var(--color-gold, #c9a961), transparent));
+  }
+  .rsvp-confirm-flourish strong {
+    font-family: var(--font-display, 'Cormorant Garamond', serif);
+    font-size: 1.1rem;
+    font-weight: 400;
+    color: var(--color-gold-deep, #8a6a2c);
+    line-height: 1;
+  }
+  /* Override the shared .rsvp-lookup/.rsvp-form/.rsvp-confirmation card so the
+     confirmation feels celebratory rather than empty — warm pearl background,
+     visible champagne border, slightly stronger shadow. */
+  .rsvp-confirmation {
+    background: linear-gradient(180deg, var(--color-surface-pearl, #F7F4ED) 0%, var(--color-surface, #fff) 100%);
+    border-color: var(--color-gold-light, #EBD7A1);
+    box-shadow: 0 8px 24px rgba(168, 132, 47, 0.10), 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
 
   .visually-hidden {
     position: absolute;
