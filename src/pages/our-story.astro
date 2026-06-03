@@ -28,7 +28,7 @@ const storyParagraphs = ['howWeMetP1', 'howWeMetP2', 'howWeMetP3', 'howWeMetP4',
     <section id="how-we-met" class="section container container--narrow reveal anchor-target" style="max-width: 44rem;">
       <h2 style="text-align:center;">{t(locale, 'ourStory.howWeMetHeading')}</h2>
       {storyParagraphs.map((key) => (
-        <p class="text-justify">{t(locale, `ourStory.${key}`)}</p>
+        <p>{t(locale, `ourStory.${key}`)}</p>
       ))}
       <p class="story-closing" style="font-style: italic; text-align: center; color: var(--color-text-muted); margin-top: var(--space-4);">{t(locale, 'ourStory.howWeMetClosing')}</p>
     </section>

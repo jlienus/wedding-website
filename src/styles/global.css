@@ -74,6 +74,34 @@ img, picture, svg, video { display: block; max-width: 100%; height: auto; }
   -webkit-hyphens: auto;
 }
 
+/* Site-wide default: justify body prose paragraphs in <main> (skip admin).
+   Narrow cards, centered callouts, and chatbot keep ragged-right via the
+   overrides below — justify creates awkward word gaps in narrow widths. */
+main:not(.admin) p {
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
+main:not(.admin) .heritage p,
+main:not(.admin) .heritage h2 {
+  text-align: center;
+}
+
+main:not(.admin) .hotel-card p,
+main:not(.admin) .info-card p,
+main:not(.admin) .travel-tips dd,
+main:not(.admin) .altitude-advisory__card p,
+main:not(.admin) .altitude-compact__body,
+main:not(.admin) .story-timeline .content p,
+main:not(.admin) .altitude-advisory__intro {
+  text-align: start;
+  text-justify: initial;
+  hyphens: initial;
+  -webkit-hyphens: initial;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
