@@ -87,16 +87,51 @@ const { photoSlot, imageAlt, variant = 'default' } = Astro.props;
   }
   .page-hero--showcase::before {
     background:
-      radial-gradient(ellipse 70% 55% at 50% 50%,
-        rgba(252, 251, 247, 0.62) 0%,
-        rgba(252, 251, 247, 0.38) 45%,
-        rgba(252, 251, 247, 0.12) 75%,
+      radial-gradient(ellipse 62% 42% at 50% 33%,
+        rgba(252, 251, 247, 0.88) 0%,
+        rgba(252, 251, 247, 0.68) 35%,
+        rgba(252, 251, 247, 0.40) 65%,
+        rgba(252, 251, 247, 0.14) 85%,
         transparent 100%),
-      linear-gradient(180deg, rgba(255, 254, 251, 0.45) 0%, transparent 25%, transparent 72%, rgba(252, 251, 247, 0.72) 100%);
+      linear-gradient(180deg,
+        rgba(255, 254, 251, 0.55) 0%,
+        rgba(255, 254, 251, 0.30) 15%,
+        rgba(255, 254, 251, 0.10) 30%,
+        transparent 45%,
+        transparent 72%,
+        rgba(252, 251, 247, 0.72) 100%);
+  }
+  /* Showcase eyebrow: use full-strength text color (not muted) so the
+     small-caps line reads against the bright photo. Pure CSS — falls
+     back gracefully if a page doesn't pass an .eyebrow into the slot.
+
+     Letters get a tight 8-direction 1px ivory paint outline so each
+     character keeps a crisp edge over busy parts of the photo (e.g.
+     "Imanalla" sitting over the volcano silhouette). The earlier blurry
+     glow alone wasn't enough — the wide halos bleed in opposite
+     directions when the photo has both highlights and shadows behind
+     adjacent letters. The 8-direction stack guarantees every letter has
+     a continuous 1px white edge, then two softer glows add ambient lift. */
+  .page-hero--showcase .page-hero-inner :global(.eyebrow) {
+    color: var(--color-text);
+    text-shadow:
+      -1px -1px 0 rgba(252, 251, 247, 0.95),
+       0   -1px 0 rgba(252, 251, 247, 0.95),
+       1px -1px 0 rgba(252, 251, 247, 0.95),
+       1px  0   0 rgba(252, 251, 247, 0.95),
+       1px  1px 0 rgba(252, 251, 247, 0.95),
+       0    1px 0 rgba(252, 251, 247, 0.95),
+      -1px  1px 0 rgba(252, 251, 247, 0.95),
+      -1px  0   0 rgba(252, 251, 247, 0.95),
+       0    0   8px rgba(252, 251, 247, 0.9),
+       0    0   18px rgba(252, 251, 247, 0.75);
   }
   .page-hero--showcase .page-hero-inner :global(h1),
-  .page-hero--showcase .page-hero-inner :global(.eyebrow),
   .page-hero--showcase .page-hero-inner :global(p) {
-    text-shadow: 0 1px 14px rgba(252, 251, 247, 0.95), 0 0 28px rgba(252, 251, 247, 0.75);
+    text-shadow:
+      0 0 1px rgba(42, 37, 32, 0.35),
+      0 1px 2px rgba(252, 251, 247, 0.95),
+      0 2px 14px rgba(252, 251, 247, 0.95),
+      0 0 28px rgba(252, 251, 247, 0.85);
   }
 </style>
