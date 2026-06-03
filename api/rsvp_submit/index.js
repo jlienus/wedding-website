@@ -123,6 +123,20 @@ module.exports = async function (context, req) {
   }
 
   context.log(`rsvp_submit ok ipHash=${ipHash} inviteId=${inviteId} guests=${v.payload.additionalGuests.length} complete=${isComplete(v.payload)} late=${isLate}`);
+
+  try {
+    const guestCount = v.payload.additionalGuests.length + 1;
+    const complete = isComplete(v.payload);
+    await storage.appendEvent({
+      type: 'rsvp.submitted',
+      actor: `invitee:${invite.primaryFirstName} ${invite.primaryLastName}`.trim(),
+      summary: `RSVP submitted for ${invite.primaryLastName} household (${guestCount} ${guestCount === 1 ? 'guest' : 'guests'}, ${complete ? 'complete' : 'partial'}${isLate ? ', late' : ''})`,
+      meta: { inviteId, guestCount, complete, late: isLate }
+    });
+  } catch (err) {
+    context.log.error(`rsvp_submit event_write_failed: ${err && err.message}`);
+  }
+
   context.res = {
     status: 200,
     headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },

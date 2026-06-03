@@ -49,6 +49,18 @@ module.exports = async function (context, req) {
   }
   context.log(`admin_toggle_reminders enabled=${payload.enabled}`);
 
+  try {
+    const principal = auth.readAdminPrincipal(req) || {};
+    await storage.appendEvent({
+      type: 'admin.reminders_toggled',
+      actor: `admin:${String(principal.userDetails || 'unknown').toLowerCase()}`,
+      summary: `Monthly reminder texts ${payload.enabled ? 'enabled' : 'disabled'}`,
+      meta: { enabled: !!payload.enabled }
+    });
+  } catch (err) {
+    context.log.error(`admin_toggle_reminders event_write_failed: ${err && err.message}`);
+  }
+
   context.res = {
     status: 200,
     headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },

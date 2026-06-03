@@ -85,6 +85,18 @@ module.exports = async function (context, req) {
   const created = await storage.getInvite(inviteId);
   context.log(`admin_create_invite inviteId=${inviteId} name="${primaryFirstName} ${primaryLastName}"`);
 
+  try {
+    const principal = auth.readAdminPrincipal(req) || {};
+    await storage.appendEvent({
+      type: 'admin.invite_created',
+      actor: `admin:${String(principal.userDetails || 'unknown').toLowerCase()}`,
+      summary: `Invite created for ${primaryFirstName} ${primaryLastName}`,
+      meta: { inviteId, primaryFirstName, primaryLastName, locale, hasPhone: !!phone }
+    });
+  } catch (err) {
+    context.log.error(`admin_create_invite event_write_failed: ${err && err.message}`);
+  }
+
   context.res = {
     status: 201,
     headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },

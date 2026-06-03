@@ -123,6 +123,16 @@ async function handleDeliveryReport(context, data) {
       if (invite && !invite.smsHardFailedAt) {
         await storage.patchInvite(match.partitionKey, { smsHardFailedAt: new Date().toISOString() });
         context.log(`sms_webhook HARD FAIL inviteId=${match.partitionKey} status=${status}`);
+        try {
+          await storage.appendEvent({
+            type: 'sms.delivery_failed',
+            actor: `invitee:${invite.primaryFirstName} ${invite.primaryLastName}`.trim(),
+            summary: `SMS hard-failed for ${invite.primaryLastName} household (${invite.phoneNorm || 'unknown phone'}, ${status}${errorCode ? `, ${errorCode}` : ''})`,
+            meta: { inviteId: match.partitionKey, phone: invite.phoneNorm, status, errorCode }
+          });
+        } catch (eventErr) {
+          context.log.error(`sms_webhook event_write_failed: ${eventErr && eventErr.message}`);
+        }
       }
     } catch (err) {
       context.log.error(`sms_webhook hardfail patch err: ${err && err.message}`);

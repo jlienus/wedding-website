@@ -113,6 +113,18 @@ module.exports = async function (context, req) {
   const after = await storage.getInvite(body.inviteId);
   context.log(`admin_update_invite inviteId=${body.inviteId} fields=${Object.keys(patch).join(',')}`);
 
+  try {
+    const principal = auth.readAdminPrincipal(req) || {};
+    await storage.appendEvent({
+      type: 'admin.invite_updated',
+      actor: `admin:${String(principal.userDetails || 'unknown').toLowerCase()}`,
+      summary: `Updated invite for ${existing.primaryFirstName} ${existing.primaryLastName}: ${Object.keys(patch).join(', ')}`,
+      meta: { inviteId: body.inviteId, fields: Object.keys(patch), rejected: rejected.length ? rejected : undefined }
+    });
+  } catch (err) {
+    context.log.error(`admin_update_invite event_write_failed: ${err && err.message}`);
+  }
+
   context.res = {
     status: 200,
     headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },

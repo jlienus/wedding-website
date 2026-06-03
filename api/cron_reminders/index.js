@@ -108,6 +108,23 @@ module.exports = async function (context, req) {
   };
   context.log(`cron_reminders done sent=${sentRows.length} skippedReasons=${JSON.stringify(skipped)} failures=${failures}`);
 
+  // Only log an event if we actually did something — otherwise the table
+  // fills with "sent 0, skipped: already_responded:80" rows once a day for
+  // months. We do log if there were failures, since those are noteworthy.
+  if (sentRows.length > 0 || failures > 0) {
+    try {
+      const skippedTotal = Object.values(skipped).reduce((a, b) => a + b, 0);
+      await storage.appendEvent({
+        type: 'cron.reminders_run',
+        actor: 'cron',
+        summary: `Reminders: sent ${sentRows.length}, skipped ${skippedTotal}${failures ? `, ${failures} failures` : ''}`,
+        meta: { sent: sentRows.length, skipped, failures, totalInvites: invites.length }
+      });
+    } catch (err) {
+      context.log.error(`cron_reminders event_write_failed: ${err && err.message}`);
+    }
+  }
+
   context.res = {
     status: 200,
     headers: { 'Cache-Control': 'no-store', 'Content-Type': 'application/json' },

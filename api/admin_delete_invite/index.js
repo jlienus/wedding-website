@@ -51,6 +51,19 @@ module.exports = async function (context, req) {
   }
 
   context.log(`admin_delete_invite inviteId=${inviteId} smsRowsDeleted=${result && result.smsRowsDeleted}`);
+
+  try {
+    const principal = auth.readAdminPrincipal(req) || {};
+    await storage.appendEvent({
+      type: 'admin.invite_deleted',
+      actor: `admin:${String(principal.userDetails || 'unknown').toLowerCase()}`,
+      summary: `Deleted invite for ${existing.primaryFirstName} ${existing.primaryLastName}`,
+      meta: { inviteId, smsRowsDeleted: (result && result.smsRowsDeleted) || 0 }
+    });
+  } catch (err) {
+    context.log.error(`admin_delete_invite event_write_failed: ${err && err.message}`);
+  }
+
   context.res = {
     status: 200,
     headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },

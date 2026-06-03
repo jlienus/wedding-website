@@ -58,6 +58,18 @@ module.exports = async function (context, req) {
   }
   context.log(`admin_send_test phone=${phone} successful=${result.successful} status=${result.deliveryStatus}`);
 
+  try {
+    const principal = auth.readAdminPrincipal(req) || {};
+    await storage.appendEvent({
+      type: 'admin.test_sms_sent',
+      actor: `admin:${String(principal.userDetails || 'unknown').toLowerCase()}`,
+      summary: `Test SMS sent to ${phone} (${result.successful ? 'ok' : 'failed'}${result.errorCode ? `, code ${result.errorCode}` : ''})`,
+      meta: { phone, locale, successful: !!result.successful, deliveryStatus: result.deliveryStatus, errorCode: result.errorCode }
+    });
+  } catch (err) {
+    context.log.error(`admin_send_test event_write_failed: ${err && err.message}`);
+  }
+
   context.res = {
     status: 200,
     headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
