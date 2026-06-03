@@ -87,22 +87,48 @@ const jobs = [
     quality: 78,
     // Override: portrait source (2722×3629) needs explicit extract to keep
     // faces in frame AND retain enough vertical context that the hero's
-    // cover-fit doesn't crop to faces-only. Resize source to 2400 wide
-    // (height ~3200), then extract a 1500-tall band that places the kiss
-    // at ~55% of the output height so cover-cropping in a wide hero band
-    // still surfaces faces + veil drape + shoulders.
+    // cover-fit doesn't crop to faces-only. After extract, we approximate
+    // a portrait/shallow-DoF effect: composite a heavily-blurred copy of
+    // the image on top of the sharp original, masked by an elliptical
+    // radial gradient centered on the kiss. The mask is transparent in
+    // the center (sharp original shows through) and opaque at the edges
+    // (blurred copy wins). Not true AI subject-segmentation — close
+    // enough for a centered subject and reads as natural bokeh.
     customPipeline: async (sharp, inFile, outFile) => {
       const resized = await sharp(inFile).rotate().resize({ width: 2400 }).toBuffer();
-      const { height } = await sharp(resized).metadata();
-      // Kiss point sits at ~47% from top of the full resized source.
-      // We want it at ~55% of the output band so faces stay above the
-      // visual center after object-position: center 45% cropping.
-      const kissY = Math.round(height * 0.47);
-      const targetH = 1500;
-      const top = Math.max(0, Math.min(height - targetH, kissY - Math.round(targetH * 0.55)));
-      return sharp(resized)
-        .extract({ left: 0, top, width: 2400, height: targetH })
-        .jpeg({ quality: 78, mozjpeg: true, progressive: true })
+      const { height: resizedH } = await sharp(resized).metadata();
+      const kissY = Math.round(resizedH * 0.47);
+      const W = 2400;
+      const H = 1500;
+      const top = Math.max(0, Math.min(resizedH - H, kissY - Math.round(H * 0.55)));
+      const sharpExtract = await sharp(resized)
+        .extract({ left: 0, top, width: W, height: H })
+        .toBuffer();
+
+      const blurred = await sharp(sharpExtract).blur(28).png().toBuffer();
+
+      // Elliptical mask centered on the kiss (50% x, 55% y).
+      // Transparent center (radius 0-45% sharp), soft falloff (45-100% blur).
+      const maskSvg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="g" cx="50%" cy="55%" r="65%" fx="50%" fy="55%">
+            <stop offset="0%" stop-color="white" stop-opacity="0"/>
+            <stop offset="38%" stop-color="white" stop-opacity="0"/>
+            <stop offset="72%" stop-color="white" stop-opacity="0.65"/>
+            <stop offset="100%" stop-color="white" stop-opacity="1"/>
+          </radialGradient>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#g)"/>
+      </svg>`;
+
+      const blurredMasked = await sharp(blurred)
+        .composite([{ input: Buffer.from(maskSvg), blend: 'dest-in' }])
+        .png()
+        .toBuffer();
+
+      return sharp(sharpExtract)
+        .composite([{ input: blurredMasked, blend: 'over' }])
+        .jpeg({ quality: 80, mozjpeg: true, progressive: true })
         .toFile(outFile);
     },
   },
