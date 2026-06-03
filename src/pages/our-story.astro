@@ -25,7 +25,7 @@ const storyParagraphs = ['howWeMetP1', 'howWeMetP2', 'howWeMetP3', 'howWeMetP4',
       <h1>{t(locale, 'ourStory.heading')}</h1>
       <PageAnchors locale={locale} links={anchorLinks} />
     </PageHero>
-    <section id="how-we-met" class="section container container--narrow reveal anchor-target">
+    <section id="how-we-met" class="section container container--narrow reveal anchor-target" style="max-width: 44rem;">
       <h2 style="text-align:center;">{t(locale, 'ourStory.howWeMetHeading')}</h2>
       {storyParagraphs.map((key) => (
         <p>{t(locale, `ourStory.${key}`)}</p>

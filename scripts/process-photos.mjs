@@ -80,14 +80,19 @@ const jobs = [
     name: 'our-story-hero (our story page hero)',
     in: 'our-story-hero-source.jpg',
     out: path.join(outImg, 'our-story-hero.jpg'),
-    width: 2400,
+    width: 3600,
     height: 1500,
     fit: 'cover',
     position: 'attention',
     quality: 82,
     // The source already has AI subject-segmentation portrait bokeh
-    // applied (edited in Google Pixel Studio), so we just resize + extract
-    // a landscape band centered on the kiss. No additional blur compositing.
+    // (edited in Google Pixel Studio). To zoom out further in the hero
+    // band: extract the natural 2400×1500 landscape band, then composite
+    // it centered on a 3600×1500 canvas whose background is the same
+    // extract heavily stretched + blurred. Net result: the couple
+    // appears smaller in the rendered hero (since the canvas is wider
+    // and gets scaled down more), with the bokeh background extending
+    // naturally beyond them instead of jumping to the page gradient.
     customPipeline: async (sharp, inFile, outFile) => {
       const resized = await sharp(inFile).rotate().resize({ width: 2400 }).toBuffer();
       const { height: resizedH } = await sharp(resized).metadata();
