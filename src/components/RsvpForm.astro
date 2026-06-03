@@ -90,8 +90,14 @@ const initData = {
 
   <div id="rsvp-magic-banner" class="rsvp-banner" role="status" aria-live="polite" hidden></div>
 
-  <div id="rsvp-loading" class="rsvp-phase rsvp-phase--loading" aria-live="polite">
-    <p class="rsvp-loading-text">{t(locale, 'rsvp.loading')}</p>
+  <div id="rsvp-loading" class="rsvp-phase rsvp-phase--loading" role="status" aria-live="polite">
+    <div class="rsvp-loader">
+      <div class="rsvp-loader__orbit" aria-hidden="true">
+        <span class="rsvp-loader__ring"></span>
+        <span class="rsvp-loader__mark">✦</span>
+      </div>
+      <p class="rsvp-loader__text">{t(locale, 'rsvp.loading')}</p>
+    </div>
   </div>
 
   <form id="rsvp-lookup-form" class="rsvp-phase rsvp-lookup" hidden novalidate>
@@ -1048,8 +1054,72 @@ const initData = {
   }
   .rsvp-phase { margin: 0; }
   .rsvp-phase[hidden] { display: none !important; }
-  .rsvp-phase--loading { text-align: center; padding: var(--space-5) 0; opacity: 0.7; }
-  .rsvp-loading-text { font-style: italic; }
+  .rsvp-phase--loading { text-align: center; padding: var(--space-5) 0; }
+
+  .rsvp-loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    padding: var(--space-5) var(--space-3);
+    min-height: 10rem;
+    /* Delay reveal so the spinner doesn't flash for fast responses */
+    animation: rsvp-loader-fadein 0.45s ease-out 0.25s both;
+  }
+  .rsvp-loader__orbit {
+    position: relative;
+    width: 3.5rem;
+    height: 3.5rem;
+    display: grid;
+    place-items: center;
+  }
+  .rsvp-loader__ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid var(--color-gold-light, #ebd7a1);
+    border-top-color: var(--color-gold-deep, #a8842f);
+    border-right-color: var(--color-gold, #d4af37);
+    opacity: 0.85;
+    animation: rsvp-loader-spin 1.4s linear infinite;
+  }
+  .rsvp-loader__mark {
+    font-family: var(--font-display, 'Cormorant Garamond', serif);
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--color-gold-deep, #a8842f);
+    animation: rsvp-loader-pulse 2.2s ease-in-out infinite;
+  }
+  .rsvp-loader__text {
+    margin: 0;
+    font-family: var(--font-display, 'Cormorant Garamond', serif);
+    font-style: italic;
+    font-size: 1.1rem;
+    letter-spacing: 0.02em;
+    color: var(--color-text-muted, #6b6259);
+    text-align: center;
+  }
+  @keyframes rsvp-loader-spin {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes rsvp-loader-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.85; }
+    50%      { transform: scale(1.08); opacity: 1; }
+  }
+  @keyframes rsvp-loader-fadein {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rsvp-loader { animation: none; opacity: 1; }
+    .rsvp-loader__ring {
+      animation: none;
+      border-color: var(--color-gold-light, #ebd7a1);
+      border-top-color: var(--color-gold, #d4af37);
+    }
+    .rsvp-loader__mark { animation: none; }
+  }
 
   .rsvp-lookup, .rsvp-form, .rsvp-confirmation {
     padding: var(--space-4);
