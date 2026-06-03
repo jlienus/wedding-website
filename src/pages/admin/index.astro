@@ -309,16 +309,34 @@ const locale = 'en';
       function buildDetailHtml(row: any): string {
         const inv = row.invite;
         const payload = inv.payload || { primary: {}, additionalGuests: [] };
-        const renderAttendee = (a: any, label: string) => `
+        const courseLabel = (key: string, value: string): string => {
+          const map: Record<string, Record<string, string>> = {
+            entradaChoice: { salpicon: 'salpicón', hojaldre: 'hojaldre', causa: 'causa' },
+            sorbetChoice: { maracuya: 'maracuyá', mandarina: 'mandarina' },
+            mealChoice: { chicken: 'chicken', beef: 'beef' },
+            postreChoice: { chocolate: 'chocolate', cheesecake: 'cheesecake', tiramisu: 'tiramisu' }
+          };
+          return (map[key] && map[key][value]) || value;
+        };
+        const renderAttendee = (a: any, label: string) => {
+          const courses: string[] = [];
+          if (a.attending === true) {
+            if (a.entradaChoice) courses.push(`entrada: ${escapeHtml(courseLabel('entradaChoice', a.entradaChoice))}`);
+            if (a.sorbetChoice) courses.push(`sorbet: ${escapeHtml(courseLabel('sorbetChoice', a.sorbetChoice))}`);
+            if (a.mealChoice) courses.push(`meal: ${escapeHtml(courseLabel('mealChoice', a.mealChoice))}`);
+            if (a.postreChoice) courses.push(`postre: ${escapeHtml(courseLabel('postreChoice', a.postreChoice))}`);
+          }
+          return `
           <li>
             <strong>${escapeHtml(label)}</strong>
             — attending: <strong>${a.attending === true ? 'YES' : a.attending === false ? 'NO' : '—'}</strong>
-            ${a.attending === true && a.mealChoice ? ` · meal: ${escapeHtml(a.mealChoice)}` : ''}
+            ${courses.length ? ` · ${courses.join(' · ')}` : ''}
             ${a.dietary ? ` · dietary: ${escapeHtml(a.dietary)}` : ''}
             ${a.songRequest ? ` · song: ${escapeHtml(a.songRequest)}` : ''}
             ${a.notes ? ` · notes: ${escapeHtml(a.notes)}` : ''}
           </li>
         `;
+        };
         const primaryLabel = `${inv.primaryFirstName} ${inv.primaryLastName}`.trim();
         const primaryItem = renderAttendee(payload.primary || {}, primaryLabel + ' (primary)');
         const guestItems = (payload.additionalGuests || []).map((g: any) =>

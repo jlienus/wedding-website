@@ -15,6 +15,26 @@ const mealOptions = [
   { value: 'beef', labelKey: 'rsvp.mealBeef' }
 ];
 
+const entradaOptions = [
+  { value: '', labelKey: 'rsvp.entradaNone' },
+  { value: 'salpicon', labelKey: 'rsvp.entradaSalpicon' },
+  { value: 'hojaldre', labelKey: 'rsvp.entradaHojaldre' },
+  { value: 'causa', labelKey: 'rsvp.entradaCausa' }
+];
+
+const sorbetOptions = [
+  { value: '', labelKey: 'rsvp.sorbetNone' },
+  { value: 'maracuya', labelKey: 'rsvp.sorbetMaracuya' },
+  { value: 'mandarina', labelKey: 'rsvp.sorbetMandarina' }
+];
+
+const postreOptions = [
+  { value: '', labelKey: 'rsvp.postreNone' },
+  { value: 'chocolate', labelKey: 'rsvp.postreChocolate' },
+  { value: 'cheesecake', labelKey: 'rsvp.postreCheesecake' },
+  { value: 'tiramisu', labelKey: 'rsvp.postreTiramisu' }
+];
+
 const stringKeys = [
   'rsvp.loading','rsvp.lookupTitle','rsvp.lookupHint','rsvp.lastNameLabel',
   'rsvp.findMe','rsvp.lookingUp',
@@ -31,6 +51,13 @@ const stringKeys = [
   'rsvp.attendingQuestion','rsvp.attendingYes','rsvp.attendingNo',
   'rsvp.mealLabel','rsvp.mealHint','rsvp.mealNone',
   'rsvp.mealChicken','rsvp.mealBeef',
+  'rsvp.menuHeading','rsvp.menuHint',
+  'rsvp.entradaLabel','rsvp.entradaNone',
+  'rsvp.entradaSalpicon','rsvp.entradaHojaldre','rsvp.entradaCausa',
+  'rsvp.sorbetLabel','rsvp.sorbetNone',
+  'rsvp.sorbetMaracuya','rsvp.sorbetMandarina',
+  'rsvp.postreLabel','rsvp.postreNone',
+  'rsvp.postreChocolate','rsvp.postreCheesecake','rsvp.postreTiramisu',
   'rsvp.dietaryLabel','rsvp.dietaryPlaceholder','rsvp.songLabel','rsvp.songPlaceholder',
   'rsvp.notesLabel','rsvp.notesPlaceholder',
   'rsvp.submitError','rsvp.submitRateLimited','rsvp.submitClosed','rsvp.lateNotice',
@@ -50,7 +77,10 @@ const initData = {
   guestDeadlineISO,
   permanentLockISO,
   maxAdditionalGuests: 20,
+  entradaOptions: entradaOptions.map(o => ({ value: o.value, label: t(locale, o.labelKey) })),
+  sorbetOptions: sorbetOptions.map(o => ({ value: o.value, label: t(locale, o.labelKey) })),
   mealOptions: mealOptions.map(o => ({ value: o.value, label: t(locale, o.labelKey) })),
+  postreOptions: postreOptions.map(o => ({ value: o.value, label: t(locale, o.labelKey) })),
   strings
 };
 ---
@@ -171,11 +201,28 @@ const initData = {
         </div>
       </div>
       <div class="rsvp-attending-fields" hidden>
-        <label class="rsvp-field">
-          <span class="rsvp-label"><span data-bind="mealLabel"></span></span>
-          <select name="mealChoice" data-bind="mealSelect"></select>
-          <small class="rsvp-muted" data-bind="mealHint"></small>
-        </label>
+        <div class="rsvp-menu-block">
+          <div class="rsvp-menu-heading"><span data-bind="menuHeading"></span></div>
+          <small class="rsvp-muted rsvp-menu-hint" data-bind="menuHint"></small>
+          <div class="rsvp-menu-grid">
+            <label class="rsvp-field">
+              <span class="rsvp-label" data-bind="entradaLabel"></span>
+              <select name="entradaChoice" data-bind="entradaSelect"></select>
+            </label>
+            <label class="rsvp-field">
+              <span class="rsvp-label" data-bind="sorbetLabel"></span>
+              <select name="sorbetChoice" data-bind="sorbetSelect"></select>
+            </label>
+            <label class="rsvp-field">
+              <span class="rsvp-label" data-bind="mealLabel"></span>
+              <select name="mealChoice" data-bind="mealSelect"></select>
+            </label>
+            <label class="rsvp-field">
+              <span class="rsvp-label" data-bind="postreLabel"></span>
+              <select name="postreChoice" data-bind="postreSelect"></select>
+            </label>
+          </div>
+        </div>
         <label class="rsvp-field">
           <span class="rsvp-label" data-bind="dietaryLabel"></span>
           <input type="text" name="dietary" maxlength="500" data-placeholder="dietary" />
@@ -209,7 +256,16 @@ const initData = {
   const INIT = JSON.parse(dataNode.textContent || '{}');
   const S: Record<string, string> = INIT.strings || {};
   const LOCALE: string = INIT.locale || 'en';
+  const ENTRADA_OPTIONS: Array<{ value: string; label: string }> = INIT.entradaOptions || [];
+  const SORBET_OPTIONS: Array<{ value: string; label: string }> = INIT.sorbetOptions || [];
   const MEAL_OPTIONS: Array<{ value: string; label: string }> = INIT.mealOptions || [];
+  const POSTRE_OPTIONS: Array<{ value: string; label: string }> = INIT.postreOptions || [];
+  const COURSE_SELECT_BINDINGS: Record<string, Array<{ value: string; label: string }>> = {
+    entradaSelect: ENTRADA_OPTIONS,
+    sorbetSelect: SORBET_OPTIONS,
+    mealSelect: MEAL_OPTIONS,
+    postreSelect: POSTRE_OPTIONS
+  };
   const MAX_GUESTS: number = INIT.maxAdditionalGuests || 20;
   const SCHEMA_VERSION = 1;
 
@@ -277,7 +333,7 @@ const initData = {
   }
 
   function emptyPrimary() {
-    return { attending: null, mealChoice: '', dietary: '', songRequest: '', notes: '' };
+    return { attending: null, entradaChoice: '', sorbetChoice: '', mealChoice: '', postreChoice: '', dietary: '', songRequest: '', notes: '' };
   }
 
   type Invite = {
@@ -322,10 +378,11 @@ const initData = {
     node.querySelectorAll('[data-bind]').forEach((el) => {
       const key = (el as HTMLElement).dataset.bind || '';
       if (!key) return;
-      if (key === 'mealSelect') {
+      const courseOptions = COURSE_SELECT_BINDINGS[key];
+      if (courseOptions) {
         const sel = el as HTMLSelectElement;
         sel.innerHTML = '';
-        for (const opt of MEAL_OPTIONS) {
+        for (const opt of courseOptions) {
           const o = document.createElement('option');
           o.value = opt.value;
           o.textContent = opt.label;
@@ -411,11 +468,17 @@ const initData = {
           if (no) no.checked = true;
         }
       }
-      const sel = fieldset.querySelector('select[name="mealChoice"]') as HTMLSelectElement;
-      if (sel && data.mealChoice) {
-        const valid = MEAL_OPTIONS.some(o => o.value === data.mealChoice);
-        sel.value = valid ? data.mealChoice : '';
-      }
+      const restoreSelect = (name: string, options: Array<{ value: string; label: string }>) => {
+        const sel = fieldset.querySelector(`select[name="${name}"]`) as HTMLSelectElement | null;
+        if (!sel) return;
+        const v = data[name];
+        if (!v) return;
+        sel.value = options.some(o => o.value === v) ? v : '';
+      };
+      restoreSelect('entradaChoice', ENTRADA_OPTIONS);
+      restoreSelect('sorbetChoice', SORBET_OPTIONS);
+      restoreSelect('mealChoice', MEAL_OPTIONS);
+      restoreSelect('postreChoice', POSTRE_OPTIONS);
       const fld = (n: string) => fieldset.querySelector(`[name="${n}"]`) as HTMLInputElement | HTMLTextAreaElement | null;
       const dietary = fld('dietary'); if (dietary && data.dietary) dietary.value = data.dietary;
       const song = fld('songRequest'); if (song && data.songRequest) song.value = data.songRequest;
@@ -786,7 +849,7 @@ const initData = {
       if (!guestsBox) return;
       const count = guestsBox.querySelectorAll('.rsvp-member--guest').length;
       if (count >= MAX_GUESTS) return;
-      const newGuest = { id: randomGuestId(), name: '', isKid: false, attending: null, mealChoice: '', dietary: '', songRequest: '' };
+      const newGuest = { id: randomGuestId(), name: '', isKid: false, attending: null, entradaChoice: '', sorbetChoice: '', mealChoice: '', postreChoice: '', dietary: '', songRequest: '' };
       guestsBox.appendChild(buildAttendeeCard('guest', newGuest, { guestId: newGuest.id }));
       updateAddGuestButton();
       // Focus the new name input for snappy entry
@@ -810,7 +873,10 @@ const initData = {
       if (yes) attending = true; else if (no) attending = false;
       return {
         attending,
+        entradaChoice: attending === true ? get('entradaChoice') : '',
+        sorbetChoice: attending === true ? get('sorbetChoice') : '',
         mealChoice: attending === true ? get('mealChoice') : '',
+        postreChoice: attending === true ? get('postreChoice') : '',
         dietary: attending === true ? get('dietary') : '',
         songRequest: attending === true ? get('songRequest') : '',
         notes: get('notes')
@@ -822,7 +888,10 @@ const initData = {
       name: get('guestName').trim(),
       isKid: !!(fs.querySelector('input[name="isKid"]') as HTMLInputElement | null)?.checked,
       attending: true,
+      entradaChoice: get('entradaChoice'),
+      sorbetChoice: get('sorbetChoice'),
       mealChoice: get('mealChoice'),
+      postreChoice: get('postreChoice'),
       dietary: get('dietary'),
       songRequest: get('songRequest')
     };
@@ -857,7 +926,7 @@ const initData = {
         // by mistake and never types anything shouldn't be blocked. A
         // half-filled card (name present but blank, or no name but a meal
         // chosen) still fails the name guard below so we don't lose data.
-        const isEmpty = (g: any) => !g.name && !g.mealChoice && !g.dietary && !g.songRequest && !g.isKid;
+        const isEmpty = (g: any) => !g.name && !g.entradaChoice && !g.sorbetChoice && !g.mealChoice && !g.postreChoice && !g.dietary && !g.songRequest && !g.isKid;
         additionalGuests = collected.filter(g => !isEmpty(g));
         const missingNames = additionalGuests.filter(g => !g.name);
         if (missingNames.length) {
@@ -1157,6 +1226,32 @@ const initData = {
   }
   .rsvp-field { display: block; }
   .rsvp-field small { display: block; margin-top: 0.2rem; font-size: 0.85rem; }
+
+  .rsvp-menu-block {
+    padding: var(--space-2) var(--space-3);
+    background: rgba(235, 215, 161, 0.10);
+    border: 1px solid var(--color-rule, #e8e0c8);
+    border-radius: var(--radius-md, 8px);
+  }
+  .rsvp-menu-heading {
+    font-family: var(--font-display, 'Cormorant Garamond', serif);
+    font-size: 1.1rem;
+    color: var(--color-gold-deep, #8a6a2c);
+    letter-spacing: 0.02em;
+  }
+  .rsvp-menu-hint {
+    display: block;
+    margin: 0.2rem 0 var(--space-2);
+    font-size: 0.85rem;
+  }
+  .rsvp-menu-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+  @media (min-width: 32rem) {
+    .rsvp-menu-grid { grid-template-columns: 1fr 1fr; }
+  }
   /* Re-assert hidden semantics so author display rules don't beat [hidden]. */
   .rsvp-attending-fields[hidden],
   .rsvp-field[hidden],

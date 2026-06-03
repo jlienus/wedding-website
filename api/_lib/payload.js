@@ -11,7 +11,10 @@
 //     "schemaVersion": 1,
 //     "primary": {
 //       "attending": true | false | null,
-//       "mealChoice": "" | "chicken" | "beef",
+//       "entradaChoice": "" | "salpicon" | "hojaldre" | "causa",
+//       "sorbetChoice":  "" | "maracuya" | "mandarina",
+//       "mealChoice":    "" | "chicken" | "beef",
+//       "postreChoice":  "" | "chocolate" | "cheesecake" | "tiramisu",
 //       "dietary": "",
 //       "songRequest": "",
 //       "notes": ""
@@ -19,9 +22,14 @@
 //     "additionalGuests": [
 //       { "id": "g_<rand>", "name": "Diana Guajan", "isKid": false,
 //         "attending": true | false | null,
-//         "mealChoice": "...", "dietary": "...", "songRequest": "" }
+//         "entradaChoice": "...", "sorbetChoice": "...",
+//         "mealChoice": "...",    "postreChoice": "...",
+//         "dietary": "...", "songRequest": "" }
 //     ]
 //   }
+//
+// Backward compat: responses saved before the 4-course migration only carry
+// mealChoice — the three new fields default to "" and are happily accepted.
 
 const SCHEMA_VERSION = 1;
 const MAX_ADDITIONAL_GUESTS = 20;
@@ -30,7 +38,10 @@ const MAX_NAME_CHARS = 100;
 const MAX_TEXT_CHARS = 500;
 const MAX_NOTES_CHARS = 800;
 
+const VALID_ENTRADA_CHOICES = new Set(['', 'salpicon', 'hojaldre', 'causa']);
+const VALID_SORBET_CHOICES = new Set(['', 'maracuya', 'mandarina']);
 const VALID_MEAL_CHOICES = new Set(['', 'chicken', 'beef']);
+const VALID_POSTRE_CHOICES = new Set(['', 'chocolate', 'cheesecake', 'tiramisu']);
 
 function clip(value, max) {
   if (typeof value !== 'string') return '';
@@ -48,7 +59,10 @@ function emptyPayload() {
 function emptyPrimary() {
   return {
     attending: null,
+    entradaChoice: '',
+    sorbetChoice: '',
     mealChoice: '',
+    postreChoice: '',
     dietary: '',
     songRequest: '',
     notes: ''
@@ -150,15 +164,32 @@ function normalizeAttendee(raw, opts) {
     return { ok: false, error: 'attending_invalid' };
   }
 
-  // Meal choice — must be in the enum. Lowercase whatever they sent.
+  // Per-course choices — each must be in its own enum. Lowercase whatever
+  // they sent. Old payloads predating the 4-course schema only carry
+  // mealChoice; entrada/sorbet/postre default to "" and pass cleanly.
+  const entrada = clip(raw.entradaChoice, 50).toLowerCase();
+  if (!VALID_ENTRADA_CHOICES.has(entrada)) {
+    return { ok: false, error: 'bad_entrada_choice', detail: entrada };
+  }
+  const sorbet = clip(raw.sorbetChoice, 50).toLowerCase();
+  if (!VALID_SORBET_CHOICES.has(sorbet)) {
+    return { ok: false, error: 'bad_sorbet_choice', detail: sorbet };
+  }
   const meal = clip(raw.mealChoice, 50).toLowerCase();
   if (!VALID_MEAL_CHOICES.has(meal)) {
     return { ok: false, error: 'bad_meal_choice', detail: meal };
   }
+  const postre = clip(raw.postreChoice, 50).toLowerCase();
+  if (!VALID_POSTRE_CHOICES.has(postre)) {
+    return { ok: false, error: 'bad_postre_choice', detail: postre };
+  }
 
   const out = {
     attending,
+    entradaChoice: entrada,
+    sorbetChoice: sorbet,
     mealChoice: meal,
+    postreChoice: postre,
     dietary: clip(raw.dietary, MAX_TEXT_CHARS),
     songRequest: clip(raw.songRequest, MAX_TEXT_CHARS)
   };
@@ -170,11 +201,14 @@ function normalizeAttendee(raw, opts) {
     out.isKid = !!raw.isKid;
   }
 
-  // Defensive: if not attending (false or null), discard meal/dietary so we
-  // don't accidentally pay for a meal for a guest who isn't coming. Notes are
-  // kept either way (e.g. "regrets, sends well-wishes").
+  // Defensive: if not attending (false or null), discard all course picks +
+  // dietary + song so we don't accidentally pay for a meal for a guest who
+  // isn't coming. Notes are kept either way (e.g. "regrets, sends well-wishes").
   if (attending !== true) {
+    out.entradaChoice = '';
+    out.sorbetChoice = '';
     out.mealChoice = '';
+    out.postreChoice = '';
     out.dietary = '';
     out.songRequest = '';
   }
@@ -220,7 +254,10 @@ module.exports = {
   SCHEMA_VERSION,
   MAX_ADDITIONAL_GUESTS,
   MAX_PAYLOAD_JSON_BYTES,
+  VALID_ENTRADA_CHOICES,
+  VALID_SORBET_CHOICES,
   VALID_MEAL_CHOICES,
+  VALID_POSTRE_CHOICES,
   emptyPayload,
   emptyPrimary,
   newGuestId,

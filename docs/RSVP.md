@@ -52,7 +52,7 @@ row key = `'invite'`. Schema:
 | `primaryFirstName`, `primaryLastName` | string | The single person who looks up this invitation. Lookup is exact-match, case-insensitive, accent-stripped. |
 | `phone`, `phoneNorm` | string | Optional. `phoneNorm` is digits-only US E.164. |
 | `locale` | `'en'` \| `'es'` | Drives SMS language + magic-link redirect target. |
-| `payload` | JSON | `{ schemaVersion: 1, primary: { attending, isKid?, mealChoice?, dietary?, songRequest? }, additionalGuests: [{ id, name, attending, isKid?, mealChoice?, dietary? }], notes? }`. |
+| `payload` | JSON | `{ schemaVersion: 1, primary: { attending, isKid?, entradaChoice?, sorbetChoice?, mealChoice?, postreChoice?, dietary?, songRequest? }, additionalGuests: [{ id, name, attending, isKid?, entradaChoice?, sorbetChoice?, mealChoice?, postreChoice?, dietary? }], notes? }`. Per-course choices map to the 4-tiempos menu (entrada/sorbet/plato fuerte/postre) — old responses predating the migration may only carry `mealChoice`. |
 | `responded`, `respondedAt` | bool / iso8601 | Server auto-derives `responded` from `payload` completeness at submit time. |
 | `optedOutOfSms`, `smsHardFailedAt` | bool / iso8601 | Suppress reminder fan-out. |
 | `lastReminderSentAt`, `reminderCount` | iso8601 / int | Cadence accounting. |
