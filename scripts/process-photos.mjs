@@ -84,51 +84,22 @@ const jobs = [
     height: 1500,
     fit: 'cover',
     position: 'attention',
-    quality: 78,
-    // Override: portrait source (2722×3629) needs explicit extract to keep
-    // faces in frame AND retain enough vertical context that the hero's
-    // cover-fit doesn't crop to faces-only. After extract, we approximate
-    // a portrait/shallow-DoF effect: composite a heavily-blurred copy of
-    // the image on top of the sharp original, masked by an elliptical
-    // radial gradient centered on the kiss. The mask is transparent in
-    // the center (sharp original shows through) and opaque at the edges
-    // (blurred copy wins). Not true AI subject-segmentation — close
-    // enough for a centered subject and reads as natural bokeh.
+    quality: 82,
+    // The source already has AI subject-segmentation portrait bokeh
+    // applied (edited in Google Pixel Studio), so we just resize + extract
+    // a landscape band centered on the kiss. No additional blur compositing.
     customPipeline: async (sharp, inFile, outFile) => {
       const resized = await sharp(inFile).rotate().resize({ width: 2400 }).toBuffer();
       const { height: resizedH } = await sharp(resized).metadata();
-      const kissY = Math.round(resizedH * 0.47);
-      const W = 2400;
-      const H = 1500;
-      const top = Math.max(0, Math.min(resizedH - H, kissY - Math.round(H * 0.55)));
-      const sharpExtract = await sharp(resized)
-        .extract({ left: 0, top, width: W, height: H })
-        .toBuffer();
-
-      const blurred = await sharp(sharpExtract).blur(28).png().toBuffer();
-
-      // Elliptical mask centered on the kiss (50% x, 55% y).
-      // Transparent center (radius 0-45% sharp), soft falloff (45-100% blur).
-      const maskSvg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <radialGradient id="g" cx="50%" cy="55%" r="65%" fx="50%" fy="55%">
-            <stop offset="0%" stop-color="white" stop-opacity="0"/>
-            <stop offset="38%" stop-color="white" stop-opacity="0"/>
-            <stop offset="72%" stop-color="white" stop-opacity="0.65"/>
-            <stop offset="100%" stop-color="white" stop-opacity="1"/>
-          </radialGradient>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#g)"/>
-      </svg>`;
-
-      const blurredMasked = await sharp(blurred)
-        .composite([{ input: Buffer.from(maskSvg), blend: 'dest-in' }])
-        .png()
-        .toBuffer();
-
-      return sharp(sharpExtract)
-        .composite([{ input: blurredMasked, blend: 'over' }])
-        .jpeg({ quality: 80, mozjpeg: true, progressive: true })
+      // Kiss point sits at ~50% from top of the AI-edited source.
+      // Place it at ~55% of the output band so faces stay in frame after
+      // the hero's object-position: center 45% crop.
+      const kissY = Math.round(resizedH * 0.50);
+      const targetH = 1500;
+      const top = Math.max(0, Math.min(resizedH - targetH, kissY - Math.round(targetH * 0.55)));
+      return sharp(resized)
+        .extract({ left: 0, top, width: 2400, height: targetH })
+        .jpeg({ quality: 82, mozjpeg: true, progressive: true })
         .toFile(outFile);
     },
   },
