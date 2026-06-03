@@ -187,7 +187,15 @@ const locale = 'en';
       async function loadGuests() {
         clearError();
         try {
-          const res = await fetch('/api/mgmt/guests', { credentials: 'same-origin' });
+          // cache: 'no-store' + cache-busting query param so the
+          // Refresh button always hits the API. Without these, some
+          // browsers will replay a stale cached fetch response even
+          // though the server sets Cache-Control: no-store.
+          const res = await fetch(`/api/mgmt/guests?_=${Date.now()}`, {
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache' },
+          });
           if (res.status === 401) { showError('Session expired. Redirecting to login…'); loginRedirect(); return; }
           if (res.status === 403) { showError('Your account is signed in but is not authorized. Only the configured admin GitHub user can use this page.'); return; }
           if (!res.ok) { showError(`Couldn't load invites (HTTP ${res.status}).`); return; }
