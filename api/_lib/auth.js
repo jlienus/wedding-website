@@ -166,11 +166,42 @@ function isAdmin(req) {
 }
 
 function verifyCronSecret(req) {
-  const got = (req.headers && (req.headers['x-cron-secret'] || req.headers['X-Cron-Secret'])) || '';
+  return _verifyHeaderSecret(req, ['x-cron-secret', 'X-Cron-Secret'], getCronSecret);
+}
+
+function getBackupSecret() {
+  const s = process.env.RSVP_BACKUP_SECRET;
+  if (!s || s.length < 32) {
+    throw new Error('CONFIG_MISSING_RSVP_BACKUP_SECRET');
+  }
+  return s;
+}
+
+function verifyBackupSecret(req) {
+  return _verifyHeaderSecret(req, ['x-backup-secret', 'X-Backup-Secret'], getBackupSecret);
+}
+
+function getInternalSecret() {
+  const s = process.env.RSVP_INTERNAL_SECRET;
+  if (!s || s.length < 32) {
+    throw new Error('CONFIG_MISSING_RSVP_INTERNAL_SECRET');
+  }
+  return s;
+}
+
+function verifyInternalSecret(req) {
+  return _verifyHeaderSecret(req, ['x-internal-secret', 'X-Internal-Secret'], getInternalSecret);
+}
+
+function _verifyHeaderSecret(req, headerNames, getter) {
+  let got = '';
+  for (const h of headerNames) {
+    if (req.headers && req.headers[h]) { got = req.headers[h]; break; }
+  }
   if (!got) return false;
   let expected;
   try {
-    expected = getCronSecret();
+    expected = getter();
   } catch {
     return false;
   }
@@ -197,6 +228,8 @@ module.exports = {
   readAdminPrincipal,
   isAdmin,
   verifyCronSecret,
+  verifyBackupSecret,
+  verifyInternalSecret,
   generateId,
   constantTimeEqual
 };
