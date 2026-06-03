@@ -43,9 +43,86 @@ const VALID_SORBET_CHOICES = new Set(['', 'maracuya', 'mandarina']);
 const VALID_MEAL_CHOICES = new Set(['', 'chicken', 'beef']);
 const VALID_POSTRE_CHOICES = new Set(['', 'chocolate', 'cheesecake', 'tiramisu']);
 
+const LEGACY_CHOICE_MAX_CHARS = 160;
+
+function normalizeChoiceToken(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/&/g, ' and ')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function buildChoiceMap(groups) {
+  const map = new Map();
+  for (const [canonical, labels] of Object.entries(groups)) {
+    map.set(normalizeChoiceToken(canonical), canonical);
+    for (const label of labels) {
+      map.set(normalizeChoiceToken(label), canonical);
+    }
+  }
+  return map;
+}
+
+const LEGACY_ATTENDING_CHOICES = new Map([
+  ['yes', true],
+  ['y', true],
+  ['true', true],
+  ['si', true],
+  ['no', false],
+  ['n', false],
+  ['false', false]
+]);
+
+const LEGACY_ENTRADA_CHOICES = buildChoiceMap({
+  '': ['choose one', 'elige una opcion'],
+  salpicon: ['seafood salpicon delights of the sea', 'salpicon de mariscos delicias del mar', 'salpicon'],
+  hojaldre: ['beef puff pastry in basil sauce', 'hojaldre de res en salsa de albahaca', 'hojaldre'],
+  causa: ['causa limena peruvian potato terrine', 'causa limena terrina peruana de papa', 'causa']
+});
+const LEGACY_SORBET_CHOICES = buildChoiceMap({
+  '': ['choose one', 'elige una opcion'],
+  maracuya: ['passion fruit with ecuadorian spirit', 'maracuya y espiritu del ecuador', 'maracuya'],
+  mandarina: ['mandarin and fresh mint', 'mandarina y menta fresca', 'mandarina']
+});
+const LEGACY_MEAL_CHOICES = buildChoiceMap({
+  '': ['choose one', 'elige una opcion'],
+  chicken: ['chicken cordon bleu in fine herbs sauce', 'cordon bleu de pollo en salsa a las finas hierbas', 'pollo'],
+  beef: ['beef tenderloin in red wine sauce', 'lomo fino en salsa de vino tinto', 'res']
+});
+const LEGACY_POSTRE_CHOICES = buildChoiceMap({
+  '': ['choose one', 'elige una opcion'],
+  chocolate: ['chocolate dome', 'domo de chocolate'],
+  cheesecake: ['red berry cheesecake', 'cheesecake de frutos rojos'],
+  tiramisu: ['classic tiramisu', 'tiramisu clasico']
+});
+
 function clip(value, max) {
   if (typeof value !== 'string') return '';
   return value.trim().slice(0, max);
+}
+
+function normalizeAttending(raw) {
+  if (raw === null || raw === true || raw === false) return { ok: true, value: raw };
+  if (raw === undefined) return { ok: true, value: null };
+  if (typeof raw === 'string') {
+    const token = normalizeChoiceToken(raw);
+    if (!token) return { ok: true, value: null };
+    if (LEGACY_ATTENDING_CHOICES.has(token)) {
+      return { ok: true, value: LEGACY_ATTENDING_CHOICES.get(token) };
+    }
+  }
+  return { ok: false, error: 'attending_invalid' };
+}
+
+function normalizeChoice(raw, legacyMap) {
+  const value = clip(raw, LEGACY_CHOICE_MAX_CHARS);
+  if (!value) return '';
+  const canonical = legacyMap.get(normalizeChoiceToken(value));
+  if (canonical !== undefined) return canonical;
+  return value.toLowerCase();
 }
 
 function emptyPayload() {
@@ -154,32 +231,28 @@ function validatePayload(input, opts = {}) {
 function normalizeAttendee(raw, opts) {
   const isPrimary = !!opts.isPrimary;
 
-  // attending: strict tri-state — true | false | null. Reject everything else.
-  let attending;
-  if (raw.attending === null || raw.attending === true || raw.attending === false) {
-    attending = raw.attending;
-  } else if (raw.attending === undefined) {
-    attending = null;
-  } else {
-    return { ok: false, error: 'attending_invalid' };
-  }
+  // attending: canonical tri-state — true | false | null. Accept old
+  // display-string submissions defensively, but only persist booleans/null.
+  const attendingResult = normalizeAttending(raw.attending);
+  if (!attendingResult.ok) return attendingResult;
+  const attending = attendingResult.value;
 
-  // Per-course choices — each must be in its own enum. Lowercase whatever
-  // they sent. Old payloads predating the 4-course schema only carry
-  // mealChoice; entrada/sorbet/postre default to "" and pass cleanly.
-  const entrada = clip(raw.entradaChoice, 50).toLowerCase();
+  // Per-course choices — each must be in its own canonical English-key enum.
+  // If an old/stale client sends a translated display label, map it back to
+  // the English key before validating and storing.
+  const entrada = normalizeChoice(raw.entradaChoice, LEGACY_ENTRADA_CHOICES);
   if (!VALID_ENTRADA_CHOICES.has(entrada)) {
     return { ok: false, error: 'bad_entrada_choice', detail: entrada };
   }
-  const sorbet = clip(raw.sorbetChoice, 50).toLowerCase();
+  const sorbet = normalizeChoice(raw.sorbetChoice, LEGACY_SORBET_CHOICES);
   if (!VALID_SORBET_CHOICES.has(sorbet)) {
     return { ok: false, error: 'bad_sorbet_choice', detail: sorbet };
   }
-  const meal = clip(raw.mealChoice, 50).toLowerCase();
+  const meal = normalizeChoice(raw.mealChoice, LEGACY_MEAL_CHOICES);
   if (!VALID_MEAL_CHOICES.has(meal)) {
     return { ok: false, error: 'bad_meal_choice', detail: meal };
   }
-  const postre = clip(raw.postreChoice, 50).toLowerCase();
+  const postre = normalizeChoice(raw.postreChoice, LEGACY_POSTRE_CHOICES);
   if (!VALID_POSTRE_CHOICES.has(postre)) {
     return { ok: false, error: 'bad_postre_choice', detail: postre };
   }

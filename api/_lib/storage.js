@@ -306,6 +306,9 @@ async function markResponded(inviteId, payloadJson, opts = {}) {
     partitionKey: INVITES_PARTITION,
     rowKey: inviteId,
     payload: payloadJson,
+    // RSVP submissions are stored canonically in English. The invite locale is
+    // only needed before a response to choose SMS reminder copy.
+    locale: 'en',
     responded: true,
     respondedAt: opts.respondedAt || new Date().toISOString(),
     respondedLate: !!opts.late,

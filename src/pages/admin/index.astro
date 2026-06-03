@@ -445,20 +445,26 @@ const locale = 'en';
         const payload = inv.payload || { primary: {}, additionalGuests: [] };
         const courseLabel = (key: string, value: string): string => {
           const map: Record<string, Record<string, string>> = {
-            entradaChoice: { salpicon: 'salpicón', hojaldre: 'hojaldre', causa: 'causa' },
-            sorbetChoice: { maracuya: 'maracuyá', mandarina: 'mandarina' },
+            entradaChoice: { salpicon: 'salpicon', hojaldre: 'beef-puff-pastry', causa: 'causa' },
+            sorbetChoice: { maracuya: 'passion-fruit', mandarina: 'mandarin-mint' },
             mealChoice: { chicken: 'chicken', beef: 'beef' },
             postreChoice: { chocolate: 'chocolate', cheesecake: 'cheesecake', tiramisu: 'tiramisu' }
           };
           return (map[key] && map[key][value]) || value;
         };
+        const courseName = (key: string): string => ({
+          entradaChoice: 'appetizer',
+          sorbetChoice: 'sorbet',
+          mealChoice: 'main',
+          postreChoice: 'dessert'
+        } as Record<string, string>)[key] || key;
         const renderAttendee = (a: any, label: string) => {
           const courses: string[] = [];
           if (a.attending === true) {
-            if (a.entradaChoice) courses.push(`entrada: ${escapeHtml(courseLabel('entradaChoice', a.entradaChoice))}`);
-            if (a.sorbetChoice) courses.push(`sorbet: ${escapeHtml(courseLabel('sorbetChoice', a.sorbetChoice))}`);
-            if (a.mealChoice) courses.push(`meal: ${escapeHtml(courseLabel('mealChoice', a.mealChoice))}`);
-            if (a.postreChoice) courses.push(`postre: ${escapeHtml(courseLabel('postreChoice', a.postreChoice))}`);
+            if (a.entradaChoice) courses.push(`${courseName('entradaChoice')}: ${escapeHtml(courseLabel('entradaChoice', a.entradaChoice))}`);
+            if (a.sorbetChoice) courses.push(`${courseName('sorbetChoice')}: ${escapeHtml(courseLabel('sorbetChoice', a.sorbetChoice))}`);
+            if (a.mealChoice) courses.push(`${courseName('mealChoice')}: ${escapeHtml(courseLabel('mealChoice', a.mealChoice))}`);
+            if (a.postreChoice) courses.push(`${courseName('postreChoice')}: ${escapeHtml(courseLabel('postreChoice', a.postreChoice))}`);
           }
           return `
           <li>
