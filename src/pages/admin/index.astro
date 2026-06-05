@@ -1090,8 +1090,11 @@ const locale: Locale = 'en';
             status.dataset.tone = 'error';
             return;
           }
+          const submitOriginalHtml = submit.innerHTML;
           submit.disabled = true;
-          status.textContent = 'Sending…';
+          submit.setAttribute('aria-busy', 'true');
+          submit.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span><span>Sending sign-in link\u2026</span>';
+          status.textContent = '';
           status.dataset.tone = '';
           try {
             const res = await fetch('/api/mgmt/admin-login-request', {
@@ -1108,13 +1111,15 @@ const locale: Locale = 'en';
               status.textContent = `Sign-in request failed (HTTP ${res.status}). Try again.`;
               status.dataset.tone = 'error';
             } else {
-              status.textContent = 'If that address is allowlisted, a sign-in link is on its way. Check your inbox (and spam) in the next minute.';
+              status.textContent = 'If that address can sign in, a link is on the way. Check your inbox \u2014 and spam \u2014 within the next minute.';
               status.dataset.tone = 'ok';
             }
           } catch (err: any) {
             status.textContent = `Couldn\u2019t reach the sign-in service: ${err && err.message ? err.message : 'unknown error'}.`;
             status.dataset.tone = 'error';
           } finally {
+            submit.innerHTML = submitOriginalHtml;
+            submit.removeAttribute('aria-busy');
             submit.disabled = false;
           }
         });
@@ -2372,6 +2377,22 @@ const locale: Locale = 'en';
       border-color: var(--color-gold, #c9a961);
     }
     .admin-gate-email-status:empty { display: none; }
+    /* Inline button spinner used while the magic-link request is in flight.
+       Inherits currentColor so it works on both filled and ghost buttons. */
+    .btn-spinner {
+      display: inline-block;
+      width: 0.95em;
+      height: 0.95em;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: btn-spin 0.7s linear infinite;
+      vertical-align: -0.15em;
+    }
+    @keyframes btn-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      .btn-spinner { animation-duration: 2s; }
+    }
     /* "or" divider between the email submit and the GitHub fallback. */
     .admin-gate-divider {
       display: flex;
