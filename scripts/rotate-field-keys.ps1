@@ -48,9 +48,21 @@ $ErrorActionPreference = 'Stop'
 
 function Invoke-Az {
     param([Parameter(Mandatory)][string[]]$AzArgs)
-    $out = az @AzArgs 2>&1
-    if ($LASTEXITCODE -ne 0) { throw "az $($AzArgs -join ' ') failed: $out" }
-    return $out
+    # Suppress noisy stderr (cryptography 32-bit Python warning on Windows az,
+    # deprecation notices, etc.) while still propagating real failures via
+    # $LASTEXITCODE. We can't 2>&1 because the warnings would contaminate the
+    # JSON stdout we feed to ConvertFrom-Json.
+    $tmpErr = [System.IO.Path]::GetTempFileName()
+    try {
+        $out = az @AzArgs 2>$tmpErr
+        if ($LASTEXITCODE -ne 0) {
+            $errText = Get-Content -Raw -LiteralPath $tmpErr -ErrorAction SilentlyContinue
+            throw "az $($AzArgs -join ' ') failed: $errText$out"
+        }
+        return $out
+    } finally {
+        Remove-Item -LiteralPath $tmpErr -ErrorAction SilentlyContinue
+    }
 }
 
 function New-FieldKey {
@@ -66,18 +78,19 @@ function Get-SwaSetting {
     $json = Invoke-Az @('staticwebapp', 'appsettings', 'list',
         '-n', $SwaName, '-g', $ResourceGroup, '--subscription', $Subscription, '-o', 'json')
     $obj = $json | ConvertFrom-Json
-    # The Azure CLI returns app settings as a top-level object with property
-    # names matching setting names.
-    return $obj.$Name
+    # `az staticwebapp appsettings list` returns the ARM resource shape:
+    # { id, name, properties: { KEY: VALUE, ... }, ... }
+    return $obj.properties.$Name
 }
 
 function Set-SwaSettings {
     param([Parameter(Mandatory)][hashtable]$Settings)
     $pairs = @()
     foreach ($k in $Settings.Keys) { $pairs += "$k=$($Settings[$k])" }
-    $null = Invoke-Az @('staticwebapp', 'appsettings', 'set',
+    $azArgs = @('staticwebapp', 'appsettings', 'set',
         '-n', $SwaName, '-g', $ResourceGroup, '--subscription', $Subscription,
         '--setting-names') + $pairs + @('-o', 'none')
+    $null = Invoke-Az -AzArgs $azArgs
 }
 
 function Remove-SwaSetting {
@@ -110,7 +123,6 @@ $oldCurrent = Get-SwaSetting -Name 'RSVP_FIELD_KEY_CURRENT'
 if (-not $oldCurrent) {
     throw "RSVP_FIELD_KEY_CURRENT is not set on $SwaName -- bootstrap with init-field-keys.ps1 first."
 }
-$oldId = ([System.Convert]::FromBase64String($oldCurrent) | ForEach-Object { $_.ToString('x2') }) -join ''
 $oldHash = [System.Security.Cryptography.SHA256]::HashData([System.Convert]::FromBase64String($oldCurrent))
 $oldId8 = (($oldHash | ForEach-Object { $_.ToString('x2') }) -join '').Substring(0, 8)
 Write-Host "       current keyId8: $oldId8"

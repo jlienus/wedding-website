@@ -34,9 +34,21 @@ $ErrorActionPreference = 'Stop'
 
 function Invoke-Az {
     param([Parameter(Mandatory)][string[]]$AzArgs)
-    $out = az @AzArgs 2>&1
-    if ($LASTEXITCODE -ne 0) { throw "az $($AzArgs -join ' ') failed: $out" }
-    return $out
+    # Suppress noisy stderr (cryptography 32-bit Python warning on Windows az,
+    # deprecation notices, etc.) while still propagating real failures via
+    # $LASTEXITCODE. We can't 2>&1 because the warnings would contaminate the
+    # JSON stdout we feed to ConvertFrom-Json.
+    $tmpErr = [System.IO.Path]::GetTempFileName()
+    try {
+        $out = az @AzArgs 2>$tmpErr
+        if ($LASTEXITCODE -ne 0) {
+            $errText = Get-Content -Raw -LiteralPath $tmpErr -ErrorAction SilentlyContinue
+            throw "az $($AzArgs -join ' ') failed: $errText$out"
+        }
+        return $out
+    } finally {
+        Remove-Item -LiteralPath $tmpErr -ErrorAction SilentlyContinue
+    }
 }
 
 function New-FieldKey {
@@ -58,7 +70,7 @@ if (-not $PSCmdlet.ShouldProcess("$SwaName app settings", "Generate + set RSVP_F
 Write-Host "`n[1/3] Checking for existing keys..." -ForegroundColor Cyan
 $existing = Invoke-Az @('staticwebapp', 'appsettings', 'list',
     '-n', $SwaName, '-g', $ResourceGroup, '--subscription', $Subscription, '-o', 'json') | ConvertFrom-Json
-if ($existing.RSVP_FIELD_KEY_CURRENT -and -not $Force) {
+if ($existing.properties.RSVP_FIELD_KEY_CURRENT -and -not $Force) {
     Write-Host "       RSVP_FIELD_KEY_CURRENT already set. Refusing to overwrite without -Force." -ForegroundColor Red
     Write-Host "       To rotate, use rotate-field-keys.ps1." -ForegroundColor Red
     exit 2
