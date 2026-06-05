@@ -1551,12 +1551,12 @@ const locale: Locale = 'en';
         if (isExpanded) dataRowClasses.push('is-expanded');
         return `
           <tr data-invite-id="${escapeHtml(inv.inviteId)}" class="${dataRowClasses.join(' ')}">
-            <td><span class="admin-chevron" aria-hidden="true">▸</span>${escapeHtml(idLabel)}${totalCard}${optBadge}${hardBadge}</td>
-            <td>${respondedBadge}</td>
-            <td>${headcount}</td>
-            <td>${phoneCell}${inv.phone ? ` <span class="admin-muted">${escapeHtml(inv.locale)}</span>` : ''}</td>
-            <td>${lastReminder}</td>
-            <td>${sendBtn} ${editBtn} ${deleteBtn}</td>
+            <td data-label="Primary invitee" class="admin-cell--primary"><span class="admin-chevron" aria-hidden="true">▸</span>${escapeHtml(idLabel)}${totalCard}${optBadge}${hardBadge}</td>
+            <td data-label="Responded">${respondedBadge}</td>
+            <td data-label="Headcount">${headcount}</td>
+            <td data-label="Phone · Locale">${phoneCell}${inv.phone ? ` <span class="admin-muted">${escapeHtml(inv.locale)}</span>` : ''}</td>
+            <td data-label="Last reminder">${lastReminder}</td>
+            <td data-label="Actions" class="admin-cell--actions">${sendBtn} ${editBtn} ${deleteBtn}</td>
           </tr>
           <tr class="admin-detail-row" data-detail-for="${escapeHtml(inv.inviteId)}"${isExpanded ? '' : ' hidden'}>
             <td colspan="6">${buildDetailHtml(row)}</td>
@@ -2840,5 +2840,178 @@ const locale: Locale = 'en';
     .bulk-action--error { color: #8a2c2c; font-weight: 600; }
     .bulk-action--pending { color: #999; font-style: italic; }
     .bulk-rsvp-note { color: #2a6a2a; font-style: italic; font-size: 0.8rem; margin-left: 0.3rem; }
+
+    /* ============================================================
+       Mobile responsive layer (admin)
+       ============================================================
+       Two-tier approach:
+       - Tier 1 polish: tighten card headers, action button rows,
+         events feed, and modal margins for narrow viewports.
+       - Tier 2 cards: collapse the Invitations table into a
+         card-per-invite layout below 720px so it reads naturally
+         on phones without horizontal scrolling. The expand /
+         collapse + detail-row logic stays untouched -- only the
+         visual layout changes via display:block + ::before labels.
+       The bulk-preview table intentionally stays as horizontal
+       scroll: it is a one-time-glance flow, not a primary surface.
+    */
+    @media (max-width: 48rem) {
+      /* Tier 1 polish */
+      .admin { padding: var(--space-3) 0; }
+      .admin .container { padding-left: 1rem; padding-right: 1rem; }
+      .admin-header { flex-direction: column; align-items: stretch; gap: 0.5rem; }
+      .admin-card { padding: var(--space-2); }
+      .admin-card-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.6rem;
+      }
+      .admin-card-actions {
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+      .admin-card-actions .btn { flex: 1 1 auto; justify-content: center; min-height: 40px; }
+      .admin-row.bulk-controls { gap: 0.4rem; }
+      .admin-row.bulk-controls .btn { flex: 1 1 auto; justify-content: center; min-height: 40px; }
+      .admin-row.bulk-controls input[type="file"] { width: 100%; }
+
+      /* Events feed: keep our existing breakpoint working but make
+         the badges + actor wrap a bit tighter at very small widths. */
+      .admin-event { padding: 0.6rem 0.7rem; }
+
+      /* Modal: respect iOS safe-area + give a bit more breathing room. */
+      .admin-modal {
+        padding: var(--space-2);
+        padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
+      }
+      .admin-modal-panel { max-height: calc(100dvh - 2rem); }
+      .admin-modal-actions { flex-wrap: wrap; justify-content: stretch; }
+      .admin-modal-actions .btn { flex: 1 1 auto; min-height: 40px; }
+    }
+
+    /* Tier 2: card-per-invite layout for the main Invitations table. */
+    @media (max-width: 45rem) {
+      .admin-table-wrap { overflow-x: visible; }
+      #admin-table { display: block; width: 100%; }
+      #admin-table thead { display: none; }
+      #admin-table tbody { display: block; }
+      #admin-table tbody > tr { display: block; }
+
+      #admin-table tr.admin-data-row {
+        position: relative;
+        background: #fff;
+        border: 1px solid var(--color-rule, #e8e0c8);
+        border-radius: var(--radius-md, 8px);
+        padding: 0.65rem 0.85rem 0.55rem;
+        margin: 0 0 0.6rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+      }
+      #admin-table tr.admin-data-row.is-responded {
+        background: rgba(80, 160, 80, 0.04);
+        border-color: rgba(80, 160, 80, 0.35);
+      }
+      #admin-table tr.admin-data-row.is-expanded {
+        background: rgba(201, 169, 97, 0.10);
+        border-color: var(--color-gold-deep, #8a6a2c);
+        box-shadow: 0 2px 6px rgba(138, 106, 44, 0.18);
+      }
+      #admin-table tr.admin-data-row.is-expanded > td:first-child {
+        box-shadow: none; /* the inset gold stripe doesn't apply in card mode */
+      }
+
+      #admin-table tr.admin-data-row > td {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 0.75rem;
+        padding: 0.32rem 0;
+        border-bottom: 1px dashed rgba(0, 0, 0, 0.06);
+        text-align: right;
+      }
+      #admin-table tr.admin-data-row > td:last-child { border-bottom: 0; }
+      #admin-table tr.admin-data-row > td::before {
+        content: attr(data-label);
+        flex: 0 0 auto;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--color-text-muted, #888);
+        text-align: left;
+      }
+
+      /* Primary cell: act as a card header -- name large, label hidden,
+         chevron pinned right so the whole "card top" reads as a tappable
+         row. */
+      #admin-table tr.admin-data-row > td.admin-cell--primary {
+        flex-direction: row-reverse;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        align-items: center;
+        padding: 0.1rem 0 0.55rem;
+        margin-bottom: 0.15rem;
+        border-bottom: 1px solid var(--color-rule, #e8e0c8);
+        font-size: 1rem;
+        font-weight: 600;
+        text-align: left;
+      }
+      #admin-table tr.admin-data-row > td.admin-cell--primary::before {
+        content: ""; /* drop the "Primary invitee" label -- the name itself is the header */
+        display: none;
+      }
+      #admin-table tr.admin-data-row > td.admin-cell--primary .admin-chevron {
+        margin-left: auto;
+        margin-right: 0;
+        font-size: 1rem;
+      }
+
+      /* Actions cell: full-width row of buttons, stretched + tappable. */
+      #admin-table tr.admin-data-row > td.admin-cell--actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.4rem;
+        padding-top: 0.55rem;
+        margin-top: 0.15rem;
+        border-top: 1px solid var(--color-rule, #e8e0c8);
+      }
+      #admin-table tr.admin-data-row > td.admin-cell--actions::before {
+        align-self: flex-start;
+      }
+      #admin-table tr.admin-data-row > td.admin-cell--actions .btn {
+        margin: 0;
+        flex: 1 1 auto;
+        justify-content: center;
+        min-height: 40px;
+      }
+
+      /* Detail row: detach from the data-row card and present as its own
+         pad below. The grid system gives us colspan=6 here; force the
+         single td to fill the block. */
+      #admin-table tr.admin-detail-row { margin: -0.6rem 0 0.7rem; }
+      #admin-table tr.admin-detail-row > td {
+        display: block;
+        padding: 0;
+        box-shadow: none;
+        background: #faf3e0;
+        border: 1px solid var(--color-gold-deep, #8a6a2c);
+        border-top: 0;
+        border-radius: 0 0 var(--radius-md, 8px) var(--radius-md, 8px);
+      }
+      #admin-table tr.admin-detail-row > td .admin-detail-inner {
+        padding: 0.85rem 0.95rem 0.9rem;
+      }
+
+      /* Loading and empty-state pseudo-rows: keep them simple, no card chrome. */
+      #admin-table tbody > tr:not(.admin-data-row):not(.admin-detail-row) {
+        display: block;
+        text-align: center;
+        padding: 0.85rem 0;
+      }
+      #admin-table tbody > tr:not(.admin-data-row):not(.admin-detail-row) > td {
+        display: block;
+        border: 0;
+        padding: 0;
+      }
+    }
   </style>
 </Base>
