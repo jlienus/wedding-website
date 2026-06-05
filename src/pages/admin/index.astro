@@ -25,7 +25,6 @@ const locale: Locale = 'en';
     <section class="container container--narrow">
       <header class="admin-gate-header">
         <h1>Admin sign-in</h1>
-        <p class="admin-muted">Choose either sign-in method. Only allowlisted accounts can access the admin dashboard.</p>
       </header>
 
       <div id="admin-gate-status" class="admin-status admin-gate-status" role="status" aria-live="polite" hidden></div>
@@ -33,13 +32,11 @@ const locale: Locale = 'en';
       <div class="admin-gate-grid">
         <article class="admin-card admin-gate-card">
           <h2>Sign in with GitHub</h2>
-          <p class="admin-muted">Recommended for John. Routes through GitHub OAuth via Azure Static Web Apps.</p>
           <a id="admin-github-signin" class="btn btn--gold" href="/.auth/login/github?post_login_redirect_uri=/admin">Sign in with GitHub</a>
         </article>
 
         <article class="admin-card admin-gate-card">
           <h2>Sign in with email</h2>
-          <p class="admin-muted">A one-time sign-in link will be emailed to allowlisted addresses. The link expires in 10 minutes.</p>
           <form id="admin-email-form" class="admin-gate-form" novalidate>
             <label class="admin-form-row">
               <span class="admin-label">Email</span>
@@ -2366,6 +2363,32 @@ const locale: Locale = 'en';
     .admin-gate-card .btn { width: 100%; justify-content: center; }
     .admin-gate-form { display: flex; flex-direction: column; gap: 0.6rem; }
     .admin-gate-form .admin-form-row { margin: 0; }
+    .admin-gate-form .admin-label {
+      font-size: 0.85rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--color-text-muted, #6b6b6b);
+      margin-bottom: 0.35rem;
+    }
+    .admin-gate-form input[type="email"] {
+      width: 100%;
+      padding: 0.7rem 0.85rem;
+      font: inherit;
+      font-size: 1rem;
+      color: var(--color-text, #2a2a2a);
+      background: #fff;
+      border: 1px solid var(--color-silver, #C5C7CC);
+      border-radius: var(--radius-md, 8px);
+      box-sizing: border-box;
+      transition: border-color var(--transition, 180ms ease), box-shadow var(--transition, 180ms ease);
+    }
+    .admin-gate-form input[type="email"]::placeholder { color: #b5b5b5; }
+    .admin-gate-form input[type="email"]:hover { border-color: var(--color-gold, #c9a961); }
+    .admin-gate-form input[type="email"]:focus {
+      outline: 2px solid var(--color-gold, #c9a961);
+      outline-offset: 1px;
+      border-color: var(--color-gold, #c9a961);
+    }
     .admin-gate-email-status:empty { display: none; }
     .admin-card {
       background: #fff;
