@@ -36,6 +36,23 @@ node scripts/test-rsvp-lookup.cjs    # exit 0 on all pass, 1 on any failure
 ```
 
 
+## `mask-sms-log-phones.cjs` — One-time mask of full numbers in `rsvpSmsLog`
+
+Companion to the field-encryption work. Existing rows in the SMS audit log
+(`rsvpSmsLog.toPhone`) carry full E.164 numbers; new writes have always
+masked since the encryption change. This sweep retro-fits the old rows in
+place.
+
+Idempotent — already-masked rows (`***NNNN`) are skipped. Empty rows are
+skipped. Writes go through `updateEntity('Merge')` so no other columns
+move. Emits an `admin.sms_log_mask_sweep` audit event on success.
+
+```powershell
+$env:RSVP_STORAGE_CONNECTION = "<connection string>"
+node scripts/mask-sms-log-phones.cjs --dry-run     # preview
+node scripts/mask-sms-log-phones.cjs --verbose     # actually mask
+```
+
 ## `init-field-keys.ps1` — One-time bootstrap of PII field-encryption keys
 
 Generates and pushes the two SWA app settings that `api/_lib/fieldcrypto.js`

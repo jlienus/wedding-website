@@ -114,6 +114,21 @@ function normalizePhone(p) {
   return '';
 }
 
+// Returns an irreversible last-4 mask suitable for the rsvpSmsLog audit
+// table. The full phone is on the matching rsvpInvites row (encrypted),
+// so the log never needs to carry it -- the mask is enough for "did this
+// invite get the right message?" debugging in /admin without leaking
+// dialable digits if the log itself is ever exfiltrated separately.
+// Idempotent: already-masked values pass through so the migration sweep
+// can be re-run safely.
+function maskPhone(value) {
+  if (typeof value !== 'string' || value.length === 0) return '';
+  if (value.startsWith('***')) return value;
+  const digits = value.replace(/[^\d]/g, '');
+  if (digits.length < 4) return '*****';
+  return '***' + digits.slice(-4);
+}
+
 // --- Invites --------------------------------------------------------------
 
 // Reads a stored entity into the API-shaped invite object.
@@ -402,7 +417,9 @@ async function appendSmsLog(inviteId, entry) {
     type: entry.type || 'reminder',
     body: entry.body || '',
     bodyLen: (entry.body || '').length,
-    toPhone: entry.toPhone || '',
+    // Always store only the last-4 mask in the audit log; the full number
+    // lives encrypted on the rsvpInvites row this entry is partitioned by.
+    toPhone: maskPhone(entry.toPhone || ''),
     deliveryStatus: entry.deliveryStatus || 'pending',
     errorCode: entry.errorCode || '',
     sentAt: entry.sentAt || new Date().toISOString(),
@@ -690,6 +707,7 @@ module.exports = {
   // helpers
   normalizeName,
   normalizePhone,
+  maskPhone,
   // invites
   getInvite,
   upsertInvite,
