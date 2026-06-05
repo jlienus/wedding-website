@@ -15,6 +15,16 @@
 //                 Columns: type, body, bodyLen, toPhone, deliveryStatus,
 //                          errorCode, sentAt, correlationId
 //
+//   rsvpEvents    PK='events'                RK=<revTimestamp>_<random>
+//                 Columns: type, actor, summary, meta, createdAt
+//   adminMagicNonces  PK=<email-lowercased>   RK=<nonceHash>
+//                 Columns: expiresAt (ISO 8601 string)
+//                 Used to enforce single-use admin magic-link tokens. A row
+//                 only exists once a nonce has been CLAIMED; existence ==
+//                 already-used. Conditional insert (createEntity returning
+//                 409 EntityAlreadyExists) makes the claim atomic across
+//                 concurrent verify calls.
+//
 // Older v1 tables (rsvpParties, rsvpMembers, rsvpResponses) are obsolete and
 // dropped by scripts/drop-old-rsvp-tables.cjs.
 
@@ -25,13 +35,14 @@ const TABLE_INVITES = 'rsvpInvites';
 const TABLE_SMSLOG = 'rsvpSmsLog';
 const TABLE_SETTINGS = 'rsvpSettings';
 const TABLE_EVENTS = 'rsvpEvents';
+const TABLE_ADMIN_NONCES = 'adminMagicNonces';
 
 // Tables to drop on migration cutover.
 const OBSOLETE_TABLES = ['rsvpParties', 'rsvpMembers', 'rsvpResponses'];
 
 const INVITES_PARTITION = 'invites'; // single fixed partition
 const EVENTS_PARTITION = 'events';   // single fixed partition; small (~5k rows lifetime)
-const ALL_TABLES = [TABLE_INVITES, TABLE_SMSLOG, TABLE_SETTINGS, TABLE_EVENTS];
+const ALL_TABLES = [TABLE_INVITES, TABLE_SMSLOG, TABLE_SETTINGS, TABLE_EVENTS, TABLE_ADMIN_NONCES];
 
 let _clients = null;
 
@@ -66,6 +77,7 @@ function getClients() {
     smslog: make(TABLE_SMSLOG),
     settings: make(TABLE_SETTINGS),
     events: make(TABLE_EVENTS),
+    adminNonces: make(TABLE_ADMIN_NONCES),
     _accountName: name,
     _endpoint: endpoint,
     _key: key,
@@ -80,7 +92,7 @@ async function ensureTables() {
   // it means the schema is already set up. Swallow that one specific error
   // per table so this function is safely idempotent.
   await Promise.all(
-    [c.invites, c.smslog, c.settings, c.events].map(async (tc) => {
+    [c.invites, c.smslog, c.settings, c.events, c.adminNonces].map(async (tc) => {
       try {
         await tc.createTable();
       } catch (err) {
@@ -671,6 +683,91 @@ async function setSettings(patch) {
   return next;
 }
 
+// --- Admin magic-link nonces ---------------------------------------------
+// Single-use enforcement for admin email magic links. Token verification
+// calls claimAdminNonce(email, nonceHash, expiresAtIso). The atomic
+// "claim" is an unconditional Table createEntity -- success means we
+// inserted, 409 EntityAlreadyExists means a previous verify call already
+// consumed this nonce. The row carries `expiresAt` purely so the prune
+// helper can sweep old rows; correctness does NOT depend on prune ever
+// running because the HMAC signature on the token still validates expiry
+// independently.
+
+async function claimAdminNonce(emailLower, nonceHash, expiresAtIso) {
+  if (!emailLower || !nonceHash) {
+    return { claimed: false, reason: 'bad_input' };
+  }
+  const c = getClients();
+  const entity = {
+    partitionKey: emailLower,
+    rowKey: nonceHash,
+    expiresAt: expiresAtIso || ''
+  };
+  try {
+    await c.adminNonces.createEntity(entity);
+    return { claimed: true };
+  } catch (err) {
+    const status = err && err.statusCode;
+    const code = err && (err.code || err.errorCode || '');
+    if (status === 409 || code === 'EntityAlreadyExists') {
+      return { claimed: false, reason: 'already_used' };
+    }
+    // Table missing -> lazy-create, then retry once. Brand-new deploys
+    // won't have hit ensureTables yet.
+    const isTableMissing = status === 404 || code === 'TableNotFound';
+    if (!isTableMissing) throw err;
+    try { await c.adminNonces.createTable(); }
+    catch (e2) {
+      if (!(e2 && (e2.statusCode === 409 || e2.code === 'TableAlreadyExists'))) throw e2;
+    }
+    try {
+      await c.adminNonces.createEntity(entity);
+      return { claimed: true };
+    } catch (err2) {
+      const status2 = err2 && err2.statusCode;
+      const code2 = err2 && (err2.code || err2.errorCode || '');
+      if (status2 === 409 || code2 === 'EntityAlreadyExists') {
+        return { claimed: false, reason: 'already_used' };
+      }
+      throw err2;
+    }
+  }
+}
+
+// Best-effort sweep of expired admin nonces. Safe to call from a cron or
+// from a periodic admin action. Bounded by `maxRows` to keep one invocation
+// cheap; remaining rows roll over to the next sweep.
+async function pruneExpiredAdminNonces(maxRows = 500) {
+  const c = getClients();
+  const nowIso = new Date().toISOString();
+  let deleted = 0;
+  let scanned = 0;
+  try {
+    for await (const e of c.adminNonces.listEntities()) {
+      scanned += 1;
+      if (scanned >= maxRows + 1) break;
+      const exp = String(e.expiresAt || '');
+      if (!exp || exp < nowIso) {
+        try {
+          await c.adminNonces.deleteEntity(e.partitionKey, e.rowKey);
+          deleted += 1;
+        } catch (err) {
+          // Race / already-deleted -- ignore.
+          const status = err && err.statusCode;
+          if (status === 404) continue;
+          throw err;
+        }
+      }
+    }
+  } catch (err) {
+    const status = err && err.statusCode;
+    const code = err && (err.code || err.errorCode || '');
+    if (status === 404 || code === 'TableNotFound') return { scanned: 0, deleted: 0 };
+    throw err;
+  }
+  return { scanned, deleted };
+}
+
 // --- Migration helper ----------------------------------------------------
 
 // One-shot helper to drop the obsolete v1 tables. Safe to run multiple times.
@@ -731,6 +828,9 @@ module.exports = {
   // events
   appendEvent,
   listEvents,
+  // admin magic-link nonces (single-use enforcement)
+  claimAdminNonce,
+  pruneExpiredAdminNonces,
   // migration
   dropObsoleteTables,
   // Test hooks -- exposed so unit tests can exercise the encryption + blind

@@ -12,13 +12,63 @@ const locale: Locale = 'en';
 ---
 
 <Base title="RSVP Admin · John & Diana" description="RSVP administration dashboard" lang={locale}>
-  <main class="admin">
+
+  <!--
+    Sign-in chooser. Shown when the caller has no admin auth at all
+    (no GitHub SWA principal AND no admin_session cookie). Hidden by
+    default; revealed by the script after /api/mgmt/admin-whoami says
+    authed:false. Two parallel paths: built-in GitHub (the existing
+    primary admin path) and email magic-link (so Diana can sign in
+    without needing a GitHub account).
+  -->
+  <main id="admin-gate" class="admin admin-gate" hidden>
+    <section class="container container--narrow">
+      <header class="admin-gate-header">
+        <h1>Admin sign-in</h1>
+        <p class="admin-muted">Choose either sign-in method. Only allowlisted accounts can access the admin dashboard.</p>
+      </header>
+
+      <div id="admin-gate-status" class="admin-status admin-gate-status" role="status" aria-live="polite" hidden></div>
+
+      <div class="admin-gate-grid">
+        <article class="admin-card admin-gate-card">
+          <h2>Sign in with GitHub</h2>
+          <p class="admin-muted">Recommended for John. Routes through GitHub OAuth via Azure Static Web Apps.</p>
+          <a id="admin-github-signin" class="btn btn--gold" href="/.auth/login/github?post_login_redirect_uri=/admin">Sign in with GitHub</a>
+        </article>
+
+        <article class="admin-card admin-gate-card">
+          <h2>Sign in with email</h2>
+          <p class="admin-muted">A one-time sign-in link will be emailed to allowlisted addresses. The link expires in 10 minutes.</p>
+          <form id="admin-email-form" class="admin-gate-form" novalidate>
+            <label class="admin-form-row">
+              <span class="admin-label">Email</span>
+              <input
+                id="admin-email-input"
+                name="email"
+                type="email"
+                autocomplete="email"
+                inputmode="email"
+                maxlength="254"
+                required
+                placeholder="you@example.com"
+              />
+            </label>
+            <button id="admin-email-submit" type="submit" class="btn btn--gold btn--small">Email me a sign-in link</button>
+            <div id="admin-email-status" class="admin-status admin-gate-email-status" role="status" aria-live="polite"></div>
+          </form>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <main id="admin-app" class="admin" hidden>
     <section class="container">
       <header class="admin-header">
         <h1>RSVP Admin</h1>
         <div class="admin-user">
           <span id="admin-user-label">…</span>
-          <a href="/.auth/logout?post_logout_redirect_uri=/" class="rsvp-link">Log out</a>
+          <a id="admin-logout-link" href="/.auth/logout?post_logout_redirect_uri=/" class="rsvp-link">Log out</a>
         </div>
       </header>
 
@@ -989,22 +1039,142 @@ const locale: Locale = 'en';
       let LAST_EVENTS: any[] = [];
       let EXPANDED_ID: string | null = null;
 
-      function loginRedirect() {
-        const target = location.pathname + location.search;
-        location.href = '/.auth/login/github?post_login_redirect_uri=' + encodeURIComponent(target);
+      function showGate(statusMsg?: string) {
+        const app = document.getElementById('admin-app');
+        const gate = document.getElementById('admin-gate');
+        if (app) (app as HTMLElement).hidden = true;
+        if (gate) (gate as HTMLElement).hidden = false;
+        const statusEl = document.getElementById('admin-gate-status') as HTMLDivElement | null;
+        if (statusEl) {
+          if (statusMsg) {
+            statusEl.textContent = statusMsg;
+            statusEl.dataset.tone = 'error';
+            statusEl.hidden = false;
+          } else {
+            statusEl.textContent = '';
+            statusEl.hidden = true;
+          }
+        }
       }
+
+      function showApp() {
+        const gate = document.getElementById('admin-gate');
+        const app = document.getElementById('admin-app');
+        if (gate) (gate as HTMLElement).hidden = true;
+        if (app) (app as HTMLElement).hidden = false;
+      }
+
+      // Read ?login=... query param (set on redirect from confirm.astro on
+      // a failure path) and translate it into a human-readable message.
+      function loginQueryMessage(): string {
+        try {
+          const params = new URLSearchParams(location.search);
+          const code = (params.get('login') || '').toLowerCase();
+          if (!code) return '';
+          if (code === 'expired') return 'That sign-in link expired. Request a new one below.';
+          if (code === 'replayed') return 'That sign-in link was already used. Request a new one below.';
+          if (code === 'invalid') return 'That sign-in link is invalid. Request a new one below.';
+          if (code === 'rate_limited') return 'Too many sign-in attempts. Please wait a minute and try again.';
+        } catch {}
+        return '';
+      }
+
+      // Wire up the email magic-link form. POSTs the address to
+      // admin-login-request and surfaces a generic 200 confirmation
+      // regardless of whether the address is allowlisted, so the gate
+      // can't be used as an enumeration oracle.
+      function wireEmailGate() {
+        const form = document.getElementById('admin-email-form') as HTMLFormElement | null;
+        const input = document.getElementById('admin-email-input') as HTMLInputElement | null;
+        const submit = document.getElementById('admin-email-submit') as HTMLButtonElement | null;
+        const status = document.getElementById('admin-email-status') as HTMLDivElement | null;
+        if (!form || !input || !submit || !status) return;
+        form.addEventListener('submit', async (ev) => {
+          ev.preventDefault();
+          const email = (input.value || '').trim();
+          if (!email) {
+            status.textContent = 'Enter an email address.';
+            status.dataset.tone = 'error';
+            return;
+          }
+          submit.disabled = true;
+          status.textContent = 'Sending…';
+          status.dataset.tone = '';
+          try {
+            const res = await fetch('/api/mgmt/admin-login-request', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
+              cache: 'no-store',
+              body: JSON.stringify({ email })
+            });
+            if (res.status === 429) {
+              status.textContent = 'Too many sign-in attempts from this network. Please wait a minute and try again.';
+              status.dataset.tone = 'error';
+            } else if (!res.ok) {
+              status.textContent = `Sign-in request failed (HTTP ${res.status}). Try again.`;
+              status.dataset.tone = 'error';
+            } else {
+              status.textContent = 'If that address is allowlisted, a sign-in link is on its way. Check your inbox (and spam) in the next minute.';
+              status.dataset.tone = 'ok';
+            }
+          } catch (err: any) {
+            status.textContent = `Couldn\u2019t reach the sign-in service: ${err && err.message ? err.message : 'unknown error'}.`;
+            status.dataset.tone = 'error';
+          } finally {
+            submit.disabled = false;
+          }
+        });
+      }
+      wireEmailGate();
 
       async function ensureAuthed(): Promise<boolean> {
         try {
-          const res = await fetch('/.auth/me', { credentials: 'same-origin' });
-          if (!res.ok) { loginRedirect(); return false; }
-          const data = await res.json();
-          const principal = data && data.clientPrincipal;
-          if (!principal) { loginRedirect(); return false; }
-          if (userLabel) userLabel.textContent = `${principal.userDetails || principal.userId} (${principal.identityProvider})`;
+          const res = await fetch('/api/mgmt/admin-whoami', {
+            credentials: 'same-origin',
+            cache: 'no-store'
+          });
+          if (!res.ok) {
+            // whoami should always 200 — if it didn't, treat as not-authed.
+            showGate(loginQueryMessage() || 'Could not verify sign-in. Please sign in again.');
+            return false;
+          }
+          const data = await res.json().catch(() => null) as any;
+          if (!data || !data.authed) {
+            showGate(loginQueryMessage());
+            return false;
+          }
+          showApp();
+          if (userLabel) {
+            const label = typeof data.label === 'string' ? data.label : '';
+            const suffix = data.mode === 'email' ? '(admin email)' : '(github)';
+            userLabel.textContent = label ? `${label} ${suffix}` : suffix;
+          }
+          // The logout link is anchored on GitHub auth by default. For the
+          // email path we override the href + intercept the click to POST to
+          // admin-logout so the admin_session cookie is cleared too.
+          const logoutLink = document.getElementById('admin-logout-link') as HTMLAnchorElement | null;
+          if (logoutLink) {
+            if (data.mode === 'email') {
+              logoutLink.href = '/';
+              logoutLink.addEventListener('click', async (ev) => {
+                ev.preventDefault();
+                try {
+                  await fetch('/api/mgmt/admin-logout', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    cache: 'no-store'
+                  });
+                } catch {}
+                location.replace('/');
+              });
+            } else {
+              logoutLink.href = '/.auth/logout?post_logout_redirect_uri=/';
+            }
+          }
           return true;
         } catch {
-          showError('Could not contact /.auth/me. Try reloading.');
+          showGate('Could not contact the admin service. Please reload.');
           return false;
         }
       }
@@ -1021,8 +1191,8 @@ const locale: Locale = 'en';
             cache: 'no-store',
             headers: { 'Cache-Control': 'no-cache' },
           });
-          if (res.status === 401) { showError('Session expired. Redirecting to login…'); loginRedirect(); return; }
-          if (res.status === 403) { showError('Your account is signed in but is not authorized. Only the configured admin GitHub user can use this page.'); return; }
+          if (res.status === 401) { showError('Session expired. Showing sign-in…'); showGate('Your session expired. Please sign in again.'); return; }
+          if (res.status === 403) { showError('Your account is signed in but is not authorized.'); return; }
           if (!res.ok) { showError(`Couldn't load invites (HTTP ${res.status}).`); return; }
           const data = await res.json();
           LAST_DATA = data;
@@ -2169,6 +2339,27 @@ const locale: Locale = 'en';
     .admin-header { display:flex; justify-content:space-between; align-items:flex-start; gap: var(--space-3); margin-bottom: var(--space-3); }
     .admin-header h1 { margin: 0; }
     .admin-user { font-size: 0.9rem; color: var(--color-text-muted, #6b6b6b); display:flex; gap:0.5rem; align-items:center; }
+
+    /* Admin sign-in gate (shown when whoami says authed:false). Two
+       side-by-side provider cards on wide screens; stacked on mobile. */
+    .admin-gate .container { max-width: 56rem; }
+    .admin-gate-header { text-align: center; margin-bottom: var(--space-3); }
+    .admin-gate-header h1 { margin: 0 0 0.4rem; }
+    .admin-gate-status { margin-bottom: var(--space-3); }
+    .admin-gate-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--space-3);
+    }
+    @media (min-width: 720px) {
+      .admin-gate-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .admin-gate-card { display: flex; flex-direction: column; gap: 0.75rem; }
+    .admin-gate-card h2 { margin: 0; }
+    .admin-gate-card p { margin: 0; }
+    .admin-gate-form { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.4rem; }
+    .admin-gate-form .admin-form-row { margin: 0; }
+    .admin-gate-email-status:empty { display: none; }
     .admin-card {
       background: #fff;
       border: 1px solid var(--color-rule, #e8e0c8);

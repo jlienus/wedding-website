@@ -1,0 +1,94 @@
+---
+import Base from '../../../layouts/Base.astro';
+import type { Locale } from '../../../lib/i18n';
+const locale: Locale = 'en';
+---
+
+<Base title="Admin sign-in · John & Diana" description="Admin sign-in confirmation" lang={locale}>
+  <main class="admin">
+    <section class="container">
+      <header class="admin-header">
+        <h1>Admin sign-in</h1>
+      </header>
+
+      <section class="admin-card admin-login-confirm">
+        <p id="login-instructions">
+          Click <strong>Sign in</strong> to finish signing in to the admin dashboard.
+        </p>
+        <div id="login-status" class="admin-status" role="status" aria-live="polite"></div>
+        <div class="admin-row admin-row--actions">
+          <button id="confirm-btn" class="btn btn--gold">Sign in</button>
+          <a href="/admin" class="rsvp-link">Cancel</a>
+        </div>
+        <p class="admin-muted admin-login-help">
+          The sign-in link expires 10 minutes after it was sent. If this attempt fails,
+          go back to the admin page and request a new link.
+        </p>
+      </section>
+    </section>
+  </main>
+
+  <style>
+    .admin-login-confirm { max-width: 520px; margin: 32px auto; }
+    .admin-login-help { margin-top: 24px; font-size: 13px; }
+    .admin-row--actions { display: flex; gap: 16px; align-items: center; }
+  </style>
+
+  <script>
+    (function () {
+      const btn = document.getElementById('confirm-btn') as HTMLButtonElement | null;
+      const status = document.getElementById('login-status') as HTMLDivElement | null;
+      const instructions = document.getElementById('login-instructions') as HTMLParagraphElement | null;
+      if (!btn || !status || !instructions) return;
+
+      const params = new URLSearchParams(location.search);
+      const token = params.get('t') || '';
+
+      if (!token) {
+        instructions.hidden = true;
+        btn.disabled = true;
+        status.textContent = 'This link is missing its token. Request a new sign-in email from the admin page.';
+        status.dataset.tone = 'error';
+        return;
+      }
+
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        status.textContent = 'Signing you in…';
+        status.dataset.tone = '';
+        try {
+          const res = await fetch('/api/mgmt/admin-login-verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            cache: 'no-store',
+            body: JSON.stringify({ t: token })
+          });
+          let data: any = null;
+          try { data = await res.json(); } catch {}
+          if (res.ok && data && data.ok) {
+            status.textContent = 'Signed in. Redirecting…';
+            status.dataset.tone = 'ok';
+            const target = (data && typeof data.redirect === 'string') ? data.redirect : '/admin';
+            // Use replace so the spent magic-link URL never lands in browser history.
+            location.replace(target);
+            return;
+          }
+          const code = (data && typeof data.error === 'string') ? data.error : '';
+          let msg = 'That sign-in link couldn\u2019t be used.';
+          if (code === 'replayed') msg = 'That sign-in link was already used. Request a new one from the admin page.';
+          else if (code === 'expired') msg = 'That sign-in link expired. Request a new one from the admin page.';
+          else if (code === 'rate_limited') msg = 'Too many sign-in attempts. Try again in a minute.';
+          else if (code === 'invalid') msg = 'That sign-in link is invalid or expired. Request a new one from the admin page.';
+          status.textContent = msg;
+          status.dataset.tone = 'error';
+          btn.disabled = true;
+        } catch (err: any) {
+          status.textContent = `Couldn\u2019t reach the sign-in service: ${err && err.message ? err.message : 'unknown error'}.`;
+          status.dataset.tone = 'error';
+          btn.disabled = false;
+        }
+      });
+    })();
+  </script>
+</Base>
