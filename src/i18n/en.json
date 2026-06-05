@@ -282,7 +282,13 @@
     "amazonButtonLabel": "View Amazon registry",
     "viewRegistry": "View registry",
     "moreComingSoon": "More registry options are coming soon.",
-    "moreSoon": "More registry options are coming soon."
+    "moreSoon": "More registry options are coming soon.",
+    "developerCallout": {
+      "eyebrow": "Another way to contribute",
+      "heading": "Open source, too",
+      "body": "If a gift off the registry isn't quite your style, here's another option. John built this site from scratch — Astro, TypeScript, Azure, and a custom RSVP backend — and the source is open. If you're a developer (or just curious how any of it works) you're welcome to poke around. Pull requests are very welcome.",
+      "cta": "View the source on GitHub →"
+    }
   },
   "faq": {
     "heading": "Frequently Asked Questions",
@@ -293,12 +299,6 @@
       "lodging": "Lodging",
       "giftsRegistry": "Gifts & Registry",
       "localTips": "Local Tips"
-    },
-    "developerCallout": {
-      "eyebrow": "Behind the site",
-      "heading": "Built by hand",
-      "body": "John built this site from scratch — Astro, TypeScript, and Azure under the hood, bilingual content throughout, and a custom RSVP backend in place of an off-the-shelf form. The source is open. If you're a developer (or curious how any of it works) you're welcome to poke around — pull requests are welcome too.",
-      "cta": "View the source on GitHub →"
     }
   },
   "footer": {

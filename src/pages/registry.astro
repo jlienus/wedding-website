@@ -17,6 +17,44 @@ const locale: Locale = 'en';
     <section class="section container reveal">
       <RegistryCard locale={locale} />
     </section>
+    <section class="section container container--narrow reveal">
+      <aside class="dev-callout-card">
+        <p class="eyebrow">{t(locale, 'registry.developerCallout.eyebrow')}</p>
+        <h2>{t(locale, 'registry.developerCallout.heading')}</h2>
+        <p>{t(locale, 'registry.developerCallout.body')}</p>
+        <p>
+          <a class="dev-callout-cta" href="https://github.com/jlienus/wedding-website" target="_blank" rel="noopener noreferrer">
+            {t(locale, 'registry.developerCallout.cta')}
+          </a>
+        </p>
+      </aside>
+    </section>
   </main>
 </Base>
+
+<style>
+  .dev-callout-card {
+    padding: var(--space-3);
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, rgba(201,169,97,0.06) 0%, rgba(247,244,237,0.6) 100%);
+    box-shadow: var(--shadow-sm);
+  }
+  .dev-callout-card .eyebrow {
+    font-size: var(--fs-tiny);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-gold-deep);
+    margin-bottom: 0.5rem;
+  }
+  .dev-callout-card h2 { margin-top: 0; margin-bottom: var(--space-2); }
+  .dev-callout-card p { color: var(--color-text-muted); }
+  .dev-callout-cta {
+    color: var(--color-gold-deep);
+    font-weight: 600;
+    border-bottom: 1px solid currentColor;
+    text-decoration: none;
+  }
+  .dev-callout-cta:hover { color: var(--color-text); }
+</style>
 

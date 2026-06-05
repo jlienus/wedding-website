@@ -282,7 +282,13 @@
     "amazonButtonLabel": "Ver mesa de regalos en Amazon",
     "viewRegistry": "Ver mesa de regalos",
     "moreComingSoon": "Pronto agregaremos más opciones de registro.",
-    "moreSoon": "Pronto agregaremos más opciones de registro."
+    "moreSoon": "Pronto agregaremos más opciones de registro.",
+    "developerCallout": {
+      "eyebrow": "Otra forma de contribuir",
+      "heading": "También código abierto",
+      "body": "Si un regalo de la mesa no es exactamente lo tuyo, aquí tienes otra opción. John desarrolló este sitio desde cero — Astro, TypeScript, Azure y un backend de confirmación de asistencia propio — y el código es abierto. Si eres desarrollador/a (o sientes curiosidad por cómo funciona algo) te invitamos a echarle un vistazo. Las pull requests son muy bienvenidas.",
+      "cta": "Ver el código en GitHub →"
+    }
   },
   "faq": {
     "heading": "Preguntas frecuentes",
@@ -293,12 +299,6 @@
       "lodging": "Hospedaje",
       "giftsRegistry": "Regalos y mesa de regalos",
       "localTips": "Consejos locales"
-    },
-    "developerCallout": {
-      "eyebrow": "Detrás del sitio",
-      "heading": "Hecho a mano",
-      "body": "John desarrolló este sitio desde cero — usando Astro, TypeScript y Azure por debajo, con contenido bilingüe en todas partes y un backend de confirmación de asistencia propio en lugar de un formulario genérico. El código es abierto. Si eres desarrollador/a (o sientes curiosidad por cómo funciona algo) te invitamos a echarle un vistazo — las contribuciones son bienvenidas.",
-      "cta": "Ver el código en GitHub →"
     }
   },
   "footer": {
