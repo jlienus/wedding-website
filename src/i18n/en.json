@@ -264,6 +264,7 @@
     "songLabel": "Song to get you on the dance floor",
     "songPlaceholder": "e.g. ABBA — Dancing Queen",
     "notesLabel": "Anything else?",
+    "optionalTag": "(optional)",
     "notesPlaceholder": "Travel notes, accessibility needs, dietary follow-ups…",
     "submitError": "Couldn't save your RSVP. Please try again.",
     "submitRateLimited": "Too many save attempts. Please wait a minute.",

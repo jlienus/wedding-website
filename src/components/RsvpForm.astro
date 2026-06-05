@@ -55,7 +55,7 @@ const stringKeys = [
   'rsvp.addGuest','rsvp.removeGuest','rsvp.maxGuestsReached',
   'rsvp.guestNameLabel','rsvp.guestNamePlaceholder','rsvp.isKidLabel',
   'rsvp.guestTypeLabel','rsvp.guestTypeNone','rsvp.guestTypeAdult','rsvp.guestTypeChild',
-  'rsvp.guestTypeRequired','rsvp.fieldRequired',
+  'rsvp.guestTypeRequired','rsvp.fieldRequired','rsvp.optionalTag',
   'rsvp.attendingQuestion','rsvp.attendingYes','rsvp.attendingNo',
   'rsvp.mealLabel','rsvp.mealHint','rsvp.mealNone',
   'rsvp.mealChicken','rsvp.mealBeef',
@@ -147,7 +147,6 @@ const initData = {
       <p class="rsvp-muted">{t(locale, 'rsvp.formIntro')}</p>
       <button type="button" id="rsvp-not-you" class="rsvp-link">{t(locale, 'rsvp.notYou')}</button>
     </div>
-    <div id="rsvp-submit-error" class="rsvp-error rsvp-error--top" role="alert" aria-live="polite" hidden></div>
 
     <h4 class="rsvp-section-heading" data-bind="primaryYourRsvp"></h4>
     <div id="rsvp-primary-card"></div>
@@ -174,6 +173,7 @@ const initData = {
     <div class="rsvp-actions">
       <button type="submit" class="btn btn--gold" data-label-default={t(locale, 'rsvp.save')} data-label-busy={t(locale, 'rsvp.saving')}>{t(locale, 'rsvp.save')}</button>
     </div>
+    <div id="rsvp-submit-error" class="rsvp-error" role="alert" aria-live="polite" hidden></div>
   </form>
 
   <div id="rsvp-confirmation" class="rsvp-phase rsvp-confirmation" hidden>
@@ -249,17 +249,26 @@ const initData = {
           </div>
         </div>
         <label class="rsvp-field">
-          <span class="rsvp-label" data-bind="dietaryLabel"></span>
+          <span class="rsvp-label">
+            <span data-bind="dietaryLabel"></span>
+            <small class="rsvp-optional-tag" data-bind="optionalTag"></small>
+          </span>
           <input type="text" name="dietary" maxlength="500" data-placeholder="dietary" />
         </label>
         <label class="rsvp-field">
-          <span class="rsvp-label" data-bind="songLabel"></span>
+          <span class="rsvp-label">
+            <span data-bind="songLabel"></span>
+            <small class="rsvp-optional-tag" data-bind="optionalTag"></small>
+          </span>
           <input type="text" name="songRequest" maxlength="500" data-placeholder="song" />
         </label>
       </div>
       <div class="rsvp-primary-notes" hidden>
         <label class="rsvp-field rsvp-field--notes">
-          <span class="rsvp-label" data-bind="notesLabel"></span>
+          <span class="rsvp-label">
+            <span data-bind="notesLabel"></span>
+            <small class="rsvp-optional-tag" data-bind="optionalTag"></small>
+          </span>
           <textarea name="notes" maxlength="800" rows="2" data-placeholder="notes"></textarea>
         </label>
       </div>
@@ -1470,9 +1479,17 @@ const initData = {
     color: #8a2c2c;
     font-size: 0.95rem;
   }
-  .rsvp-error--top {
+
+  .rsvp-optional-tag {
+    margin-left: 0.35rem;
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--color-text-muted, #6b6b6b);
+    font-style: italic;
+  }
+  .rsvp-label .rsvp-optional-tag {
+    display: inline;
     margin-top: 0;
-    margin-bottom: var(--space-3);
   }
 
   .rsvp-field-error {

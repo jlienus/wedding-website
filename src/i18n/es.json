@@ -264,6 +264,7 @@
     "songLabel": "Canción que te hace bailar",
     "songPlaceholder": "ej. ABBA — Dancing Queen",
     "notesLabel": "¿Algo más?",
+    "optionalTag": "(opcional)",
     "notesPlaceholder": "Notas de viaje, necesidades de accesibilidad, detalles alimentarios…",
     "submitError": "No se pudo guardar tu confirmación. Por favor intenta de nuevo.",
     "submitRateLimited": "Demasiados intentos de guardado. Espera un minuto.",
