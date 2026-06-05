@@ -9,13 +9,13 @@ const pending = !amazon.url || amazon.url === 'AMAZON_REGISTRY_URL_GOES_HERE';
 
 <article class="registry-card reveal">
   <p class="logo">Amazon</p>
-  <h2>{t(locale, 'registry.title')}</h2>
+  <p class="lede">{t(locale, 'registry.cardLede')}</p>
   {pending ? (
     <span class="btn disabled" aria-disabled="true">{t(locale, 'common.comingSoon')}</span>
   ) : (
     <a class="btn btn--gold" href={amazon.url} target="_blank" rel="noopener noreferrer">{t(locale, 'registry.viewRegistry')}</a>
   )}
-  <p class="note">{t(locale, 'registry.moreSoon')}</p>
+  <p class="note">{t(locale, 'registry.openNote')}</p>
 </article>
 
 <style>
@@ -47,6 +47,13 @@ const pending = !amazon.url || amazon.url === 'AMAZON_REGISTRY_URL_GOES_HERE';
     -webkit-text-fill-color: transparent;
     color: var(--color-gold-deep);
     margin-bottom: var(--space-2);
+  }
+  .lede {
+    font-size: 1.1rem;
+    line-height: 1.55;
+    color: var(--color-text);
+    margin: 0 auto var(--space-4);
+    max-width: 28rem;
   }
   .disabled { pointer-events: none; opacity: 0.5; filter: grayscale(1); }
   .note { margin-top: var(--space-3); color: var(--color-text-muted); font-size: var(--fs-small); font-style: italic; }
