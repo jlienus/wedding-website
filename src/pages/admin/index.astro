@@ -54,7 +54,7 @@ const locale: Locale = 'en';
                 placeholder="you@example.com"
               />
             </label>
-            <button id="admin-email-submit" type="submit" class="btn btn--gold btn--small">Email me a sign-in link</button>
+            <button id="admin-email-submit" type="submit" class="btn btn--gold">Email me a sign-in link</button>
             <div id="admin-email-status" class="admin-status admin-gate-email-status" role="status" aria-live="polite"></div>
           </form>
         </article>
@@ -2357,7 +2357,14 @@ const locale: Locale = 'en';
     .admin-gate-card { display: flex; flex-direction: column; gap: 0.75rem; }
     .admin-gate-card h2 { margin: 0; }
     .admin-gate-card p { margin: 0; }
-    .admin-gate-form { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.4rem; }
+    /* Push each card's CTA to the bottom so the two buttons sit at the
+       same vertical baseline regardless of body-copy length. */
+    .admin-gate-card > #admin-github-signin,
+    .admin-gate-card > .admin-gate-form { margin-top: auto; }
+    /* Make both CTAs (GitHub <a> and email submit <button>) match in size
+       and span the card width so they line up across the two cards. */
+    .admin-gate-card .btn { width: 100%; justify-content: center; }
+    .admin-gate-form { display: flex; flex-direction: column; gap: 0.6rem; }
     .admin-gate-form .admin-form-row { margin: 0; }
     .admin-gate-email-status:empty { display: none; }
     .admin-card {
