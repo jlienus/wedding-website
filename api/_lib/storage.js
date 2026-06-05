@@ -19,6 +19,7 @@
 // dropped by scripts/drop-old-rsvp-tables.cjs.
 
 const { TableClient, AzureNamedKeyCredential } = require('@azure/data-tables');
+const fc = require('./fieldcrypto');
 
 const TABLE_INVITES = 'rsvpInvites';
 const TABLE_SMSLOG = 'rsvpSmsLog';
@@ -115,19 +116,30 @@ function normalizePhone(p) {
 
 // --- Invites --------------------------------------------------------------
 
+// Reads a stored entity into the API-shaped invite object.
+//
+// Encrypted fields (`primaryFirstName`, `primaryLastName`, `phone`) are
+// decrypted here; legacy plaintext rows (pre-migration) pass through
+// untouched via decryptField's `isEncrypted` guard. The JS-level `*Norm`
+// fields (phoneNorm, primaryFirstNorm, primaryLastNorm) are computed from
+// the decrypted plaintext so every caller that reads them keeps working
+// even after we move the at-rest normalized lookup columns to HMAC indexes.
 function entityToInvite(e) {
   let payload = null;
   if (typeof e.payload === 'string' && e.payload.length > 0) {
     try { payload = JSON.parse(e.payload); } catch { payload = null; }
   }
+  const firstName = fc.decryptField(e.primaryFirstName || '');
+  const lastName = fc.decryptField(e.primaryLastName || '');
+  const phone = fc.decryptField(e.phone || '');
   return {
     inviteId: e.rowKey,
-    primaryFirstName: e.primaryFirstName || '',
-    primaryLastName: e.primaryLastName || '',
-    primaryFirstNorm: e.primaryFirstNorm || '',
-    primaryLastNorm: e.primaryLastNorm || '',
-    phone: e.phone || '',
-    phoneNorm: e.phoneNorm || '',
+    primaryFirstName: firstName,
+    primaryLastName: lastName,
+    primaryFirstNorm: normalizeName(firstName),
+    primaryLastNorm: normalizeName(lastName),
+    phone,
+    phoneNorm: normalizePhone(phone),
     locale: e.locale || 'en',
     optedOutOfSms: !!e.optedOutOfSms,
     smsHardFailedAt: e.smsHardFailedAt || '',
@@ -143,17 +155,39 @@ function entityToInvite(e) {
   };
 }
 
+// Encrypts PII and computes blind indexes for server-side lookup.
+//
+// Always re-encrypts every PII field on write under the CURRENT key (not
+// PREVIOUS). That's deliberate so manual key-rotation testing is meaningful:
+// editing any invite proves the new ciphertext header carries the new keyId.
+//
+// `primaryFirstNorm`, `primaryLastNorm`, `phoneNorm` are cleared at the DB
+// level once a row is encrypted; the blind-index columns
+// (`primaryFirstIndex`, `primaryLastIndex`, `phoneIndex`) take over for
+// lookup queries. The JS-level `*Norm` fields remain on the in-memory invite
+// object (populated by entityToInvite from decrypted plaintext) for
+// backward compatibility with reminders.js / sms_webhook / etc.
 function inviteToEntity(inv) {
-  const phoneNorm = normalizePhone(inv.phone || '');
+  const rawFirst = inv.primaryFirstName || '';
+  const rawLast = inv.primaryLastName || '';
+  const rawPhone = inv.phone || '';
   return {
     partitionKey: INVITES_PARTITION,
     rowKey: inv.inviteId,
-    primaryFirstName: inv.primaryFirstName || '',
-    primaryLastName: inv.primaryLastName || '',
-    primaryFirstNorm: normalizeName(inv.primaryFirstName || ''),
-    primaryLastNorm: normalizeName(inv.primaryLastName || ''),
-    phone: inv.phone || '',
-    phoneNorm,
+    // Ciphertext at rest.
+    primaryFirstName: rawFirst ? fc.encryptField(rawFirst) : '',
+    primaryLastName: rawLast ? fc.encryptField(rawLast) : '',
+    phone: rawPhone ? fc.encryptField(rawPhone) : '',
+    // Blind indexes (deterministic HMAC) for server-side filtering.
+    primaryFirstIndex: fc.blindIndex(normalizeName(rawFirst), 'firstName'),
+    primaryLastIndex: fc.blindIndex(normalizeName(rawLast), 'lastName'),
+    phoneIndex: fc.blindIndex(normalizePhone(rawPhone), 'phone'),
+    // Legacy norm columns -- explicitly blanked. Rows still carrying these
+    // are pre-migration; the dual-read lookup path in findInvitesBy* handles
+    // them transparently until the migration script encrypts them.
+    primaryFirstNorm: '',
+    primaryLastNorm: '',
+    phoneNorm: '',
     locale: inv.locale === 'es' ? 'es' : 'en',
     optedOutOfSms: !!inv.optedOutOfSms,
     smsHardFailedAt: inv.smsHardFailedAt || '',
@@ -189,8 +223,11 @@ async function upsertInvite(invite) {
   return entityToInvite(entity);
 }
 
-// Partial update — pass only the fields you want to change. If `phone` is in
-// the patch, we recompute `phoneNorm` automatically.
+// Partial update — pass only the fields you want to change. When one of the
+// PII fields is in the patch we update its ciphertext AND its blind index
+// AND its legacy plaintext-norm column atomically in the same Merge call,
+// so the row can't end up in an inconsistent state (e.g., new ciphertext
+// but old index).
 async function patchInvite(inviteId, patch) {
   if (!inviteId) throw new Error('patchInvite requires inviteId');
   const c = getClients();
@@ -201,14 +238,20 @@ async function patchInvite(inviteId, patch) {
   };
   for (const [k, v] of Object.entries(patch || {})) {
     if (k === 'phone') {
-      entity.phone = v || '';
-      entity.phoneNorm = normalizePhone(v || '');
+      const raw = v || '';
+      entity.phone = raw ? fc.encryptField(raw) : '';
+      entity.phoneIndex = fc.blindIndex(normalizePhone(raw), 'phone');
+      entity.phoneNorm = ''; // clear legacy plaintext-norm
     } else if (k === 'primaryFirstName') {
-      entity.primaryFirstName = v || '';
-      entity.primaryFirstNorm = normalizeName(v || '');
+      const raw = v || '';
+      entity.primaryFirstName = raw ? fc.encryptField(raw) : '';
+      entity.primaryFirstIndex = fc.blindIndex(normalizeName(raw), 'firstName');
+      entity.primaryFirstNorm = '';
     } else if (k === 'primaryLastName') {
-      entity.primaryLastName = v || '';
-      entity.primaryLastNorm = normalizeName(v || '');
+      const raw = v || '';
+      entity.primaryLastName = raw ? fc.encryptField(raw) : '';
+      entity.primaryLastIndex = fc.blindIndex(normalizeName(raw), 'lastName');
+      entity.primaryLastNorm = '';
     } else if (k === 'payload' && typeof v !== 'string') {
       entity.payload = v ? JSON.stringify(v) : '';
     } else {
@@ -250,12 +293,26 @@ async function listInvites() {
 //   { inviteId }                           — exactly one match
 //
 // At ~80 invites this is a single-partition scan with server-side filter.
+//
+// Dual-read fallback: filters match EITHER the new HMAC blind index columns
+// OR the legacy plaintext-norm columns. Encrypted rows have the indexes and
+// empty norm columns; legacy rows have plaintext norms and empty indexes.
+// Both paths coexist during the migration window; once the migration script
+// has re-written every row, the legacy clause stops matching anything and
+// can be removed in a follow-up cleanup.
 async function findInviteByPrimaryName(firstName, lastName) {
   const fn = normalizeName(firstName);
   const ln = normalizeName(lastName);
   if (fn.length < 2 || ln.length < 2) return null;
   const c = getClients();
-  const filter = `PartitionKey eq '${INVITES_PARTITION}' and primaryFirstNorm eq '${fn.replace(/'/g, "''")}' and primaryLastNorm eq '${ln.replace(/'/g, "''")}'`;
+  const esc = (s) => s.replace(/'/g, "''");
+  const fnIdx = fc.blindIndex(fn, 'firstName');
+  const lnIdx = fc.blindIndex(ln, 'lastName');
+  const filter = `PartitionKey eq '${INVITES_PARTITION}' and (`
+    + `(primaryFirstIndex eq '${esc(fnIdx)}' and primaryLastIndex eq '${esc(lnIdx)}')`
+    + ` or `
+    + `(primaryFirstNorm eq '${esc(fn)}' and primaryLastNorm eq '${esc(ln)}')`
+    + `)`;
   const matches = [];
   for await (const e of c.invites.listEntities({ queryOptions: { filter } })) {
     matches.push(e.rowKey);
@@ -267,15 +324,22 @@ async function findInviteByPrimaryName(firstName, lastName) {
   return { inviteId: matches[0], ambiguous: false };
 }
 
-// Returns all invites whose primaryLastNorm matches. Used by the public RSVP
-// lookup flow (last-name-only primary, with phone-last-4 disambiguation for
-// the small set of families that share a surname). Single-partition scan with
-// server-side filter; ~80 invites total so cheap.
+// Returns all invites whose primary last name matches. Used by the public
+// RSVP lookup flow (last-name-only primary, with phone-last-4 disambiguation
+// for the small set of families that share a surname). Single-partition scan
+// with server-side filter; ~80 invites total so cheap. Dual-read fallback
+// as in findInviteByPrimaryName.
 async function findInvitesByLastName(lastName) {
   const ln = normalizeName(lastName);
   if (ln.length < 2) return [];
   const c = getClients();
-  const filter = `PartitionKey eq '${INVITES_PARTITION}' and primaryLastNorm eq '${ln.replace(/'/g, "''")}'`;
+  const esc = (s) => s.replace(/'/g, "''");
+  const lnIdx = fc.blindIndex(ln, 'lastName');
+  const filter = `PartitionKey eq '${INVITES_PARTITION}' and (`
+    + `primaryLastIndex eq '${esc(lnIdx)}'`
+    + ` or `
+    + `primaryLastNorm eq '${esc(ln)}'`
+    + `)`;
   const out = [];
   for await (const e of c.invites.listEntities({ queryOptions: { filter } })) {
     out.push(entityToInvite(e));
@@ -285,11 +349,19 @@ async function findInvitesByLastName(lastName) {
 
 // Returns all invites that share this normalized phone. Used by the SMS
 // webhook so STOP/START applies to every household sharing a number, and by
-// the public RSVP "look me up by phone" fallback path.
+// the public RSVP "look me up by phone" fallback path. Dual-read fallback
+// covers the migration window: filter matches either the HMAC blind index
+// on encrypted rows or the legacy plaintext-norm column on un-migrated rows.
 async function findInvitesByPhoneNorm(phoneNorm) {
   if (!phoneNorm) return [];
   const c = getClients();
-  const filter = `PartitionKey eq '${INVITES_PARTITION}' and phoneNorm eq '${phoneNorm.replace(/'/g, "''")}'`;
+  const esc = (s) => s.replace(/'/g, "''");
+  const idx = fc.blindIndex(phoneNorm, 'phone');
+  const filter = `PartitionKey eq '${INVITES_PARTITION}' and (`
+    + `phoneIndex eq '${esc(idx)}'`
+    + ` or `
+    + `phoneNorm eq '${esc(phoneNorm)}'`
+    + `)`;
   const out = [];
   for await (const e of c.invites.listEntities({ queryOptions: { filter } })) {
     out.push(entityToInvite(e));
@@ -642,5 +714,9 @@ module.exports = {
   appendEvent,
   listEvents,
   // migration
-  dropObsoleteTables
+  dropObsoleteTables,
+  // Test hooks -- exposed so unit tests can exercise the encryption + blind
+  // index wiring without standing up real Azure Table Storage. Production
+  // code paths should NOT import these directly.
+  _testHooks: { entityToInvite, inviteToEntity }
 };
