@@ -66,7 +66,3 @@ After GitHub and Azure Static Web Apps are connected, pushing to `main` on GitHu
 - [Content Editing Guide](CONTENT-EDITING-GUIDE.md)
 - [Next Steps to Go Live](NEXT-STEPS.md)
 - [Photo Slot Guide](public\images\README.md)
-
-## Credits
-
-Built with help from Copilot CLI.
