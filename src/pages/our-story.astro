@@ -39,7 +39,7 @@ const storyParagraphs = ['howWeMetP1', 'howWeMetP2', 'howWeMetP3', 'howWeMetP4',
     <SectionDivider />
     <section id="moments" class="section container reveal anchor-target">
       <h2 style="text-align:center;">{t(locale, 'ourStory.galleryHeading')}</h2>
-      <PhotoGallery slots={['couple-gallery-1.jpg','couple-gallery-2.jpg','couple-gallery-3.jpg','couple-gallery-4.jpg','couple-gallery-5.jpg','couple-gallery-6.jpg']} altPrefix={locale === 'es' ? 'Foto de John y Diana' : 'John and Diana photo'} />
+      <PhotoGallery slots={['couple-gallery-1.jpg','couple-gallery-2.jpg','couple-gallery-3.jpg','couple-gallery-4.jpg','couple-gallery-5.jpg','couple-gallery-6.jpg']} altPrefix={locale === 'es' ? 'Foto de John y Diana' : 'John and Diana photo'} labels={{ close: t(locale, 'ourStory.galleryLightboxClose'), prev: t(locale, 'ourStory.galleryLightboxPrev'), next: t(locale, 'ourStory.galleryLightboxNext'), counterTemplate: t(locale, 'ourStory.galleryLightboxCounter'), openHint: t(locale, 'ourStory.galleryLightboxOpenHint') }} />
     </section>
     <SectionDivider ornament="⚭" />
     <div id="heritage" class="anchor-target">
