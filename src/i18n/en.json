@@ -280,9 +280,9 @@
     "title": "Registry",
     "intro": "Your presence in Quito is the greatest gift. For guests who would like to give something more, we are grateful for contributions toward our honeymoon and future home.",
     "amazonButtonLabel": "View Amazon registry",
-    "viewRegistry": "View registry",
-    "moreComingSoon": "More registry options are coming soon.",
-    "moreSoon": "More registry options are coming soon.",
+    "viewRegistry": "View our registry on Amazon",
+    "moreComingSoon": "The button opens our Amazon list in a new tab.",
+    "moreSoon": "The button opens our Amazon list in a new tab.",
     "developerCallout": {
       "eyebrow": "Another way to contribute",
       "heading": "Open source, too",
