@@ -84,6 +84,41 @@ const locale = 'en';
           <h2>Recent activity</h2>
           <span id="events-count" class="admin-muted"></span>
         </div>
+        <div class="admin-events-filters" role="group" aria-label="Filter events">
+          <input
+            id="events-search"
+            type="search"
+            class="admin-events-search"
+            placeholder="Search type, actor, or summary…"
+            aria-label="Search events"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <div class="admin-events-cats" role="group" aria-label="Filter by category">
+            <label class="admin-cat-toggle admin-cat-toggle--rsvp">
+              <input type="checkbox" data-cat="rsvp" checked /><span>RSVP</span>
+            </label>
+            <label class="admin-cat-toggle admin-cat-toggle--admin">
+              <input type="checkbox" data-cat="admin" checked /><span>Admin</span>
+            </label>
+            <label class="admin-cat-toggle admin-cat-toggle--deploy">
+              <input type="checkbox" data-cat="deploy" checked /><span>Deploy</span>
+            </label>
+            <label class="admin-cat-toggle admin-cat-toggle--backup">
+              <input type="checkbox" data-cat="backup" checked /><span>Backup</span>
+            </label>
+            <label class="admin-cat-toggle admin-cat-toggle--cron">
+              <input type="checkbox" data-cat="cron" checked /><span>Cron</span>
+            </label>
+            <label class="admin-cat-toggle admin-cat-toggle--sms">
+              <input type="checkbox" data-cat="sms" checked /><span>SMS</span>
+            </label>
+            <label class="admin-cat-toggle admin-cat-toggle--other">
+              <input type="checkbox" data-cat="other" checked /><span>Other</span>
+            </label>
+          </div>
+          <button type="button" id="events-reset" class="btn btn--ghost btn--small">Reset filters</button>
+        </div>
         <div class="admin-events-wrap">
           <ul id="admin-events" class="admin-events">
             <li class="admin-events-empty">
@@ -195,6 +230,7 @@ const locale = 'en';
       }
 
       let LAST_DATA: any = null;
+      let LAST_EVENTS: any[] = [];
       let EXPANDED_ID: string | null = null;
 
       function loginRedirect() {
@@ -322,6 +358,7 @@ const locale = 'en';
             headers: { 'Cache-Control': 'no-cache' },
           });
           if (!res.ok) {
+            LAST_EVENTS = [];
             listEl.replaceChildren();
             const li = document.createElement('li');
             li.className = 'admin-events-empty';
@@ -331,26 +368,72 @@ const locale = 'en';
             return;
           }
           const data = await res.json();
-          const events = Array.isArray(data.events) ? data.events : [];
-          if (countEl) countEl.textContent = events.length ? `${events.length} events` : '';
-          listEl.replaceChildren();
-          if (events.length === 0) {
-            const li = document.createElement('li');
-            li.className = 'admin-events-empty';
-            li.textContent = 'No activity yet.';
-            listEl.appendChild(li);
-            return;
-          }
-          for (const ev of events) {
-            listEl.appendChild(renderEvent(ev));
-          }
+          LAST_EVENTS = Array.isArray(data.events) ? data.events : [];
+          renderEvents();
         } catch (e: any) {
+          LAST_EVENTS = [];
           listEl.replaceChildren();
           const li = document.createElement('li');
           li.className = 'admin-events-empty';
           li.textContent = `Load failed: ${e && e.message}`;
           listEl.appendChild(li);
           if (countEl) countEl.textContent = '';
+        }
+      }
+
+      // Reads filter state from the DOM and re-renders the events list.
+      // Called by loadEvents() after fetch, and by the filter UI on every
+      // checkbox / search-input change. Pure client-side filtering — no
+      // network round-trip — so it can fire on every keystroke without
+      // needing a debounce for the volumes we expect.
+      function renderEvents() {
+        const listEl = document.getElementById('admin-events') as HTMLUListElement | null;
+        const countEl = document.getElementById('events-count') as HTMLSpanElement | null;
+        if (!listEl) return;
+
+        const searchEl = document.getElementById('events-search') as HTMLInputElement | null;
+        const q = (searchEl?.value || '').trim().toLowerCase();
+
+        const allowed = new Set<string>();
+        const cats = document.querySelectorAll<HTMLInputElement>('.admin-events-cats input[type="checkbox"][data-cat]');
+        cats.forEach((cb) => { if (cb.checked) allowed.add(cb.dataset.cat || ''); });
+
+        const filtered = LAST_EVENTS.filter((ev) => {
+          const type = String(ev.type || '');
+          if (!allowed.has(badgeKind(type))) return false;
+          if (!q) return true;
+          const hay = (type + ' ' + String(ev.actor || '') + ' ' + String(ev.summary || '')).toLowerCase();
+          return hay.includes(q);
+        });
+
+        const total = LAST_EVENTS.length;
+        if (countEl) {
+          if (total === 0) {
+            countEl.textContent = '';
+          } else if (filtered.length === total) {
+            countEl.textContent = `${total} events`;
+          } else {
+            countEl.textContent = `${filtered.length} of ${total} events`;
+          }
+        }
+
+        listEl.replaceChildren();
+        if (total === 0) {
+          const li = document.createElement('li');
+          li.className = 'admin-events-empty';
+          li.textContent = 'No activity yet.';
+          listEl.appendChild(li);
+          return;
+        }
+        if (filtered.length === 0) {
+          const li = document.createElement('li');
+          li.className = 'admin-events-empty';
+          li.textContent = 'No events match the current filters.';
+          listEl.appendChild(li);
+          return;
+        }
+        for (const ev of filtered) {
+          listEl.appendChild(renderEvent(ev));
         }
       }
 
@@ -903,6 +986,20 @@ const locale = 'en';
         if (!ok) return;
         await Promise.all([loadGuests(), loadEvents()]);
       })();
+
+      // Filter wiring for the Recent activity panel. These listeners drive
+      // a pure client-side filter over LAST_EVENTS — no network calls.
+      const eventsSearch = document.getElementById('events-search') as HTMLInputElement | null;
+      eventsSearch?.addEventListener('input', () => renderEvents());
+      document.querySelectorAll<HTMLInputElement>('.admin-events-cats input[type="checkbox"][data-cat]')
+        .forEach((cb) => cb.addEventListener('change', () => renderEvents()));
+      const eventsReset = document.getElementById('events-reset') as HTMLButtonElement | null;
+      eventsReset?.addEventListener('click', () => {
+        if (eventsSearch) eventsSearch.value = '';
+        document.querySelectorAll<HTMLInputElement>('.admin-events-cats input[type="checkbox"][data-cat]')
+          .forEach((cb) => { cb.checked = true; });
+        renderEvents();
+      });
     })();
   </script>
 
@@ -1038,6 +1135,61 @@ const locale = 'en';
     code { background: rgba(0,0,0,0.04); padding: 1px 4px; border-radius: 3px; }
 
     /* Recent activity panel */
+    .admin-events-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 0.75rem;
+      align-items: center;
+      margin: 0.6rem 0 0.75rem;
+    }
+    .admin-events-search {
+      flex: 1 1 14rem;
+      min-width: 12rem;
+      padding: 0.4rem 0.6rem;
+      font-size: 0.9rem;
+      border: 1px solid var(--color-rule, #e8e0c8);
+      border-radius: var(--radius-sm, 4px);
+      background: #fff;
+      color: inherit;
+    }
+    .admin-events-search:focus {
+      outline: none;
+      border-color: var(--color-gold-deep, #8a6a2c);
+      box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.25);
+    }
+    .admin-events-cats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+    .admin-cat-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.18rem 0.55rem;
+      border: 1px solid var(--color-rule, #e8e0c8);
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      background: #fff;
+      color: var(--color-text-muted, #6b6b6b);
+      user-select: none;
+      transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    }
+    .admin-cat-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+    .admin-cat-toggle:hover { border-color: var(--color-gold-deep, #8a6a2c); }
+    .admin-cat-toggle:focus-within { outline: 2px solid var(--color-gold, #D4AF37); outline-offset: 2px; }
+    /* Checked state uses the same palette as the matching badges so the
+       filter pill visually previews what it will keep in the list. */
+    .admin-cat-toggle--rsvp:has(input:checked)   { background: rgba(80, 160, 80, 0.14); color: #2a6a2c; border-color: rgba(80, 160, 80, 0.45); }
+    .admin-cat-toggle--admin:has(input:checked)  { background: rgba(201, 169, 97, 0.20); color: #8a6a2c; border-color: rgba(201, 169, 97, 0.55); }
+    .admin-cat-toggle--deploy:has(input:checked) { background: rgba(60, 120, 200, 0.14); color: #2a4a8a; border-color: rgba(60, 120, 200, 0.45); }
+    .admin-cat-toggle--backup:has(input:checked) { background: rgba(120, 80, 160, 0.14); color: #5a2a8a; border-color: rgba(120, 80, 160, 0.45); }
+    .admin-cat-toggle--cron:has(input:checked)   { background: rgba(0, 0, 0, 0.06);     color: #4a4a4a; border-color: rgba(0, 0, 0, 0.25); }
+    .admin-cat-toggle--sms:has(input:checked)    { background: rgba(200, 60, 60, 0.12); color: #8a2c2c; border-color: rgba(200, 60, 60, 0.45); }
+    .admin-cat-toggle--other:has(input:checked)  { background: rgba(0, 0, 0, 0.06);     color: #4a4a4a; border-color: rgba(0, 0, 0, 0.25); }
     .admin-events-wrap {
       max-height: 360px;
       overflow-y: auto;
