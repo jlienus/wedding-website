@@ -115,11 +115,34 @@ module.exports = async function (context, req) {
 
   try {
     const principal = auth.readAdminPrincipal(req) || {};
+    const meta = { inviteId: body.inviteId, fields: Object.keys(patch), rejected: rejected.length ? rejected : undefined };
+    // When a payload edit is part of this patch, snapshot the pre-edit payload
+    // into the audit log so an accidental destructive change (wiped meal picks,
+    // dropped guest, attending flipped to no) can be reversed by hand.
+    //
+    // storage.appendEvent caps the stringified `meta` at EVENT_META_MAX (4096
+    // chars). Cap snapshots well under that (3000 chars JSON) so the other
+    // meta fields fit and the result stays valid JSON on read-back. A typical
+    // 1-primary + 2-guest RSVP serializes to ~1500-2500 chars, so this fits
+    // every realistic invite. The few hypothetical edge cases (12+ guests
+    // with long dietary text) record a truncation marker instead of garbage.
+    if ('payload' in patch) {
+      try {
+        const prior = existing.payload || null;
+        const priorJson = prior ? JSON.stringify(prior) : null;
+        if (priorJson && priorJson.length <= 3000) {
+          meta.payloadBefore = prior;
+        } else if (priorJson) {
+          meta.payloadBeforeTruncated = true;
+          meta.payloadBeforeSize = priorJson.length;
+        }
+      } catch { /* ignore — audit log is best-effort */ }
+    }
     await storage.appendEvent({
       type: 'admin.invite_updated',
       actor: `admin:${String(principal.userDetails || 'unknown').toLowerCase()}`,
       summary: `Updated invite for ${existing.primaryFirstName} ${existing.primaryLastName}: ${Object.keys(patch).join(', ')}`,
-      meta: { inviteId: body.inviteId, fields: Object.keys(patch), rejected: rejected.length ? rejected : undefined }
+      meta
     });
   } catch (err) {
     context.log.error(`admin_update_invite event_write_failed: ${err && err.message}`);

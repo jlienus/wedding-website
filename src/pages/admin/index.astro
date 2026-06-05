@@ -1,6 +1,14 @@
 ---
 import Base from '../../layouts/Base.astro';
-const locale = 'en';
+import { t, type Locale } from '../../lib/i18n';
+import {
+  entradaOptions,
+  sorbetOptions,
+  mealOptions,
+  postreOptions,
+  guestTypeOptions
+} from '../../lib/rsvp-options';
+const locale: Locale = 'en';
 ---
 
 <Base title="RSVP Admin · John & Diana" description="RSVP administration dashboard" lang={locale}>
@@ -212,17 +220,188 @@ const locale = 'en';
           <label class="admin-inline"><input type="checkbox" name="optedOutOfSms" /> <span>Opted out of SMS</span></label>
           <label class="admin-inline"><input type="checkbox" name="clearHardFail" /> <span>Clear SMS hard-fail flag</span></label>
         </fieldset>
-        <label class="admin-form-row" id="admin-payload-row" hidden>
-          <span class="admin-label">RSVP payload (JSON) — leave alone unless you know what you're doing</span>
-          <textarea name="payload" rows="10" class="admin-payload-json"></textarea>
-          <small class="admin-muted">Must validate against schemaVersion=1. Saving partial state (attending: null) is allowed.</small>
-        </label>
+        <section class="admin-form-row" id="admin-payload-row" aria-label="RSVP responses" hidden>
+          <span class="admin-label">RSVP responses</span>
+          <small class="admin-muted admin-rsvp-help">
+            Edits here update what each attendee answered.
+            "Not attending" or "Not yet answered" automatically clears that person's meal picks on save.
+            Removing a guest discards their answers permanently.
+          </small>
+
+          <fieldset class="admin-attendee admin-attendee--primary">
+            <legend class="admin-attendee-legend">Primary invitee <span class="admin-muted" data-primary-name-display></span></legend>
+            <div class="admin-attendee-grid">
+              <label>
+                <span class="admin-label">Attending</span>
+                <select data-field="attending" data-attendee="primary">
+                  <option value="">— Not yet answered</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </label>
+            </div>
+            <div class="admin-meal-block" data-attending-block hidden>
+              <div class="admin-meal-grid">
+                <label>
+                  <span class="admin-label">{t(locale, 'rsvp.entradaLabel')}</span>
+                  <select data-field="entradaChoice" data-attendee="primary">
+                    {entradaOptions.map((opt) => (
+                      <option value={opt.value}>{t(locale, opt.labelKey)}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span class="admin-label">{t(locale, 'rsvp.sorbetLabel')}</span>
+                  <select data-field="sorbetChoice" data-attendee="primary">
+                    {sorbetOptions.map((opt) => (
+                      <option value={opt.value}>{t(locale, opt.labelKey)}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span class="admin-label">{t(locale, 'rsvp.mealLabel')}</span>
+                  <select data-field="mealChoice" data-attendee="primary">
+                    {mealOptions.map((opt) => (
+                      <option value={opt.value}>{t(locale, opt.labelKey)}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span class="admin-label">{t(locale, 'rsvp.postreLabel')}</span>
+                  <select data-field="postreChoice" data-attendee="primary">
+                    {postreOptions.map((opt) => (
+                      <option value={opt.value}>{t(locale, opt.labelKey)}</option>
+                    ))}
+                  </select>
+                </label>
+                <label class="admin-meal-grid-full">
+                  <span class="admin-label">Allergies / dietary notes</span>
+                  <input type="text" data-field="dietary" data-attendee="primary" maxlength="500" />
+                </label>
+                <label class="admin-meal-grid-full">
+                  <span class="admin-label">Song request</span>
+                  <input type="text" data-field="songRequest" data-attendee="primary" maxlength="500" />
+                </label>
+              </div>
+            </div>
+            <label class="admin-form-row admin-attendee-notes">
+              <span class="admin-label">Notes from this guest</span>
+              <textarea data-field="notes" data-attendee="primary" maxlength="800" rows="2"></textarea>
+            </label>
+          </fieldset>
+
+          <div class="admin-guests-section">
+            <header class="admin-guests-header">
+              <h4 class="admin-guests-heading">Additional guests <span class="admin-muted" data-guest-count></span></h4>
+              <button type="button" id="admin-add-guest" class="btn btn--ghost btn--small">+ Add guest</button>
+            </header>
+            <div id="admin-guests-list" class="admin-guests-list"></div>
+            <p id="admin-guests-empty" class="admin-muted admin-guests-empty" hidden>No additional guests on this invitation.</p>
+            <p id="admin-guests-max" class="admin-muted admin-guests-empty" hidden>Maximum of 20 guests reached.</p>
+          </div>
+        </section>
         <div id="admin-modal-error" class="admin-error" role="alert" hidden></div>
         <div class="admin-modal-actions">
           <button type="button" class="btn btn--ghost" data-modal-close>Cancel</button>
           <button type="submit" class="btn btn--gold" id="admin-modal-save">Save</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Guest card template — cloned by admin-add-guest, populated by openModal -->
+  <template id="admin-guest-card-template">
+    <fieldset class="admin-attendee admin-attendee--guest" data-guest-card>
+      <input type="hidden" data-guest-id />
+      <header class="admin-attendee-header">
+        <legend class="admin-attendee-legend">Guest <span class="admin-muted" data-guest-name-display></span></legend>
+        <button type="button" class="admin-attendee-remove rsvp-link" data-guest-remove>Remove guest</button>
+      </header>
+      <div class="admin-attendee-grid">
+        <label>
+          <span class="admin-label">Name</span>
+          <input type="text" data-field="name" maxlength="100" />
+        </label>
+        <label>
+          <span class="admin-label">Adult or child</span>
+          <select data-field="guestType">
+            {guestTypeOptions.filter((o) => o.value !== '').map((opt) => (
+              <option value={opt.value}>{t(locale, opt.labelKey)}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span class="admin-label">Attending</span>
+          <select data-field="attending">
+            <option value="">— Not yet answered</option>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </label>
+      </div>
+      <div class="admin-meal-block" data-attending-block hidden>
+        <div class="admin-meal-grid">
+          <label>
+            <span class="admin-label">{t(locale, 'rsvp.entradaLabel')}</span>
+            <select data-field="entradaChoice">
+              {entradaOptions.map((opt) => (
+                <option value={opt.value}>{t(locale, opt.labelKey)}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span class="admin-label">{t(locale, 'rsvp.sorbetLabel')}</span>
+            <select data-field="sorbetChoice">
+              {sorbetOptions.map((opt) => (
+                <option value={opt.value}>{t(locale, opt.labelKey)}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span class="admin-label">{t(locale, 'rsvp.mealLabel')}</span>
+            <select data-field="mealChoice">
+              {mealOptions.map((opt) => (
+                <option value={opt.value}>{t(locale, opt.labelKey)}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span class="admin-label">{t(locale, 'rsvp.postreLabel')}</span>
+            <select data-field="postreChoice">
+              {postreOptions.map((opt) => (
+                <option value={opt.value}>{t(locale, opt.labelKey)}</option>
+              ))}
+            </select>
+          </label>
+          <label class="admin-meal-grid-full">
+            <span class="admin-label">Allergies / dietary notes</span>
+            <input type="text" data-field="dietary" maxlength="500" />
+          </label>
+          <label class="admin-meal-grid-full">
+            <span class="admin-label">Song request</span>
+            <input type="text" data-field="songRequest" maxlength="500" />
+          </label>
+        </div>
+      </div>
+    </fieldset>
+  </template>
+
+  <!-- Diff preview overlay — shown on Save when payload changed -->
+  <div id="admin-diff-modal" class="admin-modal admin-diff-modal" hidden>
+    <div class="admin-modal-backdrop" data-diff-close></div>
+    <div class="admin-modal-panel" role="dialog" aria-modal="true" aria-labelledby="admin-diff-title">
+      <header class="admin-modal-header">
+        <h3 id="admin-diff-title">Review RSVP changes</h3>
+        <button type="button" class="admin-modal-close" data-diff-close aria-label="Close">×</button>
+      </header>
+      <div class="admin-modal-body">
+        <p class="admin-muted admin-diff-intro">Here's what will change when you save. Removed answers are permanent.</p>
+        <ul id="admin-diff-list" class="admin-diff-list"></ul>
+        <div class="admin-modal-actions">
+          <button type="button" class="btn btn--ghost" data-diff-close>Back to edit</button>
+          <button type="button" class="btn btn--gold" id="admin-diff-confirm">Confirm &amp; save</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -240,8 +419,547 @@ const locale = 'en';
       const modalForm = document.getElementById('admin-modal-form') as HTMLFormElement | null;
       const modalErrorEl = document.getElementById('admin-modal-error') as HTMLDivElement | null;
       const modalSaveBtn = document.getElementById('admin-modal-save') as HTMLButtonElement | null;
-      const payloadRow = document.getElementById('admin-payload-row') as HTMLLabelElement | null;
+      const payloadRow = document.getElementById('admin-payload-row') as HTMLElement | null;
       const exportBtn = document.getElementById('btn-export-csv') as HTMLButtonElement | null;
+
+      // ---- RSVP structured-edit helpers ----
+      //
+      // Replaces the legacy "raw JSON payload textarea" workflow. The admin
+      // edits each attendee field through a structured form; we build the
+      // payload object from the DOM at submit time. Keeps guest IDs stable
+      // via hidden inputs, shows a diff preview before persisting, and
+      // gracefully renders any unknown legacy choice values that may exist
+      // in older saved payloads.
+
+      const SCHEMA_VERSION = 1;
+      const ADMIN_MAX_GUESTS = 20;
+
+      const MEAL_FIELDS_ADMIN = ['entradaChoice', 'sorbetChoice', 'mealChoice', 'postreChoice'] as const;
+      type MealField = typeof MEAL_FIELDS_ADMIN[number];
+
+      // Human labels for diff preview — match the public RSVP form labels.
+      const FIELD_HUMAN_LABEL: Record<string, string> = {
+        attending: 'attending',
+        entradaChoice: 'appetizer',
+        sorbetChoice: 'sorbet',
+        mealChoice: 'main',
+        postreChoice: 'dessert',
+        dietary: 'allergies/dietary',
+        songRequest: 'song request',
+        notes: 'notes',
+        name: 'name',
+        guestType: 'adult/child'
+      };
+
+      const CHOICE_DISPLAY: Record<string, Record<string, string>> = {
+        entradaChoice: { salpicon: 'seafood salpicón', hojaldre: 'beef puff pastry', causa: 'causa limeña' },
+        sorbetChoice: { maracuya: 'passion fruit', mandarina: 'mandarin & mint' },
+        mealChoice: { chicken: 'chicken cordon bleu', beef: 'beef tenderloin' },
+        postreChoice: { chocolate: 'chocolate dome', cheesecake: 'red-berry cheesecake', tiramisu: 'tiramisu' }
+      };
+
+      function displayChoice(field: string, value: string): string {
+        if (!value) return '—';
+        return (CHOICE_DISPLAY[field] && CHOICE_DISPLAY[field][value]) || value;
+      }
+      function displayAttending(v: boolean | null): string {
+        if (v === true) return 'Yes';
+        if (v === false) return 'No';
+        return '—';
+      }
+      function attendingFromSelect(v: string): boolean | null {
+        if (v === 'yes') return true;
+        if (v === 'no') return false;
+        return null;
+      }
+      function attendingToSelect(v: boolean | null): string {
+        if (v === true) return 'yes';
+        if (v === false) return 'no';
+        return '';
+      }
+
+      function randomGuestId(): string {
+        // Matches the server's `g_<rand>` shape so the round-trip is stable.
+        let s = '';
+        const alpha = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        for (let i = 0; i < 8; i++) s += alpha[Math.floor(Math.random() * alpha.length)];
+        return 'g_' + s;
+      }
+
+      function rsvpSection(): HTMLElement | null {
+        return payloadRow as unknown as HTMLElement | null;
+      }
+      function primaryAttendeeRoot(): HTMLElement | null {
+        return rsvpSection()?.querySelector('.admin-attendee--primary') as HTMLElement | null;
+      }
+      function guestList(): HTMLDivElement | null {
+        return document.getElementById('admin-guests-list') as HTMLDivElement | null;
+      }
+      function guestCards(): HTMLElement[] {
+        const list = guestList();
+        return list ? Array.from(list.querySelectorAll('[data-guest-card]')) as HTMLElement[] : [];
+      }
+
+      // Set a <select>'s value, gracefully handling unknown legacy values by
+      // injecting a disabled "⚠ Unknown: x" option. Returns true if the value
+      // was unknown (caller may want to surface a hint to the admin). Strips
+      // any prior unknown-legacy option from this select first so successive
+      // openModal calls don't accumulate placeholders.
+      function setSelectValueSafely(select: HTMLSelectElement | null, value: string): boolean {
+        if (!select) return false;
+        Array.from(select.querySelectorAll('option[data-unknown-legacy]')).forEach((el) => el.remove());
+        const v = value || '';
+        const known = Array.from(select.options).some((o) => o.value === v);
+        if (!known) {
+          const opt = document.createElement('option');
+          opt.value = v;
+          opt.textContent = `⚠ Unknown legacy value: ${v}`;
+          opt.disabled = true;
+          opt.dataset.unknownLegacy = 'true';
+          select.insertBefore(opt, select.firstChild || null);
+        }
+        select.value = v;
+        return !known;
+      }
+
+      // Show/hide the meal block based on the attending select. Values are
+      // preserved in the hidden DOM so flipping yes→no→yes restores picks.
+      function toggleMealBlockFor(attendeeRoot: HTMLElement | null) {
+        if (!attendeeRoot) return;
+        const attending = attendeeRoot.querySelector('select[data-field="attending"]') as HTMLSelectElement | null;
+        const block = attendeeRoot.querySelector('[data-attending-block]') as HTMLElement | null;
+        if (!block) return;
+        block.hidden = attending?.value !== 'yes';
+      }
+
+      function wireAttendingToggle(attendeeRoot: HTMLElement | null) {
+        if (!attendeeRoot) return;
+        const attending = attendeeRoot.querySelector('select[data-field="attending"]') as HTMLSelectElement | null;
+        attending?.addEventListener('change', () => toggleMealBlockFor(attendeeRoot));
+      }
+
+      function setPrimaryNameDisplay(name: string) {
+        const el = document.querySelector('[data-primary-name-display]') as HTMLElement | null;
+        if (el) el.textContent = name ? `· ${name}` : '';
+      }
+
+      function updateGuestCountDisplay() {
+        const cards = guestCards();
+        const countEl = document.querySelector('[data-guest-count]') as HTMLElement | null;
+        const emptyEl = document.getElementById('admin-guests-empty') as HTMLElement | null;
+        const maxEl = document.getElementById('admin-guests-max') as HTMLElement | null;
+        const addBtn = document.getElementById('admin-add-guest') as HTMLButtonElement | null;
+        if (countEl) countEl.textContent = cards.length === 0 ? '' : `(${cards.length})`;
+        if (emptyEl) emptyEl.hidden = cards.length !== 0;
+        if (maxEl) maxEl.hidden = cards.length < ADMIN_MAX_GUESTS;
+        if (addBtn) addBtn.disabled = cards.length >= ADMIN_MAX_GUESTS;
+        // Refresh the live name display on each card so the legend matches input
+        for (const card of cards) {
+          const nameInput = card.querySelector('input[data-field="name"]') as HTMLInputElement | null;
+          const display = card.querySelector('[data-guest-name-display]') as HTMLElement | null;
+          if (display) display.textContent = nameInput?.value ? `· ${nameInput.value}` : '';
+        }
+      }
+
+      function attendeeHasMeaningfulData(card: HTMLElement): boolean {
+        const name = (card.querySelector('input[data-field="name"]') as HTMLInputElement | null)?.value.trim() || '';
+        if (name) return true;
+        const attending = (card.querySelector('select[data-field="attending"]') as HTMLSelectElement | null)?.value || '';
+        if (attending) return true;
+        for (const fld of MEAL_FIELDS_ADMIN) {
+          const v = (card.querySelector(`select[data-field="${fld}"]`) as HTMLSelectElement | null)?.value || '';
+          if (v) return true;
+        }
+        const dietary = (card.querySelector('input[data-field="dietary"]') as HTMLInputElement | null)?.value.trim() || '';
+        if (dietary) return true;
+        const song = (card.querySelector('input[data-field="songRequest"]') as HTMLInputElement | null)?.value.trim() || '';
+        if (song) return true;
+        return false;
+      }
+
+      function buildGuestCard(guestData: any | null, isExisting: boolean): HTMLElement | null {
+        const tpl = document.getElementById('admin-guest-card-template') as HTMLTemplateElement | null;
+        if (!tpl) return null;
+        const node = tpl.content.firstElementChild?.cloneNode(true) as HTMLElement | null;
+        if (!node) return null;
+
+        if (isExisting) node.dataset.existingGuest = 'true';
+
+        const idInput = node.querySelector('input[data-guest-id]') as HTMLInputElement | null;
+        if (idInput) idInput.value = (isExisting && guestData?.id) ? guestData.id : randomGuestId();
+
+        // For new (blank) guest cards, default the attending+type selects to
+        // empty so the admin must make an explicit choice rather than silently
+        // creating an attending=null/adult guest by accident.
+        const nameInput = node.querySelector('input[data-field="name"]') as HTMLInputElement | null;
+        if (nameInput) nameInput.value = guestData?.name || '';
+
+        const typeSelect = node.querySelector('select[data-field="guestType"]') as HTMLSelectElement | null;
+        if (typeSelect) {
+          // guestTypeOptions in admin filter out the blank — keep the saved
+          // boolean isKid back-compat: true → child, false → adult, undefined → adult default.
+          if (guestData && typeof guestData.isKid === 'boolean') {
+            typeSelect.value = guestData.isKid ? 'child' : 'adult';
+          } else {
+            typeSelect.value = 'adult';
+          }
+        }
+
+        const attendingSelect = node.querySelector('select[data-field="attending"]') as HTMLSelectElement | null;
+        if (attendingSelect) attendingSelect.value = attendingToSelect(guestData?.attending ?? null);
+
+        for (const fld of MEAL_FIELDS_ADMIN) {
+          setSelectValueSafely(node.querySelector(`select[data-field="${fld}"]`), guestData?.[fld] || '');
+        }
+        const dietaryInput = node.querySelector('input[data-field="dietary"]') as HTMLInputElement | null;
+        if (dietaryInput) dietaryInput.value = guestData?.dietary || '';
+        const songInput = node.querySelector('input[data-field="songRequest"]') as HTMLInputElement | null;
+        if (songInput) songInput.value = guestData?.songRequest || '';
+
+        wireAttendingToggle(node);
+        toggleMealBlockFor(node);
+
+        // Live update the guest legend name display
+        nameInput?.addEventListener('input', updateGuestCountDisplay);
+
+        const removeBtn = node.querySelector('[data-guest-remove]') as HTMLButtonElement | null;
+        removeBtn?.addEventListener('click', () => {
+          if (attendeeHasMeaningfulData(node)) {
+            const guestLabel = nameInput?.value.trim() || 'this guest';
+            if (!confirm(`Remove ${guestLabel}? Their answers will be discarded.`)) return;
+          }
+          node.remove();
+          updateGuestCountDisplay();
+        });
+
+        return node;
+      }
+
+      function populateRsvpSection(payload: any) {
+        const root = rsvpSection();
+        if (!root) return;
+        root.hidden = false;
+
+        const p = (payload && typeof payload === 'object' && payload.primary) || {};
+        const primaryRoot = primaryAttendeeRoot();
+        if (primaryRoot) {
+          const attendingSel = primaryRoot.querySelector('select[data-field="attending"]') as HTMLSelectElement | null;
+          if (attendingSel) attendingSel.value = attendingToSelect(p.attending ?? null);
+          for (const fld of MEAL_FIELDS_ADMIN) {
+            setSelectValueSafely(primaryRoot.querySelector(`select[data-field="${fld}"]`), p[fld] || '');
+          }
+          const dietaryInput = primaryRoot.querySelector('input[data-field="dietary"]') as HTMLInputElement | null;
+          if (dietaryInput) dietaryInput.value = p.dietary || '';
+          const songInput = primaryRoot.querySelector('input[data-field="songRequest"]') as HTMLInputElement | null;
+          if (songInput) songInput.value = p.songRequest || '';
+          const notesTa = primaryRoot.querySelector('textarea[data-field="notes"]') as HTMLTextAreaElement | null;
+          if (notesTa) notesTa.value = p.notes || '';
+          toggleMealBlockFor(primaryRoot);
+        }
+
+        const list = guestList();
+        if (list) {
+          list.innerHTML = '';
+          const guests = Array.isArray(payload?.additionalGuests) ? payload.additionalGuests : [];
+          for (const g of guests) {
+            const card = buildGuestCard(g, true);
+            if (card) list.appendChild(card);
+          }
+        }
+        updateGuestCountDisplay();
+      }
+
+      function clearRsvpSection() {
+        const root = rsvpSection();
+        if (!root) return;
+        root.hidden = true;
+        const list = guestList();
+        if (list) list.innerHTML = '';
+        setPrimaryNameDisplay('');
+      }
+
+      function buildAttendeeFromCard(card: HTMLElement, isPrimary: boolean): any {
+        const get = (sel: string) => card.querySelector(sel) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null;
+        const attendingSel = get('select[data-field="attending"]') as HTMLSelectElement | null;
+        const attending = attendingFromSelect(attendingSel?.value || '');
+        // Returns the select's value but coerces to '' if the currently
+        // selected option is a legacy-unknown placeholder. The server's
+        // validator only accepts the canonical choice set, so passing an
+        // unknown value back would reject the save with bad_*_choice.
+        const safeChoice = (fld: string): string => {
+          const sel = get(`select[data-field="${fld}"]`) as HTMLSelectElement | null;
+          if (!sel) return '';
+          const opt = sel.selectedOptions[0];
+          if (opt && (opt as HTMLOptionElement).dataset.unknownLegacy === 'true') return '';
+          return sel.value || '';
+        };
+        const out: any = { attending };
+        for (const fld of MEAL_FIELDS_ADMIN) out[fld] = safeChoice(fld);
+        out.dietary = ((get('input[data-field="dietary"]') as HTMLInputElement | null)?.value || '').trim();
+        out.songRequest = ((get('input[data-field="songRequest"]') as HTMLInputElement | null)?.value || '').trim();
+        if (isPrimary) {
+          out.notes = ((get('textarea[data-field="notes"]') as HTMLTextAreaElement | null)?.value || '').trim();
+        } else {
+          out.name = ((get('input[data-field="name"]') as HTMLInputElement | null)?.value || '').trim();
+          const typeSel = get('select[data-field="guestType"]') as HTMLSelectElement | null;
+          out.isKid = typeSel?.value === 'child';
+          out.id = (get('input[data-guest-id]') as HTMLInputElement | null)?.value || randomGuestId();
+        }
+        // Match the server's "not attending discards meal picks" rule so the
+        // diff preview shows what the server will actually store.
+        if (attending !== true) {
+          for (const fld of MEAL_FIELDS_ADMIN) out[fld] = '';
+          out.dietary = '';
+          out.songRequest = '';
+        }
+        return out;
+      }
+
+      function buildPayloadFromForm(): any {
+        const primaryRoot = primaryAttendeeRoot();
+        const primary = primaryRoot ? buildAttendeeFromCard(primaryRoot, true) : {
+          attending: null, entradaChoice: '', sorbetChoice: '', mealChoice: '', postreChoice: '',
+          dietary: '', songRequest: '', notes: ''
+        };
+        const cards = guestCards();
+        const guests: any[] = [];
+        for (const card of cards) {
+          const g = buildAttendeeFromCard(card, false);
+          const isExisting = card.dataset.existingGuest === 'true';
+          const isBlank = !g.name && g.attending === null && !g.dietary && !g.songRequest
+            && !MEAL_FIELDS_ADMIN.some((f) => g[f]);
+          // Newly-added entirely-blank cards are silently dropped so the
+          // admin can experiment with the + Add guest button without tripping
+          // a server validation error. Existing guest cards are ALWAYS kept;
+          // if the admin really wants to delete one, they click Remove guest
+          // (which triggers a destructive-confirm + a "Removed" diff entry).
+          if (!isExisting && isBlank) continue;
+          guests.push(g);
+        }
+        return { schemaVersion: SCHEMA_VERSION, primary, additionalGuests: guests };
+      }
+
+      // Stable canonical JSON for original-vs-built equality. Sorts guest
+      // array by id so reorder-only edits don't count as a change.
+      function canonicalize(payload: any): string {
+        if (!payload || typeof payload !== 'object') return JSON.stringify(payload);
+        const p = payload.primary || {};
+        const guests = Array.isArray(payload.additionalGuests) ? payload.additionalGuests.slice() : [];
+        guests.sort((a: any, b: any) => String(a?.id || '').localeCompare(String(b?.id || '')));
+        return JSON.stringify({
+          schemaVersion: payload.schemaVersion || SCHEMA_VERSION,
+          primary: {
+            attending: p.attending ?? null,
+            entradaChoice: p.entradaChoice || '',
+            sorbetChoice: p.sorbetChoice || '',
+            mealChoice: p.mealChoice || '',
+            postreChoice: p.postreChoice || '',
+            dietary: p.dietary || '',
+            songRequest: p.songRequest || '',
+            notes: p.notes || ''
+          },
+          additionalGuests: guests.map((g: any) => ({
+            id: g?.id || '',
+            name: g?.name || '',
+            isKid: !!g?.isKid,
+            attending: g?.attending ?? null,
+            entradaChoice: g?.entradaChoice || '',
+            sorbetChoice: g?.sorbetChoice || '',
+            mealChoice: g?.mealChoice || '',
+            postreChoice: g?.postreChoice || '',
+            dietary: g?.dietary || '',
+            songRequest: g?.songRequest || ''
+          }))
+        });
+      }
+
+      interface DiffEntry {
+        scope: string;       // human label: "Primary (Jane Doe)" or "Guest: John Smith"
+        kind: 'changed' | 'added' | 'removed';
+        changes: string[];   // ["attending: — → Yes", "main: empty → chicken"]
+        destructive: boolean;
+      }
+
+      function diffAttendee(scope: string, before: any, after: any, isPrimary: boolean): DiffEntry | null {
+        const changes: string[] = [];
+        let destructive = false;
+        const wasAttending = before?.attending === true;
+        const isAttending = after?.attending === true;
+
+        if ((before?.attending ?? null) !== (after?.attending ?? null)) {
+          changes.push(`attending: ${displayAttending(before?.attending ?? null)} → ${displayAttending(after?.attending ?? null)}`);
+          if (wasAttending && !isAttending) destructive = true;
+        }
+        for (const fld of MEAL_FIELDS_ADMIN) {
+          const b = before?.[fld] || '';
+          const a = after?.[fld] || '';
+          if (b !== a) {
+            changes.push(`${FIELD_HUMAN_LABEL[fld]}: ${displayChoice(fld, b) || 'empty'} → ${displayChoice(fld, a) || 'empty'}`);
+            if (b && !a) destructive = true;
+          }
+        }
+        for (const fld of ['dietary', 'songRequest'] as const) {
+          const b = (before?.[fld] || '').trim();
+          const a = (after?.[fld] || '').trim();
+          if (b !== a) {
+            const bDisp = b ? `"${b}"` : 'empty';
+            const aDisp = a ? `"${a}"` : 'empty';
+            changes.push(`${FIELD_HUMAN_LABEL[fld]}: ${bDisp} → ${aDisp}`);
+            if (b && !a) destructive = true;
+          }
+        }
+        if (isPrimary) {
+          const b = (before?.notes || '').trim();
+          const a = (after?.notes || '').trim();
+          if (b !== a) {
+            changes.push(`notes: ${b ? `"${b.slice(0, 40)}${b.length > 40 ? '…' : ''}"` : 'empty'} → ${a ? `"${a.slice(0, 40)}${a.length > 40 ? '…' : ''}"` : 'empty'}`);
+            if (b && !a) destructive = true;
+          }
+        } else {
+          if ((before?.name || '') !== (after?.name || '')) {
+            changes.push(`name: ${before?.name || 'empty'} → ${after?.name || 'empty'}`);
+          }
+          if (!!before?.isKid !== !!after?.isKid) {
+            changes.push(`adult/child: ${before?.isKid ? 'child' : 'adult'} → ${after?.isKid ? 'child' : 'adult'}`);
+          }
+        }
+        if (changes.length === 0) return null;
+        return { scope, kind: 'changed', changes, destructive };
+      }
+
+      function attendeeSummary(a: any): string[] {
+        const bits: string[] = [];
+        bits.push(`attending: ${displayAttending(a?.attending ?? null)}`);
+        for (const fld of MEAL_FIELDS_ADMIN) {
+          if (a?.[fld]) bits.push(`${FIELD_HUMAN_LABEL[fld]}: ${displayChoice(fld, a[fld])}`);
+        }
+        if ((a?.dietary || '').trim()) bits.push(`dietary: "${a.dietary.trim()}"`);
+        if ((a?.songRequest || '').trim()) bits.push(`song: "${a.songRequest.trim()}"`);
+        return bits;
+      }
+
+      function computeDiff(before: any, after: any, primaryName: string): DiffEntry[] {
+        const entries: DiffEntry[] = [];
+        const primaryDiff = diffAttendee(
+          `Primary (${primaryName || 'invitee'})`,
+          before?.primary || {},
+          after?.primary || {},
+          true
+        );
+        if (primaryDiff) entries.push(primaryDiff);
+
+        const beforeGuests = Array.isArray(before?.additionalGuests) ? before.additionalGuests : [];
+        const afterGuests = Array.isArray(after?.additionalGuests) ? after.additionalGuests : [];
+        const beforeById = new Map<string, any>();
+        for (const g of beforeGuests) if (g?.id) beforeById.set(g.id, g);
+        const afterById = new Map<string, any>();
+        for (const g of afterGuests) if (g?.id) afterById.set(g.id, g);
+
+        // Removed (in before, not in after) — destructive
+        for (const g of beforeGuests) {
+          if (g?.id && !afterById.has(g.id)) {
+            const label = g.name || '(unnamed guest)';
+            entries.push({
+              scope: `Guest: ${label}${g.isKid ? ' (child)' : ''}`,
+              kind: 'removed',
+              changes: attendeeSummary(g),
+              destructive: true
+            });
+          }
+        }
+        // Added (in after, not in before)
+        for (const g of afterGuests) {
+          if (g?.id && !beforeById.has(g.id)) {
+            const label = g.name || '(unnamed guest)';
+            entries.push({
+              scope: `Guest: ${label}${g.isKid ? ' (child)' : ''}`,
+              kind: 'added',
+              changes: attendeeSummary(g),
+              destructive: false
+            });
+          }
+        }
+        // Changed (in both)
+        for (const g of afterGuests) {
+          if (g?.id && beforeById.has(g.id)) {
+            const beforeG = beforeById.get(g.id);
+            const label = g.name || beforeG?.name || '(unnamed guest)';
+            const d = diffAttendee(`Guest: ${label}${g.isKid ? ' (child)' : ''}`, beforeG, g, false);
+            if (d) entries.push(d);
+          }
+        }
+        return entries;
+      }
+
+      function showDiffModal(entries: DiffEntry[], onConfirm: () => void) {
+        const diffModal = document.getElementById('admin-diff-modal') as HTMLDivElement | null;
+        const list = document.getElementById('admin-diff-list') as HTMLUListElement | null;
+        const confirmBtn = document.getElementById('admin-diff-confirm') as HTMLButtonElement | null;
+        if (!diffModal || !list || !confirmBtn) {
+          // Fallback: no diff UI, just confirm
+          onConfirm();
+          return;
+        }
+        // Tear down any prior session's handlers first so a stale doSave
+        // closure from a previously-closed-but-not-confirmed diff can't fire.
+        if (activeDiffCleanup) {
+          activeDiffCleanup();
+          activeDiffCleanup = null;
+        }
+        list.innerHTML = '';
+        for (const e of entries) {
+          const li = document.createElement('li');
+          li.className = `admin-diff-entry admin-diff-entry--${e.kind}${e.destructive ? ' admin-diff-entry--destructive' : ''}`;
+          const badge = e.kind === 'removed' ? 'REMOVED' : e.kind === 'added' ? 'NEW' : 'CHANGED';
+          const ul = e.changes.map((c) => `<li>${escapeHtml(c)}</li>`).join('');
+          li.innerHTML = `<div class="admin-diff-entry-head"><span class="admin-diff-badge">${badge}</span><strong>${escapeHtml(e.scope)}</strong></div><ul class="admin-diff-changes">${ul}</ul>`;
+          list.appendChild(li);
+        }
+        diffModal.hidden = false;
+
+        // Use .onclick (single slot) instead of addEventListener so there's
+        // no chance of accumulating listeners across diff-modal cycles.
+        const handleConfirm = () => {
+          if (activeDiffCleanup) { activeDiffCleanup(); activeDiffCleanup = null; }
+          onConfirm();
+        };
+        const closeAll = () => {
+          if (activeDiffCleanup) { activeDiffCleanup(); activeDiffCleanup = null; }
+        };
+        confirmBtn.onclick = handleConfirm;
+        const closeEls = Array.from(diffModal.querySelectorAll('[data-diff-close]')) as HTMLElement[];
+        for (const el of closeEls) {
+          (el as HTMLElement & { onclick: any }).onclick = closeAll;
+        }
+        activeDiffCleanup = () => {
+          diffModal.hidden = true;
+          confirmBtn.onclick = null;
+          for (const el of closeEls) (el as HTMLElement & { onclick: any }).onclick = null;
+        };
+      }
+
+      // Tracks the active diff-modal confirm handler so closeModal can clear
+      // it. Without this, dismissing the parent admin modal while the diff is
+      // open would leave a stale handler bound to the next opened invite's
+      // doSave closure — a real data-loss path on subsequent edits.
+      let activeDiffCleanup: (() => void) | null = null;
+
+      document.getElementById('admin-add-guest')?.addEventListener('click', () => {
+        if (guestCards().length >= ADMIN_MAX_GUESTS) return;
+        const list = guestList();
+        if (!list) return;
+        const card = buildGuestCard(null, false);
+        if (card) {
+          list.appendChild(card);
+          updateGuestCountDisplay();
+          (card.querySelector('input[data-field="name"]') as HTMLInputElement | null)?.focus();
+        }
+      });
+
+      // Wire the primary attendee's attending-toggle once at init so we don't
+      // accumulate listeners every time openModal is called. Guest cards are
+      // cloned fresh from the template, so they get wired in buildGuestCard.
+      wireAttendingToggle(primaryAttendeeRoot());
 
       function showError(msg: string) {
         if (!errorEl) return;
@@ -765,14 +1483,15 @@ const locale = 'en';
           (get('adminNotes') as HTMLTextAreaElement).value = invite.adminNotes || '';
           (get('optedOutOfSms') as HTMLInputElement).checked = !!invite.optedOutOfSms;
           (get('clearHardFail') as HTMLInputElement).checked = false;
-          const payloadField = get('payload') as HTMLTextAreaElement;
-          payloadField.value = JSON.stringify(invite.payload || {}, null, 2);
-          // Stash so the submit handler can detect a real change vs no-op.
-          payloadField.dataset.original = payloadField.value;
-          if (payloadRow) payloadRow.hidden = false;
+          populateRsvpSection(invite.payload || { primary: {}, additionalGuests: [] });
+          setPrimaryNameDisplay(`${invite.primaryFirstName || ''} ${invite.primaryLastName || ''}`.trim());
+          // Stash a canonical snapshot of the saved payload so the submit
+          // handler can diff it against whatever the admin built in the form.
+          modalForm.dataset.payloadOriginal = canonicalize(invite.payload || {});
         } else {
           (get('locale') as HTMLSelectElement).value = 'en';
-          if (payloadRow) payloadRow.hidden = true;
+          clearRsvpSection();
+          delete modalForm.dataset.payloadOriginal;
         }
         modalEl.hidden = false;
         document.body.style.overflow = 'hidden';
@@ -781,6 +1500,10 @@ const locale = 'en';
       function closeModal() {
         if (!modalEl) return;
         modalEl.hidden = true;
+        // Defensive: if the diff preview is open (e.g. user clicked the
+        // backdrop while reviewing), tear it down so the confirm handler
+        // can't fire later against a stale doSave closure.
+        if (activeDiffCleanup) { activeDiffCleanup(); activeDiffCleanup = null; }
         document.body.style.overflow = '';
       }
       function showModalError(msg: string) {
@@ -839,21 +1562,32 @@ const locale = 'en';
           } else {
             const patch: any = { primaryFirstName, primaryLastName, phone, locale, adminNotes, optedOutOfSms };
             if (clearHardFail) patch.smsHardFailedAt = '';
+
+            // Pre-validate guest cards: the server requires every guest in
+            // `additionalGuests` to have a non-empty name. Catch it here so
+            // the admin gets a clear in-modal error before the diff preview
+            // rather than a confusing "guest_name_required" after confirm.
+            const blankNameCard = guestCards().find((card) => {
+              if (card.dataset.existingGuest === 'true') return false;
+              const nameInput = card.querySelector('input[data-field="name"]') as HTMLInputElement | null;
+              if (nameInput?.value.trim()) return false;
+              return attendeeHasMeaningfulData(card);
+            });
+            if (blankNameCard) {
+              showModalError('Each additional guest needs a name. Fill it in or remove the card.');
+              (blankNameCard.querySelector('input[data-field="name"]') as HTMLInputElement | null)?.focus();
+              return;
+            }
+
             // Only include payload in the patch if it actually changed vs.
-            // the in-form snapshot. The server treats payload edits as a
+            // the saved snapshot. The server treats payload edits as a
             // "may recompute responded" signal — sending the same payload
             // on a no-op nudge could flip an already-responded invite.
-            const payloadField = get('payload') as HTMLTextAreaElement;
-            const raw = (payloadField.value || '').trim();
-            const original = (payloadField.dataset.original || '').trim();
-            if (raw && raw !== original) {
-              try {
-                patch.payload = JSON.parse(raw);
-              } catch {
-                showModalError('Payload JSON is not valid. Fix or clear the field to skip the payload update.');
-                return;
-              }
-            }
+            const builtPayload = buildPayloadFromForm();
+            const originalJson = modalForm.dataset.payloadOriginal || '';
+            const builtJson = canonicalize(builtPayload);
+            const payloadChanged = !!originalJson && builtJson !== originalJson;
+
             // Warn before changing the primary name — old session cookies
             // and magic links can no longer be invalidated, and would still
             // unlock this invitation under the new name. Recommended
@@ -864,18 +1598,48 @@ const locale = 'en';
                 return;
               }
             }
-            const res = await fetch('/api/mgmt/update-invite', {
-              method: 'POST', credentials: 'same-origin',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ inviteId, patch })
-            });
-            if (!res.ok) {
-              const data = await res.json().catch(() => ({}));
-              showModalError(`Update failed (${res.status}): ${data.error || ''}${data.detail ? ' · ' + data.detail : ''}`);
-              return;
+
+            const doSave = async () => {
+              if (payloadChanged) patch.payload = builtPayload;
+              modalSaveBtn.disabled = true;
+              modalSaveBtn.textContent = 'Saving…';
+              try {
+                const res = await fetch('/api/mgmt/update-invite', {
+                  method: 'POST', credentials: 'same-origin',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ inviteId, patch })
+                });
+                if (!res.ok) {
+                  const data = await res.json().catch(() => ({}));
+                  showModalError(`Update failed (${res.status}): ${data.error || ''}${data.detail ? ' · ' + data.detail : ''}`);
+                  return;
+                }
+                closeModal();
+                setStatus('Invitation updated.', 'ok');
+                await loadGuests();
+              } catch (err: any) {
+                showModalError(`Request failed: ${err && err.message}`);
+              } finally {
+                modalSaveBtn.disabled = false;
+                if (saveLabel) modalSaveBtn.textContent = saveLabel;
+              }
+            };
+
+            if (payloadChanged) {
+              const originalPayload = JSON.parse(originalJson || '{}');
+              const primaryName = `${primaryFirstName} ${primaryLastName}`.trim();
+              const diffEntries = computeDiff(originalPayload, builtPayload, primaryName);
+              if (diffEntries.length === 0) {
+                // Canonical form differs but no human-visible changes
+                // (e.g. blank-field normalization). Skip the preview.
+                await doSave();
+              } else {
+                showDiffModal(diffEntries, doSave);
+              }
+              return; // doSave handles save-button state itself
             }
-            closeModal();
-            setStatus('Invitation updated.', 'ok');
+            await doSave();
+            return;
           }
           await loadGuests();
         } catch (err: any) {
@@ -1678,6 +2442,90 @@ const locale = 'en';
       font: inherit;
     }
     .admin-payload-json { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.85rem; white-space: pre; min-height: 14rem; }
+
+    /* RSVP structured edit form */
+    .admin-rsvp-help { display: block; margin: 0.25rem 0 0.75rem; line-height: 1.4; }
+    .admin-attendee {
+      border: 1px solid var(--color-rule, #e3dccb);
+      border-radius: var(--radius-md, 8px);
+      padding: 0.85rem 0.9rem 0.6rem;
+      margin: 0 0 0.85rem;
+      background: #fcfbf6;
+    }
+    .admin-attendee--primary { background: #faf6e8; border-color: #e6d9aa; }
+    .admin-attendee-legend {
+      padding: 0 0.4rem;
+      font-weight: 600;
+      color: var(--color-gold-deep, #8a6a2c);
+      font-size: 0.95rem;
+    }
+    .admin-attendee-header {
+      display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem;
+      margin: 0 -0.4rem 0.25rem;
+    }
+    .admin-attendee-header .admin-attendee-legend { margin: 0; }
+    .admin-attendee-grid {
+      display: grid; grid-template-columns: 1fr; gap: 0.6rem;
+      margin-bottom: 0.4rem;
+    }
+    @media (min-width: 28rem) {
+      .admin-attendee-grid { grid-template-columns: 2fr 1fr 1fr; align-items: end; }
+    }
+    .admin-attendee-remove {
+      background: none; border: 0;
+      color: #b04848; font-size: 0.85rem; cursor: pointer;
+      padding: 0.15rem 0.3rem;
+      text-decoration: underline;
+    }
+    .admin-attendee-remove:hover { color: #7e2929; }
+    .admin-meal-block { margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px dashed var(--color-rule, #e3dccb); }
+    .admin-meal-block[hidden] { display: none; }
+    .admin-meal-grid {
+      display: grid; grid-template-columns: 1fr; gap: 0.55rem;
+    }
+    @media (min-width: 32rem) { .admin-meal-grid { grid-template-columns: 1fr 1fr; } }
+    .admin-meal-grid-full { grid-column: 1 / -1; }
+    .admin-attendee-notes { margin-top: 0.5rem; }
+
+    .admin-guests-section { margin-top: 0.6rem; }
+    .admin-guests-header {
+      display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .admin-guests-heading { margin: 0; font-size: 1rem; color: var(--color-gold-deep, #8a6a2c); }
+    .admin-guests-list { display: flex; flex-direction: column; gap: 0; }
+    .admin-guests-empty { margin: 0.3rem 0 0; font-size: 0.85rem; font-style: italic; }
+
+    /* Diff preview modal */
+    .admin-diff-modal { z-index: 1100; }
+    .admin-diff-intro { margin: 0 0 0.6rem; line-height: 1.4; }
+    .admin-diff-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+    .admin-diff-entry {
+      border: 1px solid var(--color-rule, #e3dccb);
+      border-left-width: 4px;
+      border-radius: var(--radius-sm, 4px);
+      padding: 0.55rem 0.7rem;
+      background: #fcfbf6;
+    }
+    .admin-diff-entry--added { border-left-color: #4a7d4a; }
+    .admin-diff-entry--changed { border-left-color: #8a6a2c; }
+    .admin-diff-entry--removed { border-left-color: #b04848; background: #faf0f0; }
+    .admin-diff-entry--destructive { background: #faf0f0; }
+    .admin-diff-entry-head {
+      display: flex; align-items: center; gap: 0.5rem;
+      margin-bottom: 0.3rem; font-size: 0.95rem;
+    }
+    .admin-diff-badge {
+      display: inline-block;
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;
+      padding: 0.1rem 0.4rem; border-radius: 999px;
+      background: rgba(0,0,0,0.06); color: #555;
+    }
+    .admin-diff-entry--added .admin-diff-badge { background: #e2efe2; color: #366336; }
+    .admin-diff-entry--changed .admin-diff-badge { background: #f3eacb; color: #6a5212; }
+    .admin-diff-entry--removed .admin-diff-badge { background: #f3d6d6; color: #7e2929; }
+    .admin-diff-changes { margin: 0 0 0 1.1rem; padding: 0; font-size: 0.88rem; line-height: 1.45; }
+    .admin-diff-changes li { margin: 0.1rem 0; }
 
     /* Bulk-import card */
     .bulk-help { margin-top: 0.4rem; margin-bottom: 0.6rem; }
