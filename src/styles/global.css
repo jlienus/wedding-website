@@ -104,6 +104,7 @@ main:not(.admin) .rsvp-deadline-callout p {
 }
 
 main:not(.admin) .rsvp-deadline-callout p { text-align: center; }
+main:not(.admin) .details-card p { text-align: center; text-justify: initial; hyphens: initial; -webkit-hyphens: initial; }
 
 .rsvp-deadline-callout {
   padding: var(--space-3);
