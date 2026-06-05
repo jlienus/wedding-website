@@ -228,6 +228,7 @@
     "isKidLabel": "Menor",
     "guestNameRequired": "Por favor escribe el nombre de cada invitado adicional, o elimina las tarjetas vacías.",
     "attendingAllRequired": "Por favor indícanos si puedes asistir antes de guardar.",
+    "mealAllRequired": "Por favor elige una entrada, sorbete, plato fuerte y postre para cada asistente.",
     "attendingQuestion": "¿Asistirás?",
     "attendingYes": "Sí",
     "attendingNo": "No",

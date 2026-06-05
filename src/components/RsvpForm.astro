@@ -61,7 +61,7 @@ const stringKeys = [
   'rsvp.dietaryLabel','rsvp.dietaryPlaceholder','rsvp.songLabel','rsvp.songPlaceholder',
   'rsvp.notesLabel','rsvp.notesPlaceholder',
   'rsvp.submitError','rsvp.submitRateLimited','rsvp.submitClosed','rsvp.lateNotice',
-  'rsvp.attendingAllRequired','rsvp.guestNameRequired',
+  'rsvp.attendingAllRequired','rsvp.guestNameRequired','rsvp.mealAllRequired',
   'rsvp.thanks','rsvp.thanksAttending','rsvp.thanksNotAttending','rsvp.thanksMixed','rsvp.edit',
   'rsvp.magicOk','rsvp.magicInvalid','rsvp.magicError','rsvp.magicMissing',
   'rsvp.privacySummary','rsvp.privacyBody','rsvp.heading'
@@ -868,6 +868,24 @@ const initData = {
   }
 
   // --- Submit ---
+  // Returns the first empty required meal-course select in this card, or null
+  // if all four are chosen. Used both to gate submit and to scroll/focus the
+  // offending field for the user. Order matches DOM order so we always land
+  // on the topmost missing field.
+  function findFirstEmptyMeal(fs: HTMLFieldSetElement): HTMLSelectElement | null {
+    const names = ['entradaChoice', 'sorbetChoice', 'mealChoice', 'postreChoice'];
+    for (const n of names) {
+      const el = fs.querySelector(`[name="${n}"]`) as HTMLSelectElement | null;
+      if (el && !el.value) return el;
+    }
+    return null;
+  }
+
+  function flagMissingMeal(el: HTMLSelectElement) {
+    try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
+    try { el.focus({ preventScroll: true }); } catch { el.focus(); }
+  }
+
   // collectAttendee derives the per-attendee payload shape from the card.
   // For guests, attending is hardcoded to true — they only exist in the
   // list because the user added them, and the new UX uses "remove" instead
@@ -924,24 +942,53 @@ const initData = {
         return;
       }
 
+      // If primary is attending, all four meal-course picks are required.
+      // (Allergies, song, and "anything else" stay optional.)
+      if (primary.attending === true) {
+        const missPrimary = findFirstEmptyMeal(primaryFs);
+        if (missPrimary) {
+          showError($('#rsvp-submit-error'), S['rsvp.mealAllRequired']);
+          flagMissingMeal(missPrimary);
+          return;
+        }
+      }
+
       // Collect additional guests ONLY when primary is attending. If primary
       // declined, the whole party is declining and the DOM rows (kept around
       // for the No -> Yes toggle-back case) are ignored entirely.
       let additionalGuests: any[] = [];
       if (primary.attending === true) {
         const guestFieldsets = Array.from($('#rsvp-guests')!.querySelectorAll('fieldset')) as HTMLFieldSetElement[];
-        const collected = guestFieldsets.map(fs => collectAttendee(fs, 'guest'));
+        // Pair each fieldset with its collected payload so we can scroll/focus
+        // back to the exact card that fails validation below.
+        const pairs = guestFieldsets.map(fs => ({ fs, g: collectAttendee(fs, 'guest') }));
         // Drop totally-empty cards silently — a user who clicks "Add guest"
         // by mistake and never types anything shouldn't be blocked. A
         // half-filled card (name present but blank, or no name but a meal
         // chosen) still fails the name guard below so we don't lose data.
         const isEmpty = (g: any) => !g.name && !g.entradaChoice && !g.sorbetChoice && !g.mealChoice && !g.postreChoice && !g.dietary && !g.songRequest && !g.isKid;
-        additionalGuests = collected.filter(g => !isEmpty(g));
-        const missingNames = additionalGuests.filter(g => !g.name);
-        if (missingNames.length) {
+        const filledPairs = pairs.filter(p => !isEmpty(p.g));
+        const missingName = filledPairs.find(p => !p.g.name);
+        if (missingName) {
           showError($('#rsvp-submit-error'), S['rsvp.guestNameRequired']);
+          const nameInput = missingName.fs.querySelector('[name="guestName"]') as HTMLInputElement | null;
+          if (nameInput) {
+            try { nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
+            try { nameInput.focus({ preventScroll: true }); } catch { nameInput.focus(); }
+          }
           return;
         }
+        // Every named guest in the list is attending, so each one needs the
+        // full set of four meal picks too.
+        for (const p of filledPairs) {
+          const missGuest = findFirstEmptyMeal(p.fs);
+          if (missGuest) {
+            showError($('#rsvp-submit-error'), S['rsvp.mealAllRequired']);
+            flagMissingMeal(missGuest);
+            return;
+          }
+        }
+        additionalGuests = filledPairs.map(p => p.g);
       }
 
       const payload = {
