@@ -81,6 +81,44 @@ const locale = 'en';
 
       <section class="admin-card">
         <div class="admin-card-header">
+          <h2>Bulk import invitations</h2>
+        </div>
+        <p class="admin-muted bulk-help">
+          Upload a CSV with columns <strong>First name</strong>, <strong>Last name</strong>, <strong>Phone</strong>
+          (optional <strong>Locale</strong>: <code>en</code> or <code>es</code>).
+          Names that match an existing invitation get their phone/locale updated —
+          <strong>existing RSVP responses are preserved</strong>. Unmatched names create new invitations.
+          Name lookup is case-insensitive; rows with duplicate first+last on the existing list are skipped (resolve manually).
+        </p>
+        <div class="admin-row bulk-controls">
+          <input type="file" id="bulk-file" accept=".csv,text/csv,text/plain" />
+          <button type="button" id="bulk-preview-btn" class="btn btn--ghost btn--small" disabled>Preview against server</button>
+          <button type="button" id="bulk-apply-btn" class="btn btn--gold btn--small" disabled>Apply changes</button>
+          <button type="button" id="bulk-clear-btn" class="btn btn--ghost btn--small" hidden>Clear</button>
+        </div>
+        <div id="bulk-status" class="admin-status"></div>
+        <div id="bulk-preview-wrap" hidden>
+          <div id="bulk-summary" class="bulk-summary"></div>
+          <div class="admin-table-wrap">
+            <table class="admin-table bulk-preview-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>First name</th>
+                  <th>Last name</th>
+                  <th>Phone</th>
+                  <th>Locale</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="bulk-preview-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-card">
+        <div class="admin-card-header">
           <h2>Recent activity</h2>
           <span id="events-count" class="admin-muted"></span>
         </div>
@@ -1000,6 +1038,364 @@ const locale = 'en';
           .forEach((cb) => { cb.checked = true; });
         renderEvents();
       });
+
+      // -----------------------------------------------------------------
+      // Bulk import (CSV → bulk-upsert-invites)
+      //
+      // Two-step flow so the admin sees real backend decisions before any
+      // writes: pick file → local parse + table → "Preview against server"
+      // (dryRun:true) fills in the action column → "Apply changes" commits.
+      // Existing RSVP responses are preserved server-side: matched rows get
+      // ONLY phone/locale patched, payload/responded/etc. are untouched.
+      // -----------------------------------------------------------------
+
+      type BulkParsedRow = {
+        rowNum: number;
+        primaryFirstName: string;
+        primaryLastName: string;
+        phone: string;
+        locale: string;
+        localError: string;
+      };
+      type BulkServerResult = {
+        row: number;
+        action: 'create' | 'update' | 'skip' | 'error';
+        inviteId?: string;
+        existingResponded?: boolean;
+        reason?: string;
+      };
+
+      function parseCsv(text: string): string[][] {
+        if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+        const rows: string[][] = [];
+        let row: string[] = [];
+        let field = '';
+        let inQuotes = false;
+        for (let i = 0; i < text.length; i++) {
+          const c = text[i];
+          if (inQuotes) {
+            if (c === '"') {
+              if (text[i + 1] === '"') { field += '"'; i++; }
+              else { inQuotes = false; }
+            } else {
+              field += c;
+            }
+          } else if (c === '"') {
+            inQuotes = true;
+          } else if (c === ',') {
+            row.push(field); field = '';
+          } else if (c === '\n') {
+            row.push(field); field = '';
+            rows.push(row); row = [];
+          } else if (c === '\r') {
+            // CRLF handled by the next \n
+          } else {
+            field += c;
+          }
+        }
+        if (field.length || row.length) { row.push(field); rows.push(row); }
+        while (rows.length && rows[rows.length - 1].every((c) => c === '')) rows.pop();
+        return rows;
+      }
+
+      const BULK_HEADER_ALIASES: Record<string, string[]> = {
+        firstName: ['first', 'first name', 'firstname', 'given', 'given name'],
+        lastName:  ['last', 'last name', 'lastname', 'surname', 'family name', 'family'],
+        phone:     ['phone', 'phone number', 'mobile', 'cell', 'tel', 'telephone', 'number'],
+        locale:    ['locale', 'language', 'lang']
+      };
+
+      function detectColumns(headerRow: string[]) {
+        const map: Record<string, number> = { firstName: -1, lastName: -1, phone: -1, locale: -1 };
+        let hits = 0;
+        for (let i = 0; i < headerRow.length; i++) {
+          const h = (headerRow[i] || '').trim().toLowerCase();
+          for (const field of Object.keys(BULK_HEADER_ALIASES)) {
+            if (map[field] === -1 && BULK_HEADER_ALIASES[field].indexOf(h) !== -1) {
+              map[field] = i; hits++; break;
+            }
+          }
+        }
+        return { map, hits };
+      }
+
+      function rowsFromCsv(rawRows: string[][]): BulkParsedRow[] {
+        if (rawRows.length === 0) return [];
+        const { map, hits } = detectColumns(rawRows[0]);
+        // Need at least 2 recognized headers to trust a header row.
+        // Otherwise treat row 1 as data and use positional columns.
+        const useHeader = hits >= 2;
+        const dataRows = useHeader ? rawRows.slice(1) : rawRows;
+        const cols = useHeader ? map : { firstName: 0, lastName: 1, phone: 2, locale: 3 };
+        const out: BulkParsedRow[] = [];
+        let i = useHeader ? 2 : 1; // human-facing row numbers match the CSV
+        for (const r of dataRows) {
+          const cell = (idx: number) => (idx < 0 || idx >= r.length ? '' : (r[idx] || '').trim());
+          const primaryFirstName = cell(cols.firstName);
+          const primaryLastName = cell(cols.lastName);
+          const phone = cell(cols.phone);
+          const locale = cell(cols.locale);
+          if (!primaryFirstName && !primaryLastName && !phone && !locale) { i++; continue; }
+          let localError = '';
+          if (!primaryFirstName || !primaryLastName) localError = 'missing first or last name';
+          out.push({ rowNum: i, primaryFirstName, primaryLastName, phone, locale, localError });
+          i++;
+        }
+        return out;
+      }
+
+      function escapeHtml(s: string): string {
+        return String(s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      let BULK_ROWS: BulkParsedRow[] = [];
+      let BULK_SERVER_RESULTS: BulkServerResult[] = [];
+
+      const bulkFile = document.getElementById('bulk-file') as HTMLInputElement | null;
+      const bulkPreviewBtn = document.getElementById('bulk-preview-btn') as HTMLButtonElement | null;
+      const bulkApplyBtn = document.getElementById('bulk-apply-btn') as HTMLButtonElement | null;
+      const bulkClearBtn = document.getElementById('bulk-clear-btn') as HTMLButtonElement | null;
+      const bulkStatusEl = document.getElementById('bulk-status') as HTMLDivElement | null;
+      const bulkPreviewWrap = document.getElementById('bulk-preview-wrap') as HTMLDivElement | null;
+      const bulkSummary = document.getElementById('bulk-summary') as HTMLDivElement | null;
+      const bulkTbody = document.getElementById('bulk-preview-tbody') as HTMLTableSectionElement | null;
+
+      function setBulkStatus(msg: string, tone: 'ok' | 'warn' | '' = '') {
+        if (!bulkStatusEl) return;
+        bulkStatusEl.textContent = msg;
+        bulkStatusEl.dataset.tone = tone;
+      }
+
+      function renderBulkPreview() {
+        if (!bulkTbody || !bulkSummary || !bulkPreviewWrap) return;
+        bulkTbody.innerHTML = '';
+        if (BULK_ROWS.length === 0) {
+          bulkPreviewWrap.hidden = true;
+          return;
+        }
+        bulkPreviewWrap.hidden = false;
+
+        // Server results carry 'row' = position within the server payload (1-based,
+        // skipping locally-invalid rows). Build a map back to BULK_ROWS' rowNum so
+        // we can show the server's action on the right CSV row.
+        const validRows = BULK_ROWS.filter((r) => !r.localError);
+        const byOriginalRow: Record<number, BulkServerResult> = {};
+        for (let k = 0; k < BULK_SERVER_RESULTS.length; k++) {
+          const sr = BULK_SERVER_RESULTS[k];
+          const target = validRows[sr.row - 1];
+          if (target) byOriginalRow[target.rowNum] = sr;
+        }
+
+        let willCreate = 0, willUpdate = 0, willSkip = 0, willError = 0;
+
+        for (const r of BULK_ROWS) {
+          const tr = document.createElement('tr');
+          const sr = byOriginalRow[r.rowNum];
+          let actionHtml = '<span class="bulk-action bulk-action--pending">— ready —</span>';
+          if (r.localError) {
+            actionHtml = `<span class="bulk-action bulk-action--error">✗ ${escapeHtml(r.localError)}</span>`;
+            willError++;
+          } else if (sr) {
+            const reason = sr.reason ? ` (${escapeHtml(sr.reason)})` : '';
+            if (sr.action === 'create') {
+              actionHtml = '<span class="bulk-action bulk-action--create">＋ Create new invitation</span>';
+              willCreate++;
+            } else if (sr.action === 'update') {
+              const presv = sr.existingResponded
+                ? ' <em class="bulk-rsvp-note">existing RSVP preserved</em>'
+                : '';
+              actionHtml = `<span class="bulk-action bulk-action--update">↻ Update existing</span>${presv}`;
+              willUpdate++;
+            } else if (sr.action === 'skip') {
+              actionHtml = `<span class="bulk-action bulk-action--skip">⊘ Skip${reason}</span>`;
+              willSkip++;
+            } else {
+              actionHtml = `<span class="bulk-action bulk-action--error">✗ Error${reason}</span>`;
+              willError++;
+            }
+          }
+          tr.innerHTML =
+            `<td>${r.rowNum}</td>` +
+            `<td>${escapeHtml(r.primaryFirstName)}</td>` +
+            `<td>${escapeHtml(r.primaryLastName)}</td>` +
+            `<td>${escapeHtml(r.phone)}</td>` +
+            `<td>${escapeHtml(r.locale)}</td>` +
+            `<td>${actionHtml}</td>`;
+          bulkTbody.appendChild(tr);
+        }
+
+        if (BULK_SERVER_RESULTS.length === 0) {
+          bulkSummary.textContent =
+            `${BULK_ROWS.length} row${BULK_ROWS.length === 1 ? '' : 's'} parsed. ` +
+            `Click "Preview against server" to see create/update decisions.`;
+          if (bulkApplyBtn) { bulkApplyBtn.disabled = true; bulkApplyBtn.textContent = 'Apply changes'; }
+        } else {
+          bulkSummary.innerHTML =
+            `<span class="bulk-stat bulk-stat--create">${willCreate} create</span>` +
+            `<span class="bulk-stat bulk-stat--update">${willUpdate} update</span>` +
+            `<span class="bulk-stat bulk-stat--skip">${willSkip} skip</span>` +
+            (willError ? `<span class="bulk-stat bulk-stat--error">${willError} error</span>` : '');
+          const actionable = willCreate + willUpdate;
+          if (bulkApplyBtn) {
+            bulkApplyBtn.disabled = actionable === 0;
+            bulkApplyBtn.textContent = actionable > 0
+              ? `Apply ${actionable} change${actionable === 1 ? '' : 's'}`
+              : 'Apply changes';
+          }
+        }
+      }
+
+      function resetBulkState() {
+        BULK_ROWS = [];
+        BULK_SERVER_RESULTS = [];
+        if (bulkFile) bulkFile.value = '';
+        if (bulkPreviewBtn) bulkPreviewBtn.disabled = true;
+        if (bulkApplyBtn) { bulkApplyBtn.disabled = true; bulkApplyBtn.textContent = 'Apply changes'; }
+        if (bulkClearBtn) bulkClearBtn.hidden = true;
+        setBulkStatus('', '');
+        renderBulkPreview();
+      }
+
+      function buildBulkPayload(dryRun: boolean) {
+        return {
+          dryRun,
+          rows: BULK_ROWS.filter((r) => !r.localError).map((r) => ({
+            primaryFirstName: r.primaryFirstName,
+            primaryLastName: r.primaryLastName,
+            phone: r.phone,
+            locale: r.locale,
+          })),
+        };
+      }
+
+      bulkFile?.addEventListener('change', async () => {
+        BULK_SERVER_RESULTS = [];
+        const file = bulkFile.files && bulkFile.files[0];
+        if (!file) { resetBulkState(); return; }
+        try {
+          const text = await file.text();
+          const parsed = parseCsv(text);
+          BULK_ROWS = rowsFromCsv(parsed);
+          if (BULK_ROWS.length === 0) {
+            setBulkStatus('CSV had no data rows.', 'warn');
+            if (bulkPreviewBtn) bulkPreviewBtn.disabled = true;
+            if (bulkClearBtn) bulkClearBtn.hidden = false;
+            renderBulkPreview();
+            return;
+          }
+          setBulkStatus(
+            `Parsed ${BULK_ROWS.length} row${BULK_ROWS.length === 1 ? '' : 's'} from ${file.name}.`,
+            'ok'
+          );
+          if (bulkPreviewBtn) bulkPreviewBtn.disabled = false;
+          if (bulkApplyBtn) { bulkApplyBtn.disabled = true; bulkApplyBtn.textContent = 'Apply changes'; }
+          if (bulkClearBtn) bulkClearBtn.hidden = false;
+          renderBulkPreview();
+        } catch (err: any) {
+          setBulkStatus(`Could not read CSV: ${err && err.message}`, 'warn');
+        }
+      });
+
+      bulkPreviewBtn?.addEventListener('click', async () => {
+        if (BULK_ROWS.length === 0) return;
+        bulkPreviewBtn.disabled = true;
+        if (bulkApplyBtn) bulkApplyBtn.disabled = true;
+        setBulkStatus('Running dry-run preview…', '');
+        try {
+          const payload = buildBulkPayload(true);
+          if (payload.rows.length === 0) {
+            setBulkStatus('No valid rows to preview (all rows missing a name).', 'warn');
+            bulkPreviewBtn.disabled = false;
+            return;
+          }
+          const res = await fetch('/api/mgmt/bulk-upsert-invites', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            setBulkStatus(
+              `Preview failed (${res.status}): ${data.error || ''} ${data.message || ''}`.trim(),
+              'warn'
+            );
+            bulkPreviewBtn.disabled = false;
+            return;
+          }
+          BULK_SERVER_RESULTS = data.results || [];
+          setBulkStatus(
+            `Preview ready: ${data.summary.created} new, ${data.summary.updated} updates, ` +
+              `${data.summary.skipped} skipped, ${data.summary.errors} errors.`,
+            'ok'
+          );
+          bulkPreviewBtn.disabled = false;
+          renderBulkPreview();
+        } catch (err: any) {
+          setBulkStatus(`Preview failed: ${err && err.message}`, 'warn');
+          bulkPreviewBtn.disabled = false;
+        }
+      });
+
+      bulkApplyBtn?.addEventListener('click', async () => {
+        if (BULK_ROWS.length === 0 || BULK_SERVER_RESULTS.length === 0) return;
+        const willChange = BULK_SERVER_RESULTS.filter(
+          (r) => r.action === 'create' || r.action === 'update'
+        ).length;
+        if (willChange === 0) return;
+        if (!confirm(
+          `Apply ${willChange} change${willChange === 1 ? '' : 's'} to the invitations table?\n\n` +
+            `Existing RSVP responses will be preserved.`
+        )) return;
+        bulkApplyBtn.disabled = true;
+        if (bulkPreviewBtn) bulkPreviewBtn.disabled = true;
+        setBulkStatus('Applying changes…', '');
+        try {
+          const res = await fetch('/api/mgmt/bulk-upsert-invites', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(buildBulkPayload(false)),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            setBulkStatus(
+              `Apply failed (${res.status}): ${data.error || ''} ${data.message || ''}`.trim(),
+              'warn'
+            );
+            bulkApplyBtn.disabled = false;
+            if (bulkPreviewBtn) bulkPreviewBtn.disabled = false;
+            return;
+          }
+          BULK_SERVER_RESULTS = data.results || [];
+          setBulkStatus(
+            `Done: ${data.summary.created} created, ${data.summary.updated} updated, ` +
+              `${data.summary.skipped} skipped, ${data.summary.errors} errors.`,
+            'ok'
+          );
+          renderBulkPreview();
+          // Refresh the main tables so the new/updated rows are visible.
+          await loadGuests();
+          await loadEvents();
+          if (bulkApplyBtn) {
+            // After a successful apply the dry-run results no longer reflect server
+            // state — re-previewing or clearing is the next sensible action.
+            bulkApplyBtn.disabled = true;
+            bulkApplyBtn.textContent = 'Apply changes';
+          }
+          if (bulkPreviewBtn) bulkPreviewBtn.disabled = false;
+        } catch (err: any) {
+          setBulkStatus(`Apply failed: ${err && err.message}`, 'warn');
+          bulkApplyBtn.disabled = false;
+          if (bulkPreviewBtn) bulkPreviewBtn.disabled = false;
+        }
+      });
+
+      bulkClearBtn?.addEventListener('click', () => resetBulkState());
     })();
   </script>
 
@@ -1282,5 +1678,48 @@ const locale = 'en';
       font: inherit;
     }
     .admin-payload-json { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.85rem; white-space: pre; min-height: 14rem; }
+
+    /* Bulk-import card */
+    .bulk-help { margin-top: 0.4rem; margin-bottom: 0.6rem; }
+    .bulk-help code {
+      background: rgba(201, 169, 97, 0.12);
+      padding: 0 0.25rem;
+      border-radius: 2px;
+      font-size: 0.9em;
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+    }
+    .bulk-controls { align-items: center; gap: 0.6rem; }
+    .bulk-controls input[type="file"] { font-size: 0.9rem; }
+    .bulk-summary {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      margin: 0.6rem 0;
+      align-items: center;
+      color: var(--color-text-muted, #888);
+      font-size: 0.85rem;
+    }
+    .bulk-stat {
+      display: inline-block;
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: rgba(0, 0, 0, 0.06);
+      color: var(--color-text);
+    }
+    .bulk-stat--create { background: rgba(80, 160, 80, 0.18); color: #2a6a2a; }
+    .bulk-stat--update { background: rgba(201, 169, 97, 0.22); color: var(--color-gold-deep, #8a6a2c); }
+    .bulk-stat--skip { background: rgba(160, 160, 160, 0.2); color: #555; }
+    .bulk-stat--error { background: rgba(200, 60, 60, 0.16); color: #8a2c2c; }
+    .bulk-preview-table { font-size: 0.88rem; }
+    .bulk-preview-table th, .bulk-preview-table td { padding: 0.35rem 0.5rem; }
+    .bulk-action { font-size: 0.85rem; }
+    .bulk-action--create { color: #2a6a2a; font-weight: 600; }
+    .bulk-action--update { color: var(--color-gold-deep, #8a6a2c); font-weight: 600; }
+    .bulk-action--skip { color: #888; }
+    .bulk-action--error { color: #8a2c2c; font-weight: 600; }
+    .bulk-action--pending { color: #999; font-style: italic; }
+    .bulk-rsvp-note { color: #2a6a2a; font-style: italic; font-size: 0.8rem; margin-left: 0.3rem; }
   </style>
 </Base>
