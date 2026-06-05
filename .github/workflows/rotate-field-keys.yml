@@ -1,0 +1,56 @@
+name: Rotate RSVP Field Keys (monthly)
+
+# Self-managed AES-256 key rotation for the encrypted PII fields in the
+# rsvpInvites table. Runs the same script you'd run by hand. See
+# scripts/rotate-field-keys.ps1 for the full procedure.
+#
+# Cadence: 1st of every month at 07:00 UTC (3am ET, comfortably outside
+# wedding-window traffic). Manual trigger also supported.
+#
+# Setup (one-time): create a service principal scoped to the wedding RG,
+# store its credentials as the AZURE_CREDENTIALS repo secret:
+#
+#   az ad sp create-for-rbac --name "sp-wedding-rotate-keys" \
+#       --role Contributor --sdk-auth \
+#       --scopes /subscriptions/<sub>/resourceGroups/rg-wedding-swa
+#   gh secret set AZURE_CREDENTIALS --body "<json from above>"
+
+on:
+  schedule:
+    - cron: '0 7 1 * *'
+  workflow_dispatch:
+    inputs:
+      propagation_sec:
+        description: 'Seconds to wait after pushing new app settings before running the re-encrypt sweep'
+        required: false
+        default: '60'
+
+permissions:
+  contents: read
+
+jobs:
+  rotate:
+    runs-on: ubuntu-latest
+    concurrency: rsvp-field-key-rotation  # never two rotations at once
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install api/ deps (used by the re-encrypt sweep)
+        run: |
+          cd api
+          npm ci --omit=dev
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Rotate field keys + re-encrypt sweep
+        shell: pwsh
+        run: |
+          $propagation = if ('${{ inputs.propagation_sec }}') { [int]'${{ inputs.propagation_sec }}' } else { 60 }
+          ./scripts/rotate-field-keys.ps1 -Confirm:$false -PropagationSec $propagation

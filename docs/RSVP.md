@@ -173,6 +173,9 @@ settings`):
 | Name | Description | How to generate |
 | --- | --- | --- |
 | `RSVP_STORAGE_CONNECTION` | Full Azure Storage connection string. | From Storage account → Access keys. |
+| `RSVP_FIELD_KEY_CURRENT` | Base64-encoded 32-byte AES-256 key. Encrypts `primaryFirstName`, `primaryLastName`, `phone` at rest. **Lose this and you lose access to every encrypted row.** | `pwsh scripts/init-field-keys.ps1` (one-time) then `pwsh scripts/rotate-field-keys.ps1` every 30 days. |
+| `RSVP_FIELD_KEY_PREVIOUS` | (Auto-managed) Second base64 key used only during a rotation window so old ciphertext stays decryptable while the re-encrypt sweep runs. Cleared automatically when the sweep completes. | Set + cleared by `rotate-field-keys.ps1`. Don't touch manually. |
+| `RSVP_BLIND_INDEX_KEY` | Base64-encoded 32-byte HMAC master. Per-field subkeys are HKDF-derived; used to build deterministic lookup hashes for phone / first / last name. Not rotated (rotation would require re-indexing every row). | `pwsh scripts/init-field-keys.ps1` (one-time). |
 | `RSVP_MAGIC_SECRET` | 32+ char random secret for magic-link HMAC. | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 | `RSVP_SESSION_SECRET` | (Optional) Separate secret for session cookies. Defaults to `RSVP_MAGIC_SECRET`. | Same generator. |
 | `RSVP_CRON_SECRET` | 32+ char random secret guarding `/api/cron/reminders`. | Same generator. **Also set as GitHub repo secret with the same name.** |

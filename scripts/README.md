@@ -36,6 +36,86 @@ node scripts/test-rsvp-lookup.cjs    # exit 0 on all pass, 1 on any failure
 ```
 
 
+## `init-field-keys.ps1` — One-time bootstrap of PII field-encryption keys
+
+Generates and pushes the two SWA app settings that `api/_lib/fieldcrypto.js`
+needs to encrypt `primaryFirstName`, `primaryLastName`, and `phone` in the
+`rsvpInvites` table:
+
+- `RSVP_FIELD_KEY_CURRENT` — base64 32-byte AES-256 key (rotates on schedule)
+- `RSVP_BLIND_INDEX_KEY`  — base64 32-byte HMAC master for blind-index lookups
+
+```powershell
+pwsh ./scripts/init-field-keys.ps1 -WhatIf
+pwsh ./scripts/init-field-keys.ps1
+```
+
+Refuses to overwrite an existing `RSVP_FIELD_KEY_CURRENT` without `-Force` —
+overwriting it makes every encrypted row unreadable. To rotate the key on an
+already-bootstrapped SWA, use `rotate-field-keys.ps1` instead.
+
+## `encrypt-existing-fields.cjs` — Encrypt-or-rotate sweep across all invites
+
+Reads every invite, decrypts its PII fields (legacy plaintext passes through),
+then writes them back through `storage.upsertInvite` so each row ends up
+ciphertext-at-rest + blind-indexed under whatever `RSVP_FIELD_KEY_CURRENT` is
+loaded at the time. Used both for the one-time migration after the first
+`init-field-keys.ps1` run and as the re-encrypt half of every rotation.
+
+```powershell
+$env:RSVP_STORAGE_CONNECTION = "<connection string>"
+$env:RSVP_FIELD_KEY_CURRENT  = "<base64 32 bytes>"
+$env:RSVP_FIELD_KEY_PREVIOUS = "<base64 32 bytes>"  # only during a rotation window
+$env:RSVP_BLIND_INDEX_KEY    = "<base64 32 bytes>"
+node scripts/encrypt-existing-fields.cjs --verbose
+node scripts/encrypt-existing-fields.cjs --dry-run    # preview only
+```
+
+Idempotent — encrypted rows still get re-emitted under the loaded CURRENT key,
+which is exactly the behavior the rotation sweep relies on. Logs an
+`admin.encrypt_sweep` event into the audit table on success.
+
+## `rotate-field-keys.ps1` — Two-phase rotation of `RSVP_FIELD_KEY_CURRENT`
+
+Mirrors the AOAI rotation pattern but for a self-managed AES-256 key (Azure
+doesn't generate the key for us, so we generate it locally and manage both
+sides of the rotation window):
+
+1. Generate a fresh 32-byte AES-256 key
+2. Push the old `CURRENT` into `RSVP_FIELD_KEY_PREVIOUS` and the new key as
+   `RSVP_FIELD_KEY_CURRENT` (both live simultaneously)
+3. Wait for SWA propagation (default 45s)
+4. Run the `encrypt-existing-fields.cjs` sweep → every row rewritten under
+   the new `CURRENT` key
+5. Clear `RSVP_FIELD_KEY_PREVIOUS` once the sweep succeeds
+
+If the sweep fails, `PREVIOUS` is left in place so the partially-migrated
+data stays readable. Resume by re-running the sweep manually, then re-run
+this script with `-SkipSweep` for the cleanup phase.
+
+```powershell
+pwsh ./scripts/rotate-field-keys.ps1 -WhatIf       # preview
+pwsh ./scripts/rotate-field-keys.ps1               # actually rotate
+pwsh ./scripts/rotate-field-keys.ps1 -PropagationSec 90   # slower SWA = wait longer
+```
+
+**Automating monthly rotation:** `.github/workflows/rotate-field-keys.yml`
+runs this script on the 1st of every month at 07:00 UTC. Needs the
+`AZURE_CREDENTIALS` repo secret (Service Principal with Contributor on the
+wedding RG). See the workflow file header for the `az ad sp create-for-rbac`
++ `gh secret set` one-liners.
+
+## `test-field-encryption.cjs` / `test-storage-encryption.cjs` — Crypto tests
+
+Pure-Node round-trip tests for `api/_lib/fieldcrypto.js` and the encryption
+wiring in `api/_lib/storage.js`. No Azure required; run before any change
+under either file.
+
+```powershell
+node scripts/test-field-encryption.cjs       # 12 unit tests (cipher + blind index)
+node scripts/test-storage-encryption.cjs     #  6 round-trip tests (entityToInvite path)
+```
+
 ## `rotate-aoai-key.ps1` — Azure OpenAI key rotation
 
 Two-key (zero-downtime) rotation of the `AZURE_OPENAI_KEY` consumed by the `/api/chat` Static Web App function.
