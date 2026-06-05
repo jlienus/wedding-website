@@ -29,33 +29,29 @@ const locale: Locale = 'en';
 
       <div id="admin-gate-status" class="admin-status admin-gate-status" role="status" aria-live="polite" hidden></div>
 
-      <div class="admin-gate-grid">
-        <article class="admin-card admin-gate-card">
-          <h2>Sign in with GitHub</h2>
-          <a id="admin-github-signin" class="btn btn--gold" href="/.auth/login/github?post_login_redirect_uri=/admin">Sign in with GitHub</a>
-        </article>
+      <article class="admin-card admin-gate-card">
+        <form id="admin-email-form" class="admin-gate-form" novalidate>
+          <label class="admin-form-row">
+            <span class="admin-label">Email</span>
+            <input
+              id="admin-email-input"
+              name="email"
+              type="email"
+              autocomplete="email"
+              inputmode="email"
+              maxlength="254"
+              required
+              placeholder="you@example.com"
+            />
+          </label>
+          <button id="admin-email-submit" type="submit" class="btn btn--gold">Email me a sign-in link</button>
+          <div id="admin-email-status" class="admin-status admin-gate-email-status" role="status" aria-live="polite"></div>
+        </form>
 
-        <article class="admin-card admin-gate-card">
-          <h2>Sign in with email</h2>
-          <form id="admin-email-form" class="admin-gate-form" novalidate>
-            <label class="admin-form-row">
-              <span class="admin-label">Email</span>
-              <input
-                id="admin-email-input"
-                name="email"
-                type="email"
-                autocomplete="email"
-                inputmode="email"
-                maxlength="254"
-                required
-                placeholder="you@example.com"
-              />
-            </label>
-            <button id="admin-email-submit" type="submit" class="btn btn--gold">Email me a sign-in link</button>
-            <div id="admin-email-status" class="admin-status admin-gate-email-status" role="status" aria-live="polite"></div>
-          </form>
-        </article>
-      </div>
+        <div class="admin-gate-divider" aria-hidden="true"><span>or</span></div>
+
+        <a id="admin-github-signin" class="btn btn--ghost" href="/.auth/login/github?post_login_redirect_uri=/admin">Sign in with GitHub</a>
+      </article>
     </section>
   </main>
 
@@ -2337,29 +2333,15 @@ const locale: Locale = 'en';
     .admin-header h1 { margin: 0; }
     .admin-user { font-size: 0.9rem; color: var(--color-text-muted, #6b6b6b); display:flex; gap:0.5rem; align-items:center; }
 
-    /* Admin sign-in gate (shown when whoami says authed:false). Two
-       side-by-side provider cards on wide screens; stacked on mobile. */
-    .admin-gate .container { max-width: 56rem; }
+    /* Admin sign-in gate (shown when whoami says authed:false). Single
+       centered narrow card; email form is the primary CTA, GitHub is
+       offered as an alternate below an "or" divider. */
+    .admin-gate .container { max-width: 26rem; }
     .admin-gate-header { text-align: center; margin-bottom: var(--space-3); }
-    .admin-gate-header h1 { margin: 0 0 0.4rem; }
+    .admin-gate-header h1 { margin: 0; }
     .admin-gate-status { margin-bottom: var(--space-3); }
-    .admin-gate-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: var(--space-3);
-    }
-    @media (min-width: 720px) {
-      .admin-gate-grid { grid-template-columns: 1fr 1fr; }
-    }
-    .admin-gate-card { display: flex; flex-direction: column; gap: 0.75rem; }
-    .admin-gate-card h2 { margin: 0; }
-    .admin-gate-card p { margin: 0; }
-    /* Push each card's CTA to the bottom so the two buttons sit at the
-       same vertical baseline regardless of body-copy length. */
-    .admin-gate-card > #admin-github-signin,
-    .admin-gate-card > .admin-gate-form { margin-top: auto; }
-    /* Make both CTAs (GitHub <a> and email submit <button>) match in size
-       and span the card width so they line up across the two cards. */
+    .admin-gate-card { display: flex; flex-direction: column; gap: 0.9rem; }
+    /* Both CTAs span the card width so they line up. */
     .admin-gate-card .btn { width: 100%; justify-content: center; }
     .admin-gate-form { display: flex; flex-direction: column; gap: 0.6rem; }
     .admin-gate-form .admin-form-row { margin: 0; }
@@ -2390,6 +2372,24 @@ const locale: Locale = 'en';
       border-color: var(--color-gold, #c9a961);
     }
     .admin-gate-email-status:empty { display: none; }
+    /* "or" divider between the email submit and the GitHub fallback. */
+    .admin-gate-divider {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--color-text-muted, #999);
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin: 0.1rem 0;
+    }
+    .admin-gate-divider::before,
+    .admin-gate-divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--color-rule, #e8e0c8);
+    }
     .admin-card {
       background: #fff;
       border: 1px solid var(--color-rule, #e8e0c8);
