@@ -35,6 +35,12 @@ const postreOptions = [
   { value: 'tiramisu', labelKey: 'rsvp.postreTiramisu' }
 ];
 
+const guestTypeOptions = [
+  { value: '', labelKey: 'rsvp.guestTypeNone' },
+  { value: 'adult', labelKey: 'rsvp.guestTypeAdult' },
+  { value: 'child', labelKey: 'rsvp.guestTypeChild' }
+];
+
 const stringKeys = [
   'rsvp.loading','rsvp.lookupTitle','rsvp.lookupHint','rsvp.lastNameLabel',
   'rsvp.findMe','rsvp.lookingUp',
@@ -48,6 +54,8 @@ const stringKeys = [
   'rsvp.previouslyDeclinedHint',
   'rsvp.addGuest','rsvp.removeGuest','rsvp.maxGuestsReached',
   'rsvp.guestNameLabel','rsvp.guestNamePlaceholder','rsvp.isKidLabel',
+  'rsvp.guestTypeLabel','rsvp.guestTypeNone','rsvp.guestTypeAdult','rsvp.guestTypeChild',
+  'rsvp.guestTypeRequired','rsvp.fieldRequired',
   'rsvp.attendingQuestion','rsvp.attendingYes','rsvp.attendingNo',
   'rsvp.mealLabel','rsvp.mealHint','rsvp.mealNone',
   'rsvp.mealChicken','rsvp.mealBeef',
@@ -81,6 +89,7 @@ const initData = {
   sorbetOptions: sorbetOptions.map(o => ({ value: o.value, label: t(locale, o.labelKey) })),
   mealOptions: mealOptions.map(o => ({ value: o.value, label: t(locale, o.labelKey) })),
   postreOptions: postreOptions.map(o => ({ value: o.value, label: t(locale, o.labelKey) })),
+  guestTypeOptions: guestTypeOptions.map(o => ({ value: o.value, label: t(locale, o.labelKey) })),
   strings
 };
 ---
@@ -138,6 +147,7 @@ const initData = {
       <p class="rsvp-muted">{t(locale, 'rsvp.formIntro')}</p>
       <button type="button" id="rsvp-not-you" class="rsvp-link">{t(locale, 'rsvp.notYou')}</button>
     </div>
+    <div id="rsvp-submit-error" class="rsvp-error rsvp-error--top" role="alert" aria-live="polite" hidden></div>
 
     <h4 class="rsvp-section-heading" data-bind="primaryYourRsvp"></h4>
     <div id="rsvp-primary-card"></div>
@@ -164,7 +174,6 @@ const initData = {
     <div class="rsvp-actions">
       <button type="submit" class="btn btn--gold" data-label-default={t(locale, 'rsvp.save')} data-label-busy={t(locale, 'rsvp.saving')}>{t(locale, 'rsvp.save')}</button>
     </div>
-    <div id="rsvp-submit-error" class="rsvp-error" role="alert" aria-live="polite" hidden></div>
   </form>
 
   <div id="rsvp-confirmation" class="rsvp-phase rsvp-confirmation" hidden>
@@ -195,10 +204,12 @@ const initData = {
         <label class="rsvp-field rsvp-field--name">
           <span class="rsvp-label" data-bind="guestNameLabel"></span>
           <input type="text" name="guestName" maxlength="100" data-placeholder="guestName" required />
+          <small class="rsvp-field-error" hidden></small>
         </label>
-        <label class="rsvp-kid-toggle">
-          <input type="checkbox" name="isKid" />
-          <span data-bind="isKidLabel"></span>
+        <label class="rsvp-field rsvp-field--type">
+          <span class="rsvp-label" data-bind="guestTypeLabel"></span>
+          <select name="guestType" data-bind="guestTypeSelect"></select>
+          <small class="rsvp-field-error" hidden></small>
         </label>
       </div>
       <legend class="rsvp-member-name"></legend>
@@ -208,6 +219,7 @@ const initData = {
           <label class="rsvp-radio"><input type="radio" name="attending" value="yes" /> <span data-bind="attendingYes"></span></label>
           <label class="rsvp-radio"><input type="radio" name="attending" value="no" /> <span data-bind="attendingNo"></span></label>
         </div>
+        <small class="rsvp-field-error" hidden></small>
       </div>
       <div class="rsvp-attending-fields" hidden>
         <div class="rsvp-menu-block">
@@ -217,18 +229,22 @@ const initData = {
             <label class="rsvp-field">
               <span class="rsvp-label" data-bind="entradaLabel"></span>
               <select name="entradaChoice" data-bind="entradaSelect"></select>
+              <small class="rsvp-field-error" hidden></small>
             </label>
             <label class="rsvp-field">
               <span class="rsvp-label" data-bind="sorbetLabel"></span>
               <select name="sorbetChoice" data-bind="sorbetSelect"></select>
+              <small class="rsvp-field-error" hidden></small>
             </label>
             <label class="rsvp-field">
               <span class="rsvp-label" data-bind="mealLabel"></span>
               <select name="mealChoice" data-bind="mealSelect"></select>
+              <small class="rsvp-field-error" hidden></small>
             </label>
             <label class="rsvp-field">
               <span class="rsvp-label" data-bind="postreLabel"></span>
               <select name="postreChoice" data-bind="postreSelect"></select>
+              <small class="rsvp-field-error" hidden></small>
             </label>
           </div>
         </div>
@@ -269,12 +285,15 @@ const initData = {
   const SORBET_OPTIONS: Array<{ value: string; label: string }> = INIT.sorbetOptions || [];
   const MEAL_OPTIONS: Array<{ value: string; label: string }> = INIT.mealOptions || [];
   const POSTRE_OPTIONS: Array<{ value: string; label: string }> = INIT.postreOptions || [];
+  const GUEST_TYPE_OPTIONS: Array<{ value: string; label: string }> = INIT.guestTypeOptions || [];
   const COURSE_SELECT_BINDINGS: Record<string, Array<{ value: string; label: string }>> = {
     entradaSelect: ENTRADA_OPTIONS,
     sorbetSelect: SORBET_OPTIONS,
     mealSelect: MEAL_OPTIONS,
-    postreSelect: POSTRE_OPTIONS
+    postreSelect: POSTRE_OPTIONS,
+    guestTypeSelect: GUEST_TYPE_OPTIONS
   };
+  const MEAL_FIELDS = ['entradaChoice', 'sorbetChoice', 'mealChoice', 'postreChoice'] as const;
   const MAX_GUESTS: number = INIT.maxAdditionalGuests || 20;
   const SCHEMA_VERSION = 1;
 
@@ -457,8 +476,14 @@ const initData = {
       (fieldset.querySelector('.rsvp-member-name') as HTMLElement).hidden = true;
       const nameInput = fieldset.querySelector('input[name="guestName"]') as HTMLInputElement;
       if (data && typeof data.name === 'string') nameInput.value = data.name;
-      const isKidInput = fieldset.querySelector('input[name="isKid"]') as HTMLInputElement;
-      if (data && data.isKid) isKidInput.checked = true;
+      // The new UI uses a required Adult/Child select instead of an isKid
+      // checkbox. Map saved isKid back to a select value so an existing RSVP
+      // doesn't lose its previously-implied "Adult" state on the next edit.
+      const typeSelect = fieldset.querySelector('select[name="guestType"]') as HTMLSelectElement | null;
+      if (typeSelect && data) {
+        if (data.isKid === true) typeSelect.value = 'child';
+        else if (data.isKid === false) typeSelect.value = 'adult';
+      }
       const removeBtn = fieldset.querySelector('.rsvp-remove-guest') as HTMLButtonElement;
       removeBtn.addEventListener('click', () => {
         fieldset.remove();
@@ -868,23 +893,106 @@ const initData = {
   }
 
   // --- Submit ---
-  // Returns the first empty required meal-course select in this card, or null
-  // if all four are chosen. Used both to gate submit and to scroll/focus the
-  // offending field for the user. Order matches DOM order so we always land
-  // on the topmost missing field.
-  function findFirstEmptyMeal(fs: HTMLFieldSetElement): HTMLSelectElement | null {
-    const names = ['entradaChoice', 'sorbetChoice', 'mealChoice', 'postreChoice'];
-    for (const n of names) {
-      const el = fs.querySelector(`[name="${n}"]`) as HTMLSelectElement | null;
-      if (el && !el.value) return el;
+  // Per-field error UX. markFieldInvalid attaches a red border + an inline
+  // "Required" caption to the closest .rsvp-field (or .rsvp-attending) so
+  // the user can see ALL missing fields at a glance, not just the first.
+  // clearAllFieldErrors wipes the marks before re-validating on each submit.
+  function fieldContainer(el: HTMLElement): HTMLElement | null {
+    return el.closest('.rsvp-field, .rsvp-attending') as HTMLElement | null;
+  }
+  function markFieldInvalid(el: HTMLElement, hint: string) {
+    const box = fieldContainer(el);
+    if (!box) return;
+    box.classList.add('rsvp-field--invalid');
+    el.setAttribute('aria-invalid', 'true');
+    const small = box.querySelector(':scope > .rsvp-field-error') as HTMLElement | null;
+    if (small) {
+      small.textContent = hint;
+      small.hidden = false;
     }
-    return null;
+  }
+  function clearFieldInvalid(box: HTMLElement) {
+    box.classList.remove('rsvp-field--invalid');
+    box.querySelectorAll('[aria-invalid="true"]').forEach((c) => c.removeAttribute('aria-invalid'));
+    const small = box.querySelector(':scope > .rsvp-field-error') as HTMLElement | null;
+    if (small) {
+      small.textContent = '';
+      small.hidden = true;
+    }
+  }
+  function clearAllFieldErrors(root: ParentNode) {
+    root.querySelectorAll('.rsvp-field--invalid').forEach((b) => clearFieldInvalid(b as HTMLElement));
   }
 
-  function flagMissingMeal(el: HTMLSelectElement) {
-    try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
-    try { el.focus({ preventScroll: true }); } catch { el.focus(); }
+  // Walk the form and mark every empty required field. Returns the first
+  // invalid element so the caller can scroll/focus it, plus a high-level
+  // summary message keyed to the first category that failed.
+  function validateForm(
+    primaryFs: HTMLFieldSetElement,
+    primary: any,
+    guestFieldsets: HTMLFieldSetElement[]
+  ): { ok: true } | { ok: false; summary: string; focus: HTMLElement } {
+    const formRoot = phases.form as HTMLElement | null;
+    if (formRoot) clearAllFieldErrors(formRoot);
+
+    const hint = S['rsvp.fieldRequired'] || 'Required';
+    let firstInvalid: HTMLElement | null = null;
+    let summary: string | null = null;
+    const note = (el: HTMLElement, msg: string) => {
+      markFieldInvalid(el, hint);
+      if (!firstInvalid) { firstInvalid = el; summary = msg; }
+    };
+
+    // Primary: did they answer attending?
+    if (primary.attending !== true && primary.attending !== false) {
+      const firstRadio = primaryFs.querySelector('input[type="radio"][name="attending-primary"]') as HTMLInputElement | null;
+      if (firstRadio) note(firstRadio, S['rsvp.attendingAllRequired']);
+      // Attending is the only blocker when it's missing — meals are gated on it.
+      return firstInvalid && summary
+        ? { ok: false, summary, focus: firstInvalid }
+        : { ok: false, summary: S['rsvp.attendingAllRequired'], focus: primaryFs };
+    }
+    // Primary declined — nothing else to validate. Guest cards (if any in DOM)
+    // are ignored entirely on submit, matching the existing behavior.
+    if (primary.attending === false) return { ok: true };
+
+    // Primary meals.
+    for (const name of MEAL_FIELDS) {
+      const el = primaryFs.querySelector(`[name="${name}"]`) as HTMLSelectElement | null;
+      if (el && !el.value) note(el, S['rsvp.mealAllRequired']);
+    }
+
+    // Each guest card: name, adult/child, then meals.
+    for (const fs of guestFieldsets) {
+      const nameEl = fs.querySelector('[name="guestName"]') as HTMLInputElement | null;
+      if (nameEl && !nameEl.value.trim()) note(nameEl, S['rsvp.guestNameRequired']);
+      const typeEl = fs.querySelector('[name="guestType"]') as HTMLSelectElement | null;
+      if (typeEl && !typeEl.value) note(typeEl, S['rsvp.guestTypeRequired']);
+      for (const name of MEAL_FIELDS) {
+        const el = fs.querySelector(`[name="${name}"]`) as HTMLSelectElement | null;
+        if (el && !el.value) note(el, S['rsvp.mealAllRequired']);
+      }
+    }
+
+    if (firstInvalid && summary) return { ok: false, summary, focus: firstInvalid };
+    return { ok: true };
   }
+
+  // Clear a field's red marking the moment the user fixes it. Wired once
+  // at form-level via event delegation so it works for dynamically-added
+  // guest cards too.
+  (() => {
+    const formNode = phases.form;
+    if (!formNode) return;
+    const handler = (e: Event) => {
+      const t = e.target as HTMLElement | null;
+      if (!t) return;
+      const box = fieldContainer(t);
+      if (box && box.classList.contains('rsvp-field--invalid')) clearFieldInvalid(box);
+    };
+    formNode.addEventListener('change', handler);
+    formNode.addEventListener('input', handler);
+  })();
 
   // collectAttendee derives the per-attendee payload shape from the card.
   // For guests, attending is hardcoded to true — they only exist in the
@@ -910,10 +1018,11 @@ const initData = {
       };
     }
     // Guest.
+    const guestType = get('guestType');
     return {
       id: fs.dataset.guestId || randomGuestId(),
       name: get('guestName').trim(),
-      isKid: !!(fs.querySelector('input[name="isKid"]') as HTMLInputElement | null)?.checked,
+      isKid: guestType === 'child',
       attending: true,
       entradaChoice: get('entradaChoice'),
       sorbetChoice: get('sorbetChoice'),
@@ -935,61 +1044,23 @@ const initData = {
       const primaryFs = $('#rsvp-primary-card')!.querySelector('fieldset') as HTMLFieldSetElement | null;
       if (!primaryFs) return;
       const primary = collectAttendee(primaryFs, 'primary');
+      const guestFieldsets = primary.attending === true
+        ? Array.from($('#rsvp-guests')!.querySelectorAll('fieldset')) as HTMLFieldSetElement[]
+        : [];
 
-      // Primary must answer Yes or No before we let the form go through.
-      if (primary.attending !== true && primary.attending !== false) {
-        showError($('#rsvp-submit-error'), S['rsvp.attendingAllRequired']);
+      const verdict = validateForm(primaryFs, primary, guestFieldsets);
+      if (!verdict.ok) {
+        showError($('#rsvp-submit-error'), verdict.summary);
+        try { verdict.focus.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
+        try { (verdict.focus as HTMLElement).focus({ preventScroll: true }); } catch { verdict.focus.focus?.(); }
         return;
       }
 
-      // If primary is attending, all four meal-course picks are required.
-      // (Allergies, song, and "anything else" stay optional.)
-      if (primary.attending === true) {
-        const missPrimary = findFirstEmptyMeal(primaryFs);
-        if (missPrimary) {
-          showError($('#rsvp-submit-error'), S['rsvp.mealAllRequired']);
-          flagMissingMeal(missPrimary);
-          return;
-        }
-      }
-
-      // Collect additional guests ONLY when primary is attending. If primary
-      // declined, the whole party is declining and the DOM rows (kept around
-      // for the No -> Yes toggle-back case) are ignored entirely.
-      let additionalGuests: any[] = [];
-      if (primary.attending === true) {
-        const guestFieldsets = Array.from($('#rsvp-guests')!.querySelectorAll('fieldset')) as HTMLFieldSetElement[];
-        // Pair each fieldset with its collected payload so we can scroll/focus
-        // back to the exact card that fails validation below.
-        const pairs = guestFieldsets.map(fs => ({ fs, g: collectAttendee(fs, 'guest') }));
-        // Drop totally-empty cards silently — a user who clicks "Add guest"
-        // by mistake and never types anything shouldn't be blocked. A
-        // half-filled card (name present but blank, or no name but a meal
-        // chosen) still fails the name guard below so we don't lose data.
-        const isEmpty = (g: any) => !g.name && !g.entradaChoice && !g.sorbetChoice && !g.mealChoice && !g.postreChoice && !g.dietary && !g.songRequest && !g.isKid;
-        const filledPairs = pairs.filter(p => !isEmpty(p.g));
-        const missingName = filledPairs.find(p => !p.g.name);
-        if (missingName) {
-          showError($('#rsvp-submit-error'), S['rsvp.guestNameRequired']);
-          const nameInput = missingName.fs.querySelector('[name="guestName"]') as HTMLInputElement | null;
-          if (nameInput) {
-            try { nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
-            try { nameInput.focus({ preventScroll: true }); } catch { nameInput.focus(); }
-          }
-          return;
-        }
-        // Every named guest in the list is attending, so each one needs the
-        // full set of four meal picks too.
-        for (const p of filledPairs) {
-          const missGuest = findFirstEmptyMeal(p.fs);
-          if (missGuest) {
-            showError($('#rsvp-submit-error'), S['rsvp.mealAllRequired']);
-            flagMissingMeal(missGuest);
-            return;
-          }
-        }
-        additionalGuests = filledPairs.map(p => p.g);
-      }
+      // Every guest card in the DOM is a real guest now (no silent
+      // empty-card drop) — they validated, so just collect them.
+      const additionalGuests = primary.attending === true
+        ? guestFieldsets.map((fs) => collectAttendee(fs, 'guest'))
+        : [];
 
       const payload = {
         schemaVersion: SCHEMA_VERSION,
@@ -1308,15 +1379,6 @@ const initData = {
   @media (min-width: 32rem) {
     .guest-name-row { grid-template-columns: 1fr auto; }
   }
-  .rsvp-kid-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.5rem 0.25rem;
-    font-size: 0.95rem;
-    white-space: nowrap;
-  }
-  .rsvp-kid-toggle input { margin: 0; }
 
   .rsvp-attending { margin-top: 0.5rem; }
   .rsvp-primary-notes { margin-top: var(--space-3); }
@@ -1407,6 +1469,32 @@ const initData = {
     border-radius: var(--radius-sm, 4px);
     color: #8a2c2c;
     font-size: 0.95rem;
+  }
+  .rsvp-error--top {
+    margin-top: 0;
+    margin-bottom: var(--space-3);
+  }
+
+  .rsvp-field-error {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #8a2c2c;
+  }
+  .rsvp-field-error[hidden] { display: none; }
+  .rsvp-field--invalid > select,
+  .rsvp-field--invalid > input[type="text"],
+  .rsvp-field--invalid > input[type="tel"],
+  .rsvp-field--invalid > textarea {
+    border-color: #c83c3c;
+    box-shadow: 0 0 0 3px rgba(200, 60, 60, 0.12);
+  }
+  .rsvp-attending.rsvp-field--invalid .rsvp-radio-group {
+    padding: 0.35rem 0.6rem;
+    border-radius: var(--radius-sm, 4px);
+    background: rgba(200, 60, 60, 0.06);
+    box-shadow: inset 0 0 0 1px #c83c3c;
   }
 
   .rsvp-confirm-card { text-align: center; padding: var(--space-2) 0; }
