@@ -44,6 +44,18 @@ const anchorLinks = Object.keys(grouped).map((category) => ({
         </div>
       </section>
     ))}
+    <section class="section container container--narrow reveal">
+      <aside class="dev-callout-card">
+        <p class="eyebrow">{t(locale, 'faq.developerCallout.eyebrow')}</p>
+        <h2>{t(locale, 'faq.developerCallout.heading')}</h2>
+        <p>{t(locale, 'faq.developerCallout.body')}</p>
+        <p>
+          <a class="dev-callout-cta" href="https://github.com/jlienus/wedding-website" target="_blank" rel="noopener noreferrer">
+            {t(locale, 'faq.developerCallout.cta')}
+          </a>
+        </p>
+      </aside>
+    </section>
   </main>
 </Base>
 
@@ -53,5 +65,28 @@ const anchorLinks = Object.keys(grouped).map((category) => ({
   .faq-item:hover, .faq-item[open] { border-color: rgba(201,169,97,0.65); background: rgba(201,169,97,0.08); }
   summary { cursor: pointer; font-weight: 700; color: var(--color-text); }
   .faq-item p { margin-top: var(--space-2); color: var(--color-text-muted); }
+  .dev-callout-card {
+    padding: var(--space-3);
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, rgba(201,169,97,0.06) 0%, rgba(247,244,237,0.6) 100%);
+    box-shadow: var(--shadow-sm);
+  }
+  .dev-callout-card .eyebrow {
+    font-size: var(--fs-tiny);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-gold-deep);
+    margin-bottom: 0.5rem;
+  }
+  .dev-callout-card h2 { margin-top: 0; margin-bottom: var(--space-2); }
+  .dev-callout-card p { color: var(--color-text-muted); }
+  .dev-callout-cta {
+    color: var(--color-gold-deep);
+    font-weight: 600;
+    border-bottom: 1px solid currentColor;
+    text-decoration: none;
+  }
+  .dev-callout-cta:hover { color: var(--color-text); }
 </style>
 

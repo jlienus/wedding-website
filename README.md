@@ -61,15 +61,6 @@ This produces the production site in `dist\`.
 
 After GitHub and Azure Static Web Apps are connected, pushing to `main` on GitHub triggers the Azure Static Web Apps workflow automatically. Azure builds the Astro site and deploys the contents of `dist\`.
 
-## Cost summary
-
-- Domain (Azure App Service Domains, Pay-As-You-Go sub): about **$12/year** (PAYG credit card)
-- Azure DNS zone hosting: about **$6/year** (PAYG credit card by default; optionally moved to VS credits)
-- Azure Static Web Apps Free tier (Visual Studio sub): **$0** (VS Azure credits)
-- RSVPify Event plan: about **$35-75 one-time**
-
-Rough total: **~$18/year + $35-75 once.** Domain + DNS land on the PAYG card (Visual Studio credits can't buy through Azure Marketplace). Hosting and deployment ride on VS credits.
-
 ## Links
 
 - [Content Editing Guide](CONTENT-EDITING-GUIDE.md)

@@ -293,6 +293,12 @@
       "lodging": "Hospedaje",
       "giftsRegistry": "Regalos y mesa de regalos",
       "localTips": "Consejos locales"
+    },
+    "developerCallout": {
+      "eyebrow": "Detrás del sitio",
+      "heading": "Hecho a mano",
+      "body": "John desarrolló este sitio desde cero con la ayuda de GitHub Copilot — usando Astro, TypeScript y Azure por debajo, con contenido bilingüe en todas partes y un backend de confirmación de asistencia propio en lugar de un formulario genérico. El código es abierto. Si eres desarrollador/a (o sientes curiosidad por cómo funciona algo) te invitamos a echarle un vistazo — las contribuciones son bienvenidas.",
+      "cta": "Ver el código en GitHub →"
     }
   },
   "footer": {
@@ -303,7 +309,8 @@
     "backToTop": "Volver arriba ↑",
     "privacy": "Privacidad",
     "terms": "Términos",
-    "share": "Compartir"
+    "share": "Compartir",
+    "developerCallout": "Hecho a mano — ¿eres desarrollador/a? Contribuye en GitHub →"
   },
   "share": {
     "eyebrow": "Compartir",

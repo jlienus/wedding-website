@@ -28,6 +28,11 @@ const shareHref = locale === 'es' ? '/es/compartir' : '/share';
       {t(locale, 'footer.share')}
     </a>
   </p>
+  <p class="dev-callout">
+    <a href="https://github.com/jlienus/wedding-website" target="_blank" rel="noopener noreferrer">
+      {t(locale, 'footer.developerCallout')}
+    </a>
+  </p>
 </footer>
 
 <script>
@@ -93,6 +98,20 @@ const shareHref = locale === 'es' ? '/es/compartir' : '/share';
   }
   .legal-links a:hover { opacity: 1; color: var(--color-gold-deep); }
   .legal-links span { margin: 0 0.4rem; }
+  .dev-callout {
+    margin-top: 0.75rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    opacity: 0.55;
+  }
+  .dev-callout a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px dotted currentColor;
+    transition: color var(--transition), opacity var(--transition);
+  }
+  .dev-callout a:hover { opacity: 1; color: var(--color-gold-deep); }
   .share-link {
     display: inline-flex;
     align-items: center;

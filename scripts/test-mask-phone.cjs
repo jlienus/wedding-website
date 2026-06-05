@@ -19,13 +19,13 @@ const cases = [
   ['null -> empty',                null,                 ''],
   ['undefined -> empty',           undefined,            ''],
   ['non-string number -> empty',   12345,                ''],
-  ['E.164 US -> ***last4',         '+15551234567',       '***3952'],
-  ['10-digit US -> ***last4',      '5551234567',         '***3952'],
-  ['formatted US -> ***last4',     '(555) 123-4567',     '***3952'],
+  ['E.164 US -> ***last4',         '+15551234567',       '***4567'],
+  ['10-digit US -> ***last4',      '5551234567',         '***4567'],
+  ['formatted US -> ***last4',     '(555) 123-4567',     '***4567'],
   ['intl -> ***last4',             '+593987654321',      '***4321'],
   ['3 digits -> stars',            '123',                '*****'],
   ['mixed garbage with 4 digits',  'abc1234xyz',         '***1234'],
-  ['already masked -> unchanged',  '***3952',            '***3952'],
+  ['already masked -> unchanged',  '***4567',            '***4567'],
   ['idempotent on stars-only',     '*****',              '*****']
 ];
 
