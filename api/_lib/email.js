@@ -23,17 +23,28 @@ function getClient() {
   return { client: _client, from: _from };
 }
 
-// Sends a transactional email and waits for ACS to accept it for delivery.
+// Sends a transactional email and returns as soon as ACS has ACCEPTED the
+// message for delivery (i.e. the underlying HTTP POST that begins the
+// long-running send completed). We do NOT wait for the LRO to reach
+// terminal Succeeded/Failed status -- that adds 5-15 seconds to every
+// user-facing send for zero UX benefit, since:
+//   * the caller (admin_login_request) always returns a generic 200
+//     regardless of outcome (anti-enumeration), so terminal status does
+//     not change the user response
+//   * ACS reports "Succeeded" once the message is handed to the recipient
+//     MTA -- it cannot see downstream silent-drop behavior (e.g., outlook
+//     consumer dropping `*.azurecomm.net` mail), so terminal status is a
+//     poor proxy for actual deliverability anyway
+//   * the audit log only needs the handoff signal, not the LRO terminal
 //
 // Returns:
 //   { successful, messageId, status, errorCode, errorMessage }
 //
-// `status` is the ACS LRO terminal status string ('Succeeded' / 'Failed' /
-// 'Canceled'). `successful` is true only when status === 'Succeeded'.
-//
-// We poll the LRO to completion rather than fire-and-forget because magic
-// links MUST land in the user's inbox before they can sign in -- a silent
-// drop here would make admin login look broken with no diagnostics.
+// `status` is 'Initiated' on the happy path; 'rejected' / 'send_failed'
+// on the error paths below. `successful` is true iff beginSend resolved
+// without throwing. If we ever need terminal status for deliverability
+// analytics, subscribe to ACS Event Grid events instead of blocking the
+// request thread on pollUntilDone().
 async function sendEmail({ to, subject, html, plainText }) {
   if (!to || typeof to !== 'string') {
     return { successful: false, messageId: '', status: 'rejected', errorCode: 'BAD_TO', errorMessage: 'to required' };
@@ -81,28 +92,34 @@ async function sendEmail({ to, subject, html, plainText }) {
     };
   }
 
-  let result;
+  // Extract whatever messageId / id ACS already populated on the operation
+  // state. This is best-effort -- ACS Email's PollerLike does not formally
+  // guarantee an id pre-poll, but in practice the Operation-Location
+  // header gives the SDK enough context to populate `result.id` (a.k.a.
+  // the eventual messageId) from the initial 202 response.
+  let messageId = '';
   try {
-    result = await poller.pollUntilDone();
-  } catch (err) {
-    return {
-      successful: false,
-      messageId: '',
-      status: 'poll_failed',
-      errorCode: (err && err.code) || 'EXCEPTION',
-      errorMessage: (err && err.message) || String(err)
-    };
-  }
+    const initial = poller.getOperationState();
+    messageId = (initial && initial.result && initial.result.id) || (initial && initial.id) || '';
+  } catch { /* messageId stays '' */ }
 
-  const status = (result && result.status) || '';
-  const messageId = (result && result.id) || '';
-  const failureError = (result && result.error) || null;
+  // Drain the poller in the background so the SDK doesn't log unhandled-
+  // promise warnings if it has internal retries scheduled. We do not await
+  // and we silently swallow any failures -- they would only surface
+  // recipient-side drops that ACS already cannot see reliably anyway.
+  try {
+    const drain = poller.pollUntilDone();
+    if (drain && typeof drain.then === 'function') {
+      drain.catch(() => { /* no-op */ });
+    }
+  } catch { /* no-op */ }
+
   return {
-    successful: status === 'Succeeded',
+    successful: true,
     messageId,
-    status,
-    errorCode: failureError ? (failureError.code || 'PROVIDER_ERR') : '',
-    errorMessage: failureError ? (failureError.message || '') : ''
+    status: 'Initiated',
+    errorCode: '',
+    errorMessage: ''
   };
 }
 
