@@ -5,33 +5,70 @@ const locale: Locale = 'en';
 ---
 
 <Base title="Admin sign-in · John & Diana" description="Admin sign-in confirmation" lang={locale}>
-  <main class="admin">
-    <section class="container">
-      <header class="admin-header">
+  <main class="admin admin-confirm">
+    <section class="container container--narrow">
+      <header class="admin-confirm-header">
         <h1>Admin sign-in</h1>
       </header>
 
-      <section class="admin-card admin-login-confirm">
-        <p id="login-instructions">
-          Click <strong>Sign in</strong> to finish signing in to the admin dashboard.
+      <article class="admin-card admin-confirm-card">
+        <p id="login-instructions" class="admin-confirm-instructions">
+          Click <strong>Sign in</strong> to finish signing in.
         </p>
-        <div id="login-status" class="admin-status" role="status" aria-live="polite"></div>
-        <div class="admin-row admin-row--actions">
+
+        <div class="admin-confirm-actions">
           <button id="confirm-btn" class="btn btn--gold">Sign in</button>
-          <a href="/admin" class="rsvp-link">Cancel</a>
+          <a href="/admin" class="admin-confirm-cancel rsvp-link">Cancel</a>
         </div>
-        <p class="admin-muted admin-login-help">
-          The sign-in link expires 10 minutes after it was sent. If this attempt fails,
-          go back to the admin page and request a new link.
-        </p>
-      </section>
+
+        <div id="login-status" class="admin-status admin-confirm-status" role="status" aria-live="polite"></div>
+      </article>
     </section>
   </main>
 
   <style>
-    .admin-login-confirm { max-width: 520px; margin: 32px auto; }
-    .admin-login-help { margin-top: 24px; font-size: 13px; }
-    .admin-row--actions { display: flex; gap: 16px; align-items: center; }
+    .admin-confirm .container { max-width: 26rem; }
+    .admin-confirm-header { text-align: center; margin-bottom: var(--space-3); }
+    .admin-confirm-header h1 { margin: 0; }
+    .admin-confirm-card {
+      background: #fff;
+      border: 1px solid var(--color-rule, #e8e0c8);
+      border-radius: var(--radius-md, 8px);
+      padding: var(--space-3);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      text-align: center;
+    }
+    .admin-confirm-instructions { margin: 0; }
+    .admin-confirm-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.6rem;
+    }
+    .admin-confirm-actions .btn { width: 100%; justify-content: center; }
+    .admin-confirm-cancel { align-self: center; font-size: 0.85rem; }
+    .admin-confirm-status:empty { display: none; }
+    .admin-confirm-status { margin: 0; }
+    .admin-confirm-status[data-tone="error"] { color: #8a2c2c; }
+    .admin-confirm-status[data-tone="ok"] { color: #2a6a2c; }
+
+    /* Inline button spinner (matches the sign-in gate). */
+    .btn-spinner {
+      display: inline-block;
+      width: 0.95em;
+      height: 0.95em;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: btn-spin 0.7s linear infinite;
+      vertical-align: -0.15em;
+    }
+    @keyframes btn-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      .btn-spinner { animation-duration: 2s; }
+    }
   </style>
 
   <script>
@@ -53,8 +90,11 @@ const locale: Locale = 'en';
       }
 
       btn.addEventListener('click', async () => {
+        const originalHtml = btn.innerHTML;
         btn.disabled = true;
-        status.textContent = 'Signing you in…';
+        btn.setAttribute('aria-busy', 'true');
+        btn.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span><span>Signing you in\u2026</span>';
+        status.textContent = '';
         status.dataset.tone = '';
         try {
           const res = await fetch('/api/mgmt/admin-login-verify', {
@@ -67,7 +107,7 @@ const locale: Locale = 'en';
           let data: any = null;
           try { data = await res.json(); } catch {}
           if (res.ok && data && data.ok) {
-            status.textContent = 'Signed in. Redirecting…';
+            status.textContent = 'Signed in. Redirecting\u2026';
             status.dataset.tone = 'ok';
             const target = (data && typeof data.redirect === 'string') ? data.redirect : '/admin';
             // Use replace so the spent magic-link URL never lands in browser history.
@@ -82,10 +122,17 @@ const locale: Locale = 'en';
           else if (code === 'invalid') msg = 'That sign-in link is invalid or expired. Request a new one from the admin page.';
           status.textContent = msg;
           status.dataset.tone = 'error';
+          btn.innerHTML = originalHtml;
+          btn.removeAttribute('aria-busy');
+          // Token is spent/invalid on the server side — keep the button disabled
+          // so the user can't burn rate-limit budget retrying a dead token.
           btn.disabled = true;
         } catch (err: any) {
           status.textContent = `Couldn\u2019t reach the sign-in service: ${err && err.message ? err.message : 'unknown error'}.`;
           status.dataset.tone = 'error';
+          btn.innerHTML = originalHtml;
+          btn.removeAttribute('aria-busy');
+          // Network error — token may still be usable, allow retry.
           btn.disabled = false;
         }
       });
