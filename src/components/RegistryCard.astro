@@ -56,5 +56,9 @@ const pending = !amazon.url || amazon.url === 'AMAZON_REGISTRY_URL_GOES_HERE';
     max-width: 28rem;
   }
   .disabled { pointer-events: none; opacity: 0.5; filter: grayscale(1); }
-  .note { margin-top: var(--space-3); color: var(--color-text-muted); font-size: var(--fs-small); font-style: italic; }
+  /* Override the site-wide `main:not(.admin) p { text-align: justify }` rule
+     (global.css). For a single short line, `justify` falls left because
+     there's nothing to spread — visually it reads as left-aligned. The
+     descendant selector boosts specificity past the global rule. */
+  .registry-card .note { margin-top: var(--space-3); color: var(--color-text-muted); font-size: var(--fs-small); font-style: italic; text-align: center; }
 </style>
