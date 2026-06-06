@@ -76,10 +76,6 @@ const locale: Locale = 'en';
           </label>
           <span id="reminders-stop" class="admin-muted"></span>
         </div>
-        <div class="admin-row admin-row--actions">
-          <button id="btn-send-test" class="btn btn--ghost btn--small">Send test SMS</button>
-          <span class="admin-muted">Sends a test message to a phone you specify. Useful to verify ACS provisioning.</span>
-        </div>
         <div id="settings-status" class="admin-status"></div>
       </section>
 
@@ -106,15 +102,48 @@ const locale: Locale = 'en';
             <button id="btn-refresh" class="btn btn--ghost btn--small">Refresh</button>
           </div>
         </div>
+        <div class="admin-invites-filters" role="group" aria-label="Filter invitations">
+          <input
+            id="invites-search"
+            type="search"
+            class="admin-events-search"
+            placeholder="Search by primary name…"
+            aria-label="Search invitations by primary invitee name"
+          />
+          <div class="admin-invites-chips" role="group" aria-label="Filter by response">
+            <label class="admin-cat-toggle admin-cat-toggle--ok">
+              <input type="checkbox" data-invite-filter="responded" checked /><span>Responded</span>
+            </label>
+            <label class="admin-cat-toggle admin-cat-toggle--muted">
+              <input type="checkbox" data-invite-filter="pending" checked /><span>Pending</span>
+            </label>
+          </div>
+          <div class="admin-invites-chips" role="group" aria-label="Filter by phone status">
+            <label class="admin-cat-toggle admin-cat-toggle--info">
+              <input type="checkbox" data-invite-filter="hasPhone" checked /><span>Has phone</span>
+            </label>
+            <label class="admin-cat-toggle admin-cat-toggle--muted">
+              <input type="checkbox" data-invite-filter="noPhone" checked /><span>No phone</span>
+            </label>
+            <label class="admin-cat-toggle admin-cat-toggle--warn">
+              <input type="checkbox" data-invite-filter="optedOut" checked /><span>Opted out</span>
+            </label>
+            <label class="admin-cat-toggle admin-cat-toggle--warn">
+              <input type="checkbox" data-invite-filter="hardFail" checked /><span>Hard-fail</span>
+            </label>
+          </div>
+          <button type="button" id="invites-reset" class="btn btn--ghost btn--small">Reset filters</button>
+          <span id="invites-count" class="admin-muted"></span>
+        </div>
         <div class="admin-table-wrap">
           <table id="admin-table" class="admin-table">
             <thead>
               <tr>
-                <th>Primary invitee</th>
-                <th>Responded</th>
-                <th>Headcount</th>
-                <th>Phone · Locale</th>
-                <th>Last reminder</th>
+                <th data-sort-key="name" aria-sort="ascending" class="admin-th-sortable">Primary invitee</th>
+                <th data-sort-key="responded" aria-sort="none" class="admin-th-sortable">Responded</th>
+                <th data-sort-key="headcount" aria-sort="none" class="admin-th-sortable">Headcount</th>
+                <th data-sort-key="phone" aria-sort="none" class="admin-th-sortable">Phone · Locale</th>
+                <th data-sort-key="reminder" aria-sort="none" class="admin-th-sortable">Last reminder</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -1482,6 +1511,143 @@ const locale: Locale = 'en';
         window.setTimeout(() => URL.revokeObjectURL(url), 0);
       }
 
+      // --- Invitations: filter + sort state -----------------------------
+      // Mutated in place by the chip + search listeners; read by
+      // applyInvitesFiltersAndSort(rows). Defaults keep every category
+      // visible and sort by primary name A->Z, matching the previous
+      // unfiltered server order.
+      const INVITES_FILTERS = {
+        search: '',
+        responded: true,
+        pending: true,
+        hasPhone: true,
+        noPhone: true,
+        optedOut: true,
+        hardFail: true
+      };
+      let INVITES_SORT: { key: string; dir: 'asc' | 'desc' } = { key: 'name', dir: 'asc' };
+
+      function invitesSortValue(row: any, key: string): any {
+        const inv = row.invite || {};
+        const s = row.summary || {};
+        switch (key) {
+          case 'name': {
+            const n = `${inv.primaryLastName || ''} ${inv.primaryFirstName || ''}`.trim().toLowerCase();
+            return n || (inv.inviteId || '').toLowerCase();
+          }
+          case 'responded': {
+            // Responded rows first when desc, pending first when asc.
+            // Tiebreak by respondedAt so most-recent responder bubbles.
+            const base = inv.responded ? 1 : 0;
+            const ts = inv.respondedAt ? new Date(inv.respondedAt).getTime() : 0;
+            return base * 1e15 + (isFinite(ts) ? ts : 0);
+          }
+          case 'headcount':
+            return (s.yes || 0) * 1e6 + (s.no || 0) * 1e3 + (s.pending || 0);
+          case 'phone': {
+            // No-phone rows always sort last regardless of direction.
+            if (!inv.phoneNorm) return INVITES_SORT.dir === 'asc' ? '\uFFFF' : '';
+            return String(inv.phoneNorm).toLowerCase();
+          }
+          case 'reminder': {
+            // Never-reminded rows sort last regardless of direction.
+            if (!inv.lastReminderSentAt) return INVITES_SORT.dir === 'asc' ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+            const t = new Date(inv.lastReminderSentAt).getTime();
+            return isFinite(t) ? t : 0;
+          }
+          default:
+            return 0;
+        }
+      }
+
+      function applyInvitesFiltersAndSort(rows: any[]): any[] {
+        const q = INVITES_FILTERS.search.trim().toLowerCase();
+        const filtered = rows.filter((row) => {
+          const inv = row.invite || {};
+          const responded = !!inv.responded;
+          if (responded && !INVITES_FILTERS.responded) return false;
+          if (!responded && !INVITES_FILTERS.pending) return false;
+          const hasPhone = !!inv.phoneNorm;
+          const isOpted = !!inv.optedOutOfSms;
+          const isHardFail = !!inv.smsHardFailedAt;
+          // Phone-status chips act as an OR-union over the four states.
+          // A row passes if at least one of its applicable states is checked.
+          const stateChecks: boolean[] = [];
+          if (hasPhone && !isOpted && !isHardFail) stateChecks.push(INVITES_FILTERS.hasPhone);
+          if (!hasPhone) stateChecks.push(INVITES_FILTERS.noPhone);
+          if (isOpted) stateChecks.push(INVITES_FILTERS.optedOut);
+          if (isHardFail) stateChecks.push(INVITES_FILTERS.hardFail);
+          if (stateChecks.length && !stateChecks.some(Boolean)) return false;
+          if (q) {
+            const hay = `${inv.primaryFirstName || ''} ${inv.primaryLastName || ''}`.toLowerCase();
+            if (!hay.includes(q)) return false;
+          }
+          return true;
+        });
+        const dir = INVITES_SORT.dir === 'desc' ? -1 : 1;
+        filtered.sort((a, b) => {
+          const av = invitesSortValue(a, INVITES_SORT.key);
+          const bv = invitesSortValue(b, INVITES_SORT.key);
+          if (av < bv) return -1 * dir;
+          if (av > bv) return 1 * dir;
+          return 0;
+        });
+        return filtered;
+      }
+
+      function updateInviteSortHeaders() {
+        document.querySelectorAll<HTMLTableCellElement>('#admin-table th[data-sort-key]').forEach((th) => {
+          const key = th.dataset.sortKey || '';
+          if (key === INVITES_SORT.key) {
+            th.setAttribute('aria-sort', INVITES_SORT.dir === 'asc' ? 'ascending' : 'descending');
+          } else {
+            th.setAttribute('aria-sort', 'none');
+          }
+        });
+      }
+
+      // Renders just the tbody + the "X of Y" count. Used by render() on
+      // first paint and re-used on every filter/sort change without an API
+      // round-trip. Re-binds the per-row click + action handlers each time
+      // because we replace innerHTML wholesale.
+      function renderInvitesTable() {
+        if (!tbody) return;
+        const countEl = document.getElementById('invites-count') as HTMLSpanElement | null;
+        const allRows: any[] = (LAST_DATA && Array.isArray(LAST_DATA.rows)) ? LAST_DATA.rows : [];
+        const total = allRows.length;
+        const visible = applyInvitesFiltersAndSort(allRows);
+        if (countEl) {
+          if (!total) countEl.textContent = '';
+          else if (visible.length === total) countEl.textContent = `${total} ${total === 1 ? 'invitation' : 'invitations'}`;
+          else countEl.textContent = `${visible.length} of ${total} invitations`;
+        }
+        if (!total) {
+          tbody.innerHTML = '<tr><td colspan="6" class="admin-muted">No invitations yet. Create one with the button above, or run the seed script.</td></tr>';
+          EXPANDED_ID = null;
+          updateInviteSortHeaders();
+          return;
+        }
+        if (!visible.length) {
+          tbody.innerHTML = '<tr><td colspan="6" class="admin-muted">No invitations match the current filters.</td></tr>';
+          updateInviteSortHeaders();
+          return;
+        }
+        tbody.innerHTML = visible.map(renderRow).join('');
+        if (EXPANDED_ID && !allRows.some((r: any) => r.invite.inviteId === EXPANDED_ID)) {
+          EXPANDED_ID = null;
+        }
+        tbody.querySelectorAll('button[data-action]').forEach((btn) => {
+          btn.addEventListener('click', onActionClick);
+        });
+        tbody.querySelectorAll('tr.admin-data-row').forEach((tr) => {
+          tr.addEventListener('click', (ev) => {
+            if ((ev.target as HTMLElement).closest('button')) return;
+            toggleRow((tr as HTMLTableRowElement).dataset.inviteId || '');
+          });
+        });
+        updateInviteSortHeaders();
+      }
+
       function render(data: any) {
         if (remindersChk) remindersChk.checked = !!(data.settings && data.settings.remindersEnabled);
         if (remindersStopEl && data.settings && data.settings.remindersStopOnUtc) {
@@ -1499,26 +1665,7 @@ const locale: Locale = 'en';
           `;
         }
         if (exportBtn) exportBtn.disabled = false;
-        if (!tbody) return;
-        if (!data.rows || data.rows.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" class="admin-muted">No invitations yet. Create one with the button above, or run the seed script.</td></tr>';
-          EXPANDED_ID = null;
-          return;
-        }
-        tbody.innerHTML = data.rows.map(renderRow).join('');
-        // Drop stale expanded id if the invite is gone (e.g., after delete).
-        if (EXPANDED_ID && !data.rows.some((r: any) => r.invite.inviteId === EXPANDED_ID)) {
-          EXPANDED_ID = null;
-        }
-        tbody.querySelectorAll('button[data-action]').forEach((btn) => {
-          btn.addEventListener('click', onActionClick);
-        });
-        tbody.querySelectorAll('tr.admin-data-row').forEach((tr) => {
-          tr.addEventListener('click', (ev) => {
-            if ((ev.target as HTMLElement).closest('button')) return;
-            toggleRow((tr as HTMLTableRowElement).dataset.inviteId || '');
-          });
-        });
+        renderInvitesTable();
       }
 
       function renderRow(row: any): string {
@@ -1922,27 +2069,8 @@ const locale: Locale = 'en';
         }
       });
 
-      const sendTestBtn = document.getElementById('btn-send-test');
-      sendTestBtn?.addEventListener('click', async () => {
-        const phone = window.prompt('Phone number to text (E.164 or 10 digits US):');
-        if (!phone) return;
-        const locale = window.prompt('Locale? "en" or "es" (default en):', 'en') || 'en';
-        try {
-          const res = await fetch('/api/mgmt/send-test', {
-            method: 'POST', credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone, locale })
-          });
-          const data = await res.json();
-          if (data.successful) {
-            setStatus(`Test SMS sent (id=${data.messageId}, ${data.segmentCount} seg, ${data.bodyLen} chars).`, 'ok');
-          } else {
-            setStatus(`Test SMS failed: ${data.errorCode || data.error || 'unknown'} ${data.errorMessage || ''}`, 'warn');
-          }
-        } catch (e: any) {
-          setStatus(`Test SMS failed: ${e && e.message}`, 'warn');
-        }
-      });
+      // (Send test SMS button removed: per-invite "Send reminder" provides
+      // the same end-to-end ACS SMS smoke test against a real invitee.)
 
       if (remindersChk) {
         remindersChk.addEventListener('change', async () => {
@@ -1987,6 +2115,61 @@ const locale: Locale = 'en';
         document.querySelectorAll<HTMLInputElement>('.admin-events-cats input[type="checkbox"][data-cat]')
           .forEach((cb) => { cb.checked = true; });
         renderEvents();
+      });
+
+      // Filter + sort wiring for the Invitations table. Same pattern as
+      // the events panel: client-side over LAST_DATA, no network calls.
+      const invitesSearch = document.getElementById('invites-search') as HTMLInputElement | null;
+      invitesSearch?.addEventListener('input', () => {
+        INVITES_FILTERS.search = invitesSearch.value || '';
+        renderInvitesTable();
+      });
+      document.querySelectorAll<HTMLInputElement>('.admin-invites-filters input[type="checkbox"][data-invite-filter]')
+        .forEach((cb) => cb.addEventListener('change', () => {
+          const key = cb.dataset.inviteFilter || '';
+          if (key in INVITES_FILTERS) (INVITES_FILTERS as any)[key] = cb.checked;
+          renderInvitesTable();
+        }));
+      const invitesReset = document.getElementById('invites-reset') as HTMLButtonElement | null;
+      invitesReset?.addEventListener('click', () => {
+        INVITES_FILTERS.search = '';
+        if (invitesSearch) invitesSearch.value = '';
+        document.querySelectorAll<HTMLInputElement>('.admin-invites-filters input[type="checkbox"][data-invite-filter]')
+          .forEach((cb) => {
+            cb.checked = true;
+            const key = cb.dataset.inviteFilter || '';
+            if (key in INVITES_FILTERS) (INVITES_FILTERS as any)[key] = true;
+          });
+        INVITES_SORT = { key: 'name', dir: 'asc' };
+        renderInvitesTable();
+      });
+      document.querySelectorAll<HTMLTableCellElement>('#admin-table th[data-sort-key]').forEach((th) => {
+        // Make the header keyboard-activatable for accessibility.
+        th.setAttribute('tabindex', '0');
+        th.setAttribute('role', 'button');
+        const activate = () => {
+          const key = th.dataset.sortKey || '';
+          if (!key) return;
+          if (INVITES_SORT.key === key) {
+            INVITES_SORT.dir = INVITES_SORT.dir === 'asc' ? 'desc' : 'asc';
+          } else {
+            // Sensible default direction per column: name/phone alphabetical
+            // up, everything quantitative starts on its "more interesting"
+            // end (newest reminder, biggest household, responded first).
+            INVITES_SORT = {
+              key,
+              dir: (key === 'name' || key === 'phone') ? 'asc' : 'desc'
+            };
+          }
+          renderInvitesTable();
+        };
+        th.addEventListener('click', activate);
+        th.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter' || ev.key === ' ') {
+            ev.preventDefault();
+            activate();
+          }
+        });
       });
 
       // -----------------------------------------------------------------
@@ -2458,6 +2641,60 @@ const locale: Locale = 'en';
     .admin-table { width:100%; border-collapse: collapse; font-size: 0.95rem; }
     .admin-table th, .admin-table td { padding: 0.5rem 0.6rem; text-align:left; border-bottom: 1px solid var(--color-rule, #eee); vertical-align: top; }
     .admin-table th { background: rgba(201,169,97,0.08); }
+    .admin-table th.admin-th-sortable {
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      padding-right: 1.4rem;
+    }
+    .admin-table th.admin-th-sortable:hover { background: rgba(201,169,97,0.18); }
+    .admin-table th.admin-th-sortable:focus-visible {
+      outline: 2px solid var(--color-gold, #D4AF37);
+      outline-offset: -2px;
+    }
+    .admin-table th.admin-th-sortable::after {
+      content: '↕';
+      position: absolute;
+      right: 0.45rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.8em;
+      color: var(--color-text-muted, #999);
+      opacity: 0.55;
+    }
+    .admin-table th.admin-th-sortable[aria-sort="ascending"]::after {
+      content: '↑';
+      color: var(--color-gold-deep, #8a6a2c);
+      opacity: 1;
+    }
+    .admin-table th.admin-th-sortable[aria-sort="descending"]::after {
+      content: '↓';
+      color: var(--color-gold-deep, #8a6a2c);
+      opacity: 1;
+    }
+
+    /* Invitations filter row: same flex/wrap pattern as the events panel,
+       so the layout collapses identically on narrow viewports. */
+    .admin-invites-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 0.75rem;
+      align-items: center;
+      margin: 0.6rem 0 0.75rem;
+    }
+    .admin-invites-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+    /* Generic chip variants reused by the invitations filter row. The
+       palette mirrors the inline badges (--ok/--warn) and the events feed
+       categories (--admin gold) so the chip visually previews what it
+       keeps in view. */
+    .admin-cat-toggle--ok:has(input:checked)    { background: rgba(80, 160, 80, 0.14); color: #2a6a2c; border-color: rgba(80, 160, 80, 0.45); }
+    .admin-cat-toggle--warn:has(input:checked)  { background: rgba(200, 60, 60, 0.12); color: #8a2c2c; border-color: rgba(200, 60, 60, 0.45); }
+    .admin-cat-toggle--info:has(input:checked)  { background: rgba(60, 120, 200, 0.14); color: #2a4a8a; border-color: rgba(60, 120, 200, 0.45); }
+    .admin-cat-toggle--muted:has(input:checked) { background: rgba(0, 0, 0, 0.06); color: #4a4a4a; border-color: rgba(0, 0, 0, 0.25); }
     .admin-table tr.admin-data-row { cursor: pointer; }
     .admin-table tr.admin-data-row.is-responded { background: rgba(80, 160, 80, 0.04); }
     .admin-table tr.admin-data-row.is-expanded > td {
