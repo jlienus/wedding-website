@@ -8,6 +8,14 @@ const { emptyPayload } = require('../_lib/payload');
 
 const RATE_LIMIT_PER_MIN = 5;
 const RATE_WINDOW_MS = 60_000;
+// Per-last-name global cap layered on top of the per-IP bucket. Blunts an
+// attacker who rotates source IPs to scrape pre-verification payloads
+// (first name + last-4 of phone). A legitimate household typically needs
+// only 1-5 lookups for the same last name; 20/hour leaves headroom for
+// edge cases (extended family on shared WiFi) while still capping a
+// rotating-IP scraper at the same low rate.
+const LASTNAME_LIMIT_PER_HOUR = 20;
+const LASTNAME_WINDOW_MS = 60 * 60 * 1000;
 const MIN_NAME_CHARS = 2;
 const MAX_NAME_CHARS = 80;
 const MAX_BODY_BYTES = 4 * 1024;
@@ -220,8 +228,25 @@ function shortCircuit(status, headers, body) {
 }
 
 async function lookupByLastName(lastName, phoneLast4, context, ipHash, cors) {
-  if (storage.normalizeName(lastName).length < MIN_NAME_CHARS) {
+  const normalized = storage.normalizeName(lastName);
+  if (normalized.length < MIN_NAME_CHARS) {
     throw shortCircuit(400, cors, { error: 'name_too_short' });
+  }
+
+  // Per-last-name global throttle. Bucket key is the *normalized* last name
+  // so 'lien' and 'Lien' share the count. Returns 429 with the standard
+  // Retry-After so the client can show a friendly "too many tries" message
+  // without exposing whether the name matched.
+  const nameRl = ratelimit.check(
+    'rsvp_lookup:lastName',
+    normalized,
+    LASTNAME_LIMIT_PER_HOUR,
+    LASTNAME_WINDOW_MS
+  );
+  if (!nameRl.ok) {
+    context.log(`rsvp_lookup 429-lastName ipHash=${ipHash} lastName=${normalized}`);
+    throw shortCircuit(429, { ...cors, 'Retry-After': String(nameRl.retryAfter) },
+      { error: 'rate_limited', retryAfter: nameRl.retryAfter });
   }
 
   const matches = await storage.findInvitesByLastName(lastName);

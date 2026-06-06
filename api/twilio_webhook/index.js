@@ -91,11 +91,11 @@ async function handleInbound(context, params) {
   const phoneNorm = storage.normalizePhone(fromPhone);
   const kind = actions.classifyInbound(message);
 
-  context.log(`twilio_webhook inbound from=${phoneNorm} kind=${kind} sid=${messageSid}`);
+  context.log(`twilio_webhook inbound from=${storage.maskPhone(phoneNorm)} kind=${kind} sid=${messageSid}`);
 
   const invites = await storage.findInvitesByPhoneNorm(phoneNorm);
   if (invites.length === 0) {
-    context.log(`twilio_webhook inbound no_invite for=${phoneNorm}`);
+    context.log(`twilio_webhook inbound no_invite for=${storage.maskPhone(phoneNorm)}`);
     return twimlResponse(null);
   }
 
@@ -196,8 +196,8 @@ async function handleStatusCallback(context, params) {
           await storage.appendEvent({
             type: 'sms.delivery_failed',
             actor: `invitee:${invite.primaryFirstName || ''} ${invite.primaryLastName || ''}`.trim(),
-            summary: `SMS hard-failed for ${invite.primaryLastName || 'unknown'} household (${invite.phoneNorm || 'unknown phone'}, ${rawStatus}${errorCode ? `, ${errorCode}` : ''})`,
-            meta: { inviteId: match.partitionKey, phone: invite.phoneNorm, status: rawStatus, errorCode }
+            summary: `SMS hard-failed for ${invite.primaryLastName || 'unknown'} household (${storage.maskPhone(invite.phoneNorm) || 'unknown phone'}, ${rawStatus}${errorCode ? `, ${errorCode}` : ''})`,
+            meta: { inviteId: match.partitionKey, phoneMasked: storage.maskPhone(invite.phoneNorm), status: rawStatus, errorCode }
           });
         } catch (eventErr) {
           context.log.error(`twilio_webhook event_write_err: ${eventErr && eventErr.message}`);

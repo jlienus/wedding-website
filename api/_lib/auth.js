@@ -31,6 +31,18 @@ function getMagicSecret() {
   return s;
 }
 
+// During a rotation window the operator sets RSVP_MAGIC_SECRET to the NEW
+// secret and RSVP_MAGIC_SECRET_OLD to the previous one. Token signing always
+// uses the current (new) secret, but verification falls back to the old one
+// so unexpired reminder magic-links (legacy unbounded format) keep working
+// for the cutover period. Returns the secrets in priority order: [new, old?].
+function getMagicVerifySecrets() {
+  const cur = getMagicSecret();
+  const prev = process.env.RSVP_MAGIC_SECRET_OLD;
+  if (prev && prev.length >= 32 && prev !== cur) return [cur, prev];
+  return [cur];
+}
+
 function getSessionSecret() {
   const s = process.env.RSVP_SESSION_SECRET || process.env.RSVP_MAGIC_SECRET;
   if (!s || s.length < 32) {
@@ -103,11 +115,20 @@ function verifyMagicToken(token) {
     const [inviteId, sig] = parts;
     if (!/^[A-Za-z0-9_-]{1,128}$/.test(inviteId)) return null;
     if (sig.length !== SIG_LEN_CHARS) return null;
-    const expected = hmacSign(getMagicSecret(), MAGIC_PURPOSE, inviteId);
-    return constantTimeEqual(sig, expected) ? inviteId : null;
+    // Try every active secret (new + optional old during rotation window)
+    // and accept the token if any of them verify. constantTimeEqual still
+    // guards each individual compare.
+    const secrets = getMagicVerifySecrets();
+    for (const secret of secrets) {
+      const expected = hmacSign(secret, MAGIC_PURPOSE, inviteId);
+      if (constantTimeEqual(sig, expected)) return inviteId;
+    }
+    return null;
   }
   if (parts.length === 3) {
-    // TTL'd verify-link format.
+    // TTL'd verify-link format. Only ever lives 10 min, so we don't bother
+    // with the rotation fallback -- the operator just waits 10 min for
+    // outstanding links to expire before cycling the old secret.
     const [inviteId, expStr, sig] = parts;
     if (!/^[A-Za-z0-9_-]{1,128}$/.test(inviteId)) return null;
     if (sig.length !== SIG_LEN_CHARS) return null;
@@ -608,6 +629,7 @@ module.exports = {
   signMagicToken,
   signVerifyMagicToken,
   verifyMagicToken,
+  getMagicVerifySecrets,
   issueSessionCookie,
   clearSessionCookie,
   verifySessionCookie,

@@ -1,12 +1,21 @@
 'use strict';
 
-// SMS sending abstraction. Defaults to Azure Communication Services; can be
-// switched to Twilio for pre-verification dev/testing by setting
-// SMS_PROVIDER=twilio. Both branches return the same shape so callers
-// (admin_send_test, cron_reminders, etc.) don't care which provider ran.
+// SMS sending abstraction. Two providers:
+//   SMS_PROVIDER=twilio  -> Twilio (current production)
+//   SMS_PROVIDER=acs     -> Azure Communication Services (long-term)
+//
+// SMS_PROVIDER must be set explicitly. We deliberately fail-closed when
+// it's missing rather than silently picking a default that might race ahead
+// of the operator's intent (e.g. leaving Twilio shipping SMS after the ACS
+// cutover is supposed to have happened). The error surfaces immediately in
+// the function logs at boot time rather than silently delivering messages
+// from the wrong provider.
 
 function provider() {
-  return (process.env.SMS_PROVIDER || 'acs').toLowerCase();
+  const raw = (process.env.SMS_PROVIDER || '').toLowerCase().trim();
+  if (raw === 'twilio' || raw === 'acs') return raw;
+  // No env var set, or unrecognized value: fail-closed.
+  throw new Error('CONFIG_MISSING_SMS_PROVIDER');
 }
 
 // --- ACS branch ---------------------------------------------------------
@@ -134,8 +143,12 @@ async function sendViaTwilio(toPhone, body, _opts) {
 // --- Dispatch ----------------------------------------------------------
 // Returns: { successful, messageId, deliveryStatus, errorCode, errorMessage, segmentCount }
 async function sendSms(toPhone, body, opts = {}) {
-  if (provider() === 'twilio') return sendViaTwilio(toPhone, body, opts);
-  return sendViaAcs(toPhone, body, opts);
+  const p = provider();
+  if (p === 'twilio') return sendViaTwilio(toPhone, body, opts);
+  if (p === 'acs') return sendViaAcs(toPhone, body, opts);
+  // provider() throws on unset/unknown, but be defensive against future
+  // additions that forget to extend the dispatch table.
+  throw new Error(`CONFIG_UNKNOWN_SMS_PROVIDER:${p}`);
 }
 
 // GSM-7 default alphabet check; messages with characters outside GSM-7 must

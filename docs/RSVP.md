@@ -215,7 +215,7 @@ settings`):
 | `RSVP_MAGIC_SECRET` | 32+ char random secret for magic-link HMAC. | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 | `RSVP_SESSION_SECRET` | (Optional) Separate secret for session cookies. Defaults to `RSVP_MAGIC_SECRET`. | Same generator. |
 | `RSVP_CRON_SECRET` | 32+ char random secret guarding `/api/cron/reminders`. | Same generator. **Also set as GitHub repo secret with the same name.** |
-| `SMS_PROVIDER` | `twilio` or `acs`. Picks which provider `api/_lib/sms.js` uses. Defaults to `acs`. | Set on the SWA. |
+| `SMS_PROVIDER` | `twilio` or `acs`. Picks which provider `api/_lib/sms.js` uses. **Must be set explicitly** — `sms.sendSms` throws `CONFIG_MISSING_SMS_PROVIDER` if unset, so the operator can't accidentally ship messages from the wrong provider after a cutover. | Set on the SWA. |
 | `TWILIO_ACCOUNT_SID` | Twilio account SID. Required when `SMS_PROVIDER=twilio`. | From Twilio Console → Account. |
 | `TWILIO_AUTH_TOKEN` | Twilio auth token. Also used to validate `X-Twilio-Signature` on inbound webhooks. | From Twilio Console → Account. |
 | `TWILIO_FROM` | Twilio sending number in E.164. | The number you purchased. |

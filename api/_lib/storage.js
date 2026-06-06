@@ -426,12 +426,16 @@ async function appendSmsLog(inviteId, entry) {
   const revTs = (10_000_000_000_000 - Date.now()).toString().padStart(13, '0');
   const rand = Math.random().toString(36).slice(2, 8);
   const rowKey = `${revTs}_${rand}`;
+  // Caller can pass an explicit bodyLen when `body` has been redacted (e.g.
+  // reminder magic-link tokens stripped) so the audit row still records the
+  // actual wire length for segment-cost accounting.
+  const explicitLen = typeof entry.bodyLen === 'number' ? entry.bodyLen : null;
   const entity = {
     partitionKey: inviteId,
     rowKey,
     type: entry.type || 'reminder',
     body: entry.body || '',
-    bodyLen: (entry.body || '').length,
+    bodyLen: explicitLen !== null ? explicitLen : (entry.body || '').length,
     // Always store only the last-4 mask in the audit log; the full number
     // lives encrypted on the rsvpInvites row this entry is partitioned by.
     toPhone: maskPhone(entry.toPhone || ''),

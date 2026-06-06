@@ -121,9 +121,16 @@ async function sendReminderToInvite(inviteId, opts = {}) {
 
   const result = await sms.sendSms(invite.phoneNorm, body, { tag: opts.tag || 'rsvp-reminder' });
 
+  // Strip the magic-link token from the stored audit body so a future
+  // RSVP_MAGIC_SECRET leak combined with the audit log can't be turned
+  // into a token replay. Keeps the rest of the body intact (deadline copy,
+  // domain, etc.) for operator readability.
+  const auditBody = body.replace(/(\?t=)[A-Za-z0-9._\-]+/g, '$1<redacted>');
+
   const logRowKey = await storage.appendSmsLog(inviteId, {
     type: opts.type || 'reminder',
-    body,
+    body: auditBody,
+    bodyLen: body.length,
     toPhone: invite.phoneNorm,
     deliveryStatus: result.deliveryStatus,
     errorCode: result.errorCode,

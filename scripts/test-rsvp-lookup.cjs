@@ -27,6 +27,9 @@ function normalizePhone(p) {
 }
 
 const origLoad = Module._load;
+// Mutable per-bucket allow/deny map so individual tests can simulate the
+// per-last-name throttle returning 429 without rewiring everything.
+const rlOverrides = new Map();
 const stubs = {
   '../_lib/cors': {
     preflight: () => ({ handled: false, cors: { 'Access-Control-Allow-Origin': '*' }, origin: 'https://example.com' }),
@@ -35,7 +38,11 @@ const stubs = {
   '../_lib/ratelimit': {
     clientIp: () => '127.0.0.1',
     hashIp: () => 'abc',
-    check: () => ({ ok: true, retryAfter: 0 }),
+    check: (bucket, key) => {
+      const override = rlOverrides.get(`${bucket}:${key}`);
+      if (override) return override;
+      return { ok: true, retryAfter: 0 };
+    },
   },
   '../_lib/auth': {
     issueSessionCookie: (id) => `rsvp_session=session-for-${id}; Path=/; HttpOnly`,
@@ -310,6 +317,39 @@ function assertDirect(name, r, inviteId) {
   });
   assert('S non-JSON-body-400-invalid-json',
     captured.status === 400 && captured.body.error === 'invalid_json');
+
+  // ============================================================
+  // PER-LAST-NAME THROTTLE (#5)
+  // ============================================================
+
+  // X: per-last-name throttle returns 429 + Retry-After even when the name
+  // would otherwise resolve. Note that the IP bucket is checked BEFORE the
+  // lastName bucket (in the main handler), so the override here targets the
+  // post-IP path triggered inside lookupByLastName.
+  indexInvites([fakeInvite('i_throttled', 'Test', 'Throttled', '5559990001')]);
+  rlOverrides.set('rsvp_lookup:lastName:throttled', { ok: false, retryAfter: 600 });
+  r = await call({ lastName: 'Throttled' });
+  assert('X throttled-lastname-429',
+    r.status === 429
+    && r.body.error === 'rate_limited'
+    && r.body.retryAfter === 600
+    && r.headers['Retry-After'] === '600');
+  rlOverrides.clear();
+
+  // Y: normalization joins variant casings into the same throttle bucket
+  // ('THROTTLED' must hit the same key as 'throttled').
+  rlOverrides.set('rsvp_lookup:lastName:throttled', { ok: false, retryAfter: 1 });
+  r = await call({ lastName: 'THROTTLED' });
+  assert('Y throttle-bucket-uses-normalized-name', r.status === 429);
+  rlOverrides.clear();
+
+  // Z: throttle does NOT trigger on phone-only lookups (different code path).
+  rlOverrides.set('rsvp_lookup:lastName:throttled', { ok: false, retryAfter: 1 });
+  indexInvites([fakeInvite('i_p9', 'Phoner', 'Throttled', '5559876543')]);
+  r = await call({ phone: '(555) 987-6543' });
+  assert('Z phone-lookup-bypasses-lastName-throttle',
+    r.status === 200 && r.body.found === true);
+  rlOverrides.clear();
 
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);

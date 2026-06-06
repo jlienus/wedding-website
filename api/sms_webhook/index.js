@@ -57,11 +57,11 @@ async function handleSmsReceived(context, data) {
   const phoneNorm = storage.normalizePhone(fromPhone);
   const keyword = classifyKeyword(message);
 
-  context.log(`sms_webhook inbound from=${phoneNorm} keyword=${keyword || 'none'}`);
+  context.log(`sms_webhook inbound from=${storage.maskPhone(phoneNorm)} keyword=${keyword || 'none'}`);
 
   const invites = await storage.findInvitesByPhoneNorm(phoneNorm);
   if (invites.length === 0) {
-    context.log(`sms_webhook inbound no invite for phone=${phoneNorm}`);
+    context.log(`sms_webhook inbound no invite for phone=${storage.maskPhone(phoneNorm)}`);
     return;
   }
 
@@ -127,8 +127,8 @@ async function handleDeliveryReport(context, data) {
           await storage.appendEvent({
             type: 'sms.delivery_failed',
             actor: `invitee:${invite.primaryFirstName} ${invite.primaryLastName}`.trim(),
-            summary: `SMS hard-failed for ${invite.primaryLastName} household (${invite.phoneNorm || 'unknown phone'}, ${status}${errorCode ? `, ${errorCode}` : ''})`,
-            meta: { inviteId: match.partitionKey, phone: invite.phoneNorm, status, errorCode }
+            summary: `SMS hard-failed for ${invite.primaryLastName} household (${storage.maskPhone(invite.phoneNorm) || 'unknown phone'}, ${status}${errorCode ? `, ${errorCode}` : ''})`,
+            meta: { inviteId: match.partitionKey, phoneMasked: storage.maskPhone(invite.phoneNorm), status, errorCode }
           });
         } catch (eventErr) {
           context.log.error(`sms_webhook event_write_failed: ${eventErr && eventErr.message}`);
