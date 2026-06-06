@@ -299,6 +299,7 @@
     "verifyResendIn": "Resend in {s}s",
     "verifyStartOver": "Start over",
     "verifyLinkSent": "We texted a sign-in link to the number ending in {last4}. Open the text on your phone to continue.",
+    "verifySpamNote": "Don't see it? On iPhone check the \"Unknown Senders\" tab in Messages; on Android check \"Spam & blocked\" or your filtered messages folder.",
     "verifyCodeInvalid": "Please enter the 6 digits we texted you.",
     "verifyCodeMismatch": "That code didn't match. Please try again.",
     "verifyCodeMismatchRemaining": "That code didn't match. You have {n} attempt(s) left.",

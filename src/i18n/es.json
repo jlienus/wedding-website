@@ -299,6 +299,7 @@
     "verifyResendIn": "Reenviar en {s}s",
     "verifyStartOver": "Comenzar de nuevo",
     "verifyLinkSent": "Enviamos un enlace de acceso al número que termina en {last4}. Abre el mensaje en tu teléfono para continuar.",
+    "verifySpamNote": "¿No lo ves? En iPhone revisa la pestaña \"Remitentes desconocidos\" en Mensajes; en Android revisa \"Spam y bloqueados\" o tu carpeta de mensajes filtrados.",
     "verifyCodeInvalid": "Por favor ingresa los 6 dígitos que te enviamos.",
     "verifyCodeMismatch": "Ese código no coincide. Inténtalo de nuevo.",
     "verifyCodeMismatchRemaining": "Ese código no coincide. Te quedan {n} intento(s).",

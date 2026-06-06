@@ -52,6 +52,7 @@ const stringKeys = [
   'rsvp.verifyCodeLabel','rsvp.verifyCodeHint','rsvp.verifyConfirm','rsvp.verifyConfirming',
   'rsvp.verifyResend','rsvp.verifyResendIn','rsvp.verifyStartOver',
   'rsvp.verifyLinkSent',
+  'rsvp.verifySpamNote',
   'rsvp.verifyCodeInvalid','rsvp.verifyCodeMismatch','rsvp.verifyCodeMismatchRemaining',
   'rsvp.verifyCodeLocked','rsvp.verifyCodeExpired','rsvp.verifyCodeError',
   'rsvp.verifyTicketExpired',
@@ -154,6 +155,8 @@ const initData = {
     </form>
 
     <p class="rsvp-verify-status" id="rsvp-verify-link-sent" hidden></p>
+
+    <p class="rsvp-verify-spam-note" id="rsvp-verify-spam-note" hidden></p>
 
     <div class="rsvp-verify-resend" id="rsvp-verify-resend-row" hidden>
       <button type="button" id="rsvp-verify-resend-btn" class="rsvp-link" disabled></button>
@@ -920,6 +923,7 @@ const initData = {
   const verifyCodeInput = verifyCodeForm?.querySelector('input[name="code"]') as HTMLInputElement | null;
   const verifyCodeSentMsg = $('#rsvp-verify-code-sent') as HTMLElement | null;
   const verifyLinkSentMsg = $('#rsvp-verify-link-sent') as HTMLElement | null;
+  const verifySpamNote = $('#rsvp-verify-spam-note') as HTMLElement | null;
   const verifyResendRow = $('#rsvp-verify-resend-row') as HTMLElement | null;
   const verifyResendBtn = $('#rsvp-verify-resend-btn') as HTMLButtonElement | null;
   const verifyBackBtn = $('#rsvp-verify-back-btn') as HTMLButtonElement | null;
@@ -938,6 +942,7 @@ const initData = {
     if (verifyChooser) verifyChooser.hidden = false;
     if (verifyCodeSentMsg) verifyCodeSentMsg.hidden = true;
     if (verifyLinkSentMsg) verifyLinkSentMsg.hidden = true;
+    if (verifySpamNote) verifySpamNote.hidden = true;
     if (verifyResendRow) verifyResendRow.hidden = true;
     if (verifyResendBtn) {
       verifyResendBtn.disabled = true;
@@ -1089,6 +1094,10 @@ const initData = {
         verifyCodeSentMsg.textContent = maskPhoneHint(VERIFY_CTX?.phoneLast4 || '');
         verifyCodeSentMsg.hidden = false;
       }
+      if (verifySpamNote) {
+        verifySpamNote.textContent = S['rsvp.verifySpamNote'] || '';
+        verifySpamNote.hidden = false;
+      }
       if (verifyCodeInput) requestAnimationFrame(() => verifyCodeInput.focus());
       startVerifyResendCountdown('code');
     });
@@ -1104,6 +1113,10 @@ const initData = {
       if (verifyLinkSentMsg) {
         verifyLinkSentMsg.textContent = (S['rsvp.verifyLinkSent'] || '').replace('{last4}', VERIFY_CTX?.phoneLast4 || '');
         verifyLinkSentMsg.hidden = false;
+      }
+      if (verifySpamNote) {
+        verifySpamNote.textContent = S['rsvp.verifySpamNote'] || '';
+        verifySpamNote.hidden = false;
       }
       startVerifyResendCountdown('link');
     });
@@ -1736,6 +1749,15 @@ const initData = {
     margin: 0 0 var(--space-2);
     font-size: 0.95rem;
     color: var(--color-muted, #6a6453);
+  }
+  .rsvp-verify-spam-note {
+    text-align: center;
+    margin: calc(-1 * var(--space-1, 0.5rem)) auto var(--space-2);
+    max-width: 28rem;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: var(--color-muted, #6a6453);
+    opacity: 0.85;
   }
   .rsvp-verify-resend {
     text-align: center;
