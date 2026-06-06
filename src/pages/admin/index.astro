@@ -1687,9 +1687,22 @@ const locale: Locale = 'en';
         const idLabel = `${inv.primaryFirstName} ${inv.primaryLastName}`.trim() || inv.inviteId;
         const totalOnInvite = (s.yes || 0) + (s.no || 0) + (s.pending || 0);
         const totalCard = totalOnInvite > 1 ? ` <span class="admin-muted">(${totalOnInvite} on this invite)</span>` : '';
-        const sendBtn = inv.phoneNorm
-          ? `<button class="btn btn--ghost btn--small" data-action="send-reminder" data-invite-id="${escapeHtml(inv.inviteId)}">Send reminder</button>`
-          : '';
+        // Reminder button is only meaningful for invites that:
+        //   - have a phone number on file (no point texting a phoneless invite), AND
+        //   - haven't already responded (sending a reminder to someone who
+        //     said yes/no is at best confusing and at worst spammy -- the
+        //     server already silently skips with reason 'already_responded',
+        //     but a previous visual signal of "Send reminder" sitting next
+        //     to a green 'yes' badge tricked the host into clicking it
+        //     twice in a row and assuming the SMS had gone out).
+        let sendBtn = '';
+        if (inv.phoneNorm) {
+          if (inv.responded) {
+            sendBtn = '<span class="admin-muted admin-action-note" title="Reminders are only sent to invites that haven\'t responded yet.">Reminders off — already responded</span>';
+          } else {
+            sendBtn = `<button class="btn btn--ghost btn--small" data-action="send-reminder" data-invite-id="${escapeHtml(inv.inviteId)}">Send reminder</button>`;
+          }
+        }
         const editBtn = `<button class="btn btn--ghost btn--small" data-action="edit" data-invite-id="${escapeHtml(inv.inviteId)}">Edit</button>`;
         const deleteBtn = `<button class="btn btn--ghost btn--small admin-btn-danger" data-action="delete" data-invite-id="${escapeHtml(inv.inviteId)}">Delete</button>`;
         const isExpanded = EXPANDED_ID === inv.inviteId;
@@ -2016,6 +2029,19 @@ const locale: Locale = 'en';
           return;
         }
         if (action === 'send-reminder') {
+          // Defensive: even though the renderer hides the button for
+          // already-responded invites (see admin-action-note span above),
+          // a stale DOM (between a guest replying and the next
+          // loadGuests poll) could leave the button live. The server
+          // will skip with reason 'already_responded' anyway, but
+          // confirming up front avoids the host clicking it twice and
+          // thinking the SMS went out.
+          const targetRow = LAST_DATA?.rows.find((r: any) => r.invite.inviteId === inviteId);
+          if (targetRow?.invite?.responded) {
+            setStatus('Reminder skipped: this invite has already responded.', 'warn');
+            await loadGuests();
+            return;
+          }
           if (!confirm('Send an SMS reminder to this invite now (bypasses 30-day cadence)?')) return;
           const original = btn.textContent;
           btn.disabled = true; btn.textContent = '…';
@@ -2736,6 +2762,10 @@ const locale: Locale = 'en';
     .admin-detail-inner .admin-detail-meta { margin: 0 0 0.4rem; }
     .admin-btn-danger { color: #8a2c2c; border-color: rgba(200, 60, 60, 0.4); }
     .admin-muted { color: var(--color-text-muted, #888); font-size: 0.85rem; }
+    /* Inline note that takes the place of an action button (e.g. "Reminders
+       off — already responded") so the actions cell doesn't reflow when
+       a guest's responded state flips. Sized to match .btn--small. */
+    .admin-action-note { display: inline-block; padding: 0.25rem 0.5rem; font-style: italic; }
     .admin-loading { text-align:center; padding: var(--space-3); color: var(--color-text-muted, #888); }
     /* Higher-specificity override: .admin-table td defaults to text-align:left,
        but the loading cell needs to centre its inline-flex loader. */
