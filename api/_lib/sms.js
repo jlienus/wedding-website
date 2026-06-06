@@ -96,8 +96,16 @@ async function sendViaTwilio(toPhone, body, _opts) {
       segmentCount: 0
     };
   }
+  // statusCallback wires Twilio's delivery-lifecycle POSTs back to our
+  // webhook so we can update sms_logs and mark hard-fail / opt-out flags.
+  // Per-message rather than account-wide because Twilio recommends it and
+  // it lets us swap providers / endpoints without Console config.
+  const cbUrl = process.env.TWILIO_STATUS_CALLBACK_URL
+    || ((process.env.RSVP_SITE_ORIGIN || 'https://johnanddianaswedding.com').replace(/\/$/, '') + '/api/twilio/webhook');
+  const createParams = { from, to: toPhone, body };
+  if (cbUrl) createParams.statusCallback = cbUrl;
   try {
-    const msg = await client.messages.create({ from, to: toPhone, body });
+    const msg = await client.messages.create(createParams);
     const status = String(msg.status || '').toLowerCase();
     // Twilio status values: queued, sending, sent, delivered, undelivered, failed.
     // queued/accepted/sending/sent/delivered are all "we successfully handed it

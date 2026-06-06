@@ -28,14 +28,42 @@ function deadlineDisplay(locale) {
   return locale === 'es' ? '15 de noviembre' : 'November 15';
 }
 
-// Returns the canonical reason string for a delivery-status that should mark
-// an invite as permanently hard-failed (bad number, blocked, etc.). Soft errors
-// (rate limits, transient) should NOT poison the invite.
+// True if a delivery state should mark an invite permanently hard-failed (bad
+// number, blocked, etc.). Soft errors (rate limits, transient) should NOT
+// poison the invite. Recognizes both ACS-style and Twilio-style status codes.
+//
+// Note: Twilio error 21610 (recipient unsubscribed) is intentionally NOT in the
+// hard-fail set. The twilio_webhook function handles it as an opt-out signal
+// (sets optedOutOfSms) which is the more accurate state.
+const HARD_TWILIO_ERROR_CODES = new Set([
+  '30003', // Unreachable destination handset
+  '30004', // Message blocked by carrier
+  '30005', // Unknown destination handset
+  '30006', // Landline / unreachable carrier
+  '30007', // Carrier filtered (content blocked)
+  '21211', // Invalid 'To' phone number
+  '21408', // Permission to send to this region not enabled
+  '21614'  // 'To' is not a valid mobile number
+]);
+
 function isHardFailure(deliveryStatus, errorCode) {
-  if (deliveryStatus === 'rejected') {
-    if (!errorCode) return true;
-    if (/^HTTP_4/.test(errorCode)) return true;
+  const status = String(deliveryStatus || '').toLowerCase();
+  const code = String(errorCode || '');
+
+  // ACS pattern: rejected at send time with HTTP 4xx (e.g. invalid number) is
+  // permanent. Bare rejected with no detail is also treated as permanent.
+  if (status === 'rejected') {
+    if (!code) return true;
+    if (/^HTTP_4/.test(code)) return true;
   }
+
+  // Twilio 'failed' = gave up before reaching carrier. Always permanent.
+  if (status === 'failed') return true;
+
+  // Twilio 'undelivered' = carrier accepted then rejected. Hard only for
+  // codes that indicate a permanent condition.
+  if (status === 'undelivered' && HARD_TWILIO_ERROR_CODES.has(code)) return true;
+
   return false;
 }
 

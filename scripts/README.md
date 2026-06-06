@@ -52,6 +52,38 @@ For Twilio trial accounts the destination must already be on your
 **Verified Caller IDs** list in the Twilio console.
 
 
+## `test-classify-inbound.cjs` — Smoke-test the SMS keyword classifier
+
+In-process check that `api/_lib/sms_actions.classifyInbound` maps the keyword
+aliases we care about (STOP/START/HELP/NO/YES/other) to the right canonical
+action. No Azure connection required — run before any change to the keyword
+set.
+
+```powershell
+node scripts/test-classify-inbound.cjs    # exit 0 on all pass, 1 on any failure
+```
+
+
+## `diag-invite-by-phone.cjs` — Look up invite reminder-state by phone number
+
+One-shot diagnostic that prints the reminder-relevant flags
+(`responded`, `optedOutOfSms`, `smsHardFailedAt`, `phoneNorm`, `reminderCount`)
+for every invite matching a given phone. Useful when "Send reminder" doesn't
+seem to do anything — most skips happen silently.
+
+Loads env vars from `api/local.settings.json` if present; otherwise reads from
+process env. Requires `RSVP_STORAGE_CONNECTION`, `RSVP_BLIND_INDEX_KEY`,
+`RSVP_FIELD_KEY_CURRENT`.
+
+```powershell
+# Easiest: pull current prod settings inline
+$env:RSVP_STORAGE_CONNECTION = az staticwebapp appsettings list -n swa-wedding -g rg-wedding-swa --query "properties.RSVP_STORAGE_CONNECTION" -o tsv
+$env:RSVP_BLIND_INDEX_KEY    = az staticwebapp appsettings list -n swa-wedding -g rg-wedding-swa --query "properties.RSVP_BLIND_INDEX_KEY" -o tsv
+$env:RSVP_FIELD_KEY_CURRENT  = az staticwebapp appsettings list -n swa-wedding -g rg-wedding-swa --query "properties.RSVP_FIELD_KEY_CURRENT" -o tsv
+node scripts/diag-invite-by-phone.cjs +15551234567
+```
+
+
 ## `mask-sms-log-phones.cjs` — One-time mask of full numbers in `rsvpSmsLog`
 
 Companion to the field-encryption work. Existing rows in the SMS audit log
