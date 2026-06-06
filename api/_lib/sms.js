@@ -154,13 +154,17 @@ function estimateSegments(body) {
 
 // Canonical reminder body in EN or ES. Token is the magic-link signed token
 // (see _lib/auth.js signMagicToken). siteOrigin: canonical site URL, no slash.
+//
+// Advertises only NO (decline) and STOP (opt out) as text-reply options.
+// "Yes" RSVPs must go through the website so guests can pick meals,
+// declare additional guests, etc. — capabilities SMS can't capture cleanly.
 function buildReminderBody({ locale, firstName, deadlineDisplay, siteOrigin, magicToken }) {
   const link = `${siteOrigin}/api/rsvp/magic?t=${magicToken}`;
   const greeting = firstName ? (locale === 'es' ? `Hola ${firstName}, ` : `Hi ${firstName}, `) : '';
   if (locale === 'es') {
-    return `${greeting}recordatorio para confirmar tu asistencia a la boda de John & Diana antes del ${deadlineDisplay}. Responde aqui: ${link} Responde STOP para no recibir mas mensajes.`;
+    return `${greeting}recordatorio para confirmar tu asistencia a la boda de John & Diana antes del ${deadlineDisplay}. Responde aqui: ${link} O responde NO para declinar, STOP para no recibir mas mensajes.`;
   }
-  return `${greeting}friendly reminder to RSVP for John & Diana's wedding by ${deadlineDisplay}. Tap to respond: ${link} Reply STOP to opt out.`;
+  return `${greeting}friendly reminder to RSVP for John & Diana's wedding by ${deadlineDisplay}. Tap to respond: ${link} Or reply NO to decline, STOP to opt out.`;
 }
 
 module.exports = {
