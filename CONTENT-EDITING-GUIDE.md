@@ -8,7 +8,6 @@ This guide is for changing wedding website content without needing to be a progr
 |---|---|
 | Change the wedding date / time / venue | `src\data\wedding.config.json` — this is the single source of truth; all pages read from here |
 | Update the RSVP deadline | `src\data\wedding.config.json`, the `rsvp.deadline` field |
-| Paste in the RSVPify embed URL | `src\data\wedding.config.json`, the `rsvp.embedUrl` field |
 | Add the Amazon registry link | `src\data\wedding.config.json`, the `registry.amazon.url` field |
 | Change English copy | `src\i18n\en.json` |
 | Change Spanish copy | `src\i18n\es.json` |
@@ -17,6 +16,11 @@ This guide is for changing wedding website content without needing to be a progr
 | Add/remove a hotel | `src\data\hotels.json` |
 | Add a FAQ | `src\data\faqs.json` |
 | Change a flight/hotel deep link | `src\data\travel-links.json` |
+
+For RSVP-system internals (the SMS step-up flow, magic-link reminders,
+backend storage, admin panel) see [docs\RSVP.md](docs\RSVP.md). The
+RSVP is a custom flow backed by Azure Functions + Table Storage — it
+no longer uses any third-party embed.
 
 ## B. Photos — drop-in instructions
 
@@ -54,7 +58,8 @@ To check the Spanish version, navigate to http://localhost:4321/es.
 
 ## F. Publishing changes
 
-If you have set up GitHub + Azure Static Web Apps, see [NEXT-STEPS.md](NEXT-STEPS.md). Then publish content edits with:
+The site auto-deploys from `main` via GitHub Actions whenever you push.
+Make your edits, then:
 
 ```powershell
 git add -A

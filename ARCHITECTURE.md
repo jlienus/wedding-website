@@ -126,7 +126,6 @@ wedding-website/
 ├── package-lock.json
 ├── staticwebapp.config.json
 ├── README.md
-├── NEXT-STEPS.md
 └── ARCHITECTURE.md
 ```
 
@@ -149,7 +148,6 @@ Top-level files and directories:
 | `package-lock.json` | Locked npm dependency graph; currently locks Astro to 6.4.2. |
 | `staticwebapp.config.json` | Azure Static Web Apps runtime config, including routes, headers, navigation fallback, MIME types, and 404 behavior. |
 | `README.md` | Project overview, quick start, content guide, deployment notes, and maintenance checklist. |
-| `NEXT-STEPS.md` | Post-deployment checklist for photos, RSVPify, registry URL, content review, and workflow validation. |
 | `ARCHITECTURE.md` | This architecture document. |
 
 Source tree:
@@ -167,7 +165,7 @@ src/
 │   ├── Nav.astro
 │   ├── PhotoGallery.astro
 │   ├── RegistryCard.astro
-│   ├── RsvpEmbed.astro
+│   ├── RsvpForm.astro
 │   ├── SectionDivider.astro
 │   ├── TravelDeepLinks.astro
 │   ├── VenueCard.astro
@@ -240,7 +238,7 @@ Component inventory:
 | `Nav.astro` | Shared navigation menu and mobile nav markup. |
 | `PhotoGallery.astro` | Placeholder/gallery component for current and future photo assets. |
 | `RegistryCard.astro` | Registry callout component using registry data from `wedding.config.json`. |
-| `RsvpEmbed.astro` | RSVP page embed/callout component using RSVPify URL fields from config. |
+| `RsvpForm.astro` | Custom RSVP flow: lookup, SMS step-up verification, and per-guest form. Reads i18n strings and config from `wedding.config.json`. |
 | `SectionDivider.astro` | Decorative section separator aligned to the white/gold/silver visual language. |
 | `TravelDeepLinks.astro` | Travel page deep-link cards sourced from `travel-links.json`. |
 | `VenueCard.astro` | Venue card for ceremony/reception locations from `venues.json`. |

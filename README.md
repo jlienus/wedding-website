@@ -30,8 +30,9 @@ npm run dev
 | Task | Where to go |
 |---|---|
 | Change wedding details, copy, itinerary, hotels, FAQs, links, or photos | [CONTENT-EDITING-GUIDE.md](CONTENT-EDITING-GUIDE.md) |
-| Get the site live at `johnanddianaswedding.com` | [NEXT-STEPS.md](NEXT-STEPS.md) |
+| RSVP system internals (SMS step-up, reminders, admin panel) | [docs/RSVP.md](docs/RSVP.md) |
 | Add or replace website photos | [public\images\README.md](public\images\README.md) |
+| Operational scripts (key rotation, smoke tests, deploy helpers) | [scripts/README.md](scripts/README.md) |
 | Build the site before deployment | Run `npm run build` |
 | Preview the site while editing | Run `npm run dev` |
 
@@ -47,8 +48,9 @@ wedding-website\
 ├─ astro.config.mjs      Astro configuration
 ├─ package.json          npm scripts and dependencies
 ├─ README.md             Project overview
+├─ ARCHITECTURE.md       Architecture and operations reference
 ├─ CONTENT-EDITING-GUIDE.md
-└─ NEXT-STEPS.md
+└─ docs\RSVP.md          RSVP system internals
 ```
 
 ## Build & deploy
@@ -64,5 +66,7 @@ After GitHub and Azure Static Web Apps are connected, pushing to `main` on GitHu
 ## Links
 
 - [Content Editing Guide](CONTENT-EDITING-GUIDE.md)
-- [Next Steps to Go Live](NEXT-STEPS.md)
+- [RSVP System Internals](docs/RSVP.md)
+- [Architecture & Operations](ARCHITECTURE.md)
 - [Photo Slot Guide](public\images\README.md)
+- [Operational Scripts](scripts/README.md)
