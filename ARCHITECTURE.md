@@ -1137,6 +1137,29 @@ curl.exe -I https://black-glacier-09fe0f210.7.azurestaticapps.net
 ```
 
 
+Admin RSVP notifications:
+
+Every guest RSVP submission (and every subsequent update) fans out an email
+to each address on the `ADMIN_EMAIL_ALLOWLIST` so the couple sees responses
+in real time without needing to refresh the admin dashboard. The send
+happens in `api/_lib/notify.js` and is invoked from `api/rsvp_submit` after
+the public 200 response is composed but before the function returns. The
+notification body contains the household name, totals (yes/no/TBD/kids),
+per-attendee menu choices and dietary notes, a banner if the submission was
+late, and a link back to `/admin`. Failures are swallowed and recorded as
+`admin.notify.rsvp_submitted` / `admin.notify.rsvp_send_failed` events on
+the audit log — they can never break the guest-facing submit path.
+
+To mute notifications (for example during a bulk data-import), set the
+following app setting on the Static Web App and the change takes effect
+without a redeploy:
+
+```text
+ADMIN_NOTIFY_RSVP=false
+```
+
+Any value other than `false`/`0`/`off`/`no` keeps notifications on.
+
 
 ## 14. Known gaps / TODO
 

@@ -4,7 +4,8 @@ const { preflight, isAllowedOrigin } = require('../_lib/cors');
 const ratelimit = require('../_lib/ratelimit');
 const auth = require('../_lib/auth');
 const storage = require('../_lib/storage');
-const { validatePayload, isComplete } = require('../_lib/payload');
+const { validatePayload, isComplete, summarize } = require('../_lib/payload');
+const notify = require('../_lib/notify');
 
 const RATE_LIMIT_PER_MIN = 10;
 const RATE_WINDOW_MS = 60_000;
@@ -114,6 +115,7 @@ module.exports = async function (context, req) {
   }
 
   const isLate = now > GUEST_DEADLINE_UTC;
+  const wasResponded = !!invite.responded;
   try {
     await storage.markResponded(inviteId, v.json, { late: isLate, respondedAt: now.toISOString() });
   } catch (err) {
@@ -135,6 +137,23 @@ module.exports = async function (context, req) {
     });
   } catch (err) {
     context.log.error(`rsvp_submit event_write_failed: ${err && err.message}`);
+  }
+
+  // Best-effort admin notification. Errors are swallowed inside notify.js so
+  // a flaky inbox can never break the guest-facing 200. We await it because
+  // the SWA function host may freeze us the moment we return; the call
+  // typically resolves in 300-600ms with ACS Email's accept-and-poll model.
+  try {
+    await notify.notifyAdminsOfRsvpUpdate(context, {
+      invite,
+      payload: v.payload,
+      summary: summarize(v.payload),
+      isUpdate: wasResponded,
+      late: isLate,
+      receivedAt: now.toISOString()
+    });
+  } catch (err) {
+    context.log.error(`rsvp_submit notify_failed: ${err && err.message}`);
   }
 
   context.res = {
