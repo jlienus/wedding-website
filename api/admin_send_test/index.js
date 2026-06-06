@@ -45,8 +45,16 @@ module.exports = async function (context, req) {
 
   const locale = payload.locale === 'es' ? 'es' : 'en';
   const body = locale === 'es'
-    ? 'Test: sistema de RSVP de John & Diana funcionando. Si recibes esto, todo bien. Responde NO para declinar, STOP para no recibir mas mensajes.'
-    : 'Test: John & Diana RSVP system is working. If you got this, all good. Reply NO to decline, STOP to opt out.';
+    ? [
+        'Test: sistema de RSVP de John & Diana funcionando.',
+        'Si recibes esto, todo bien.',
+        'Responde NO para declinar o STOP para no recibir mas mensajes.'
+      ].join('\n\n')
+    : [
+        'Test: John & Diana RSVP system is working.',
+        'If you got this, all good.',
+        'Reply NO to decline or STOP to opt out.'
+      ].join('\n\n');
 
   let result;
   try {

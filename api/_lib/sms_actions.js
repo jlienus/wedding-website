@@ -72,18 +72,30 @@ function replyNo(invite) {
   const link = magicLink(invite.inviteId);
   if (invite.locale === 'es') {
     const who = lastName ? `la familia ${lastName}` : 'tu familia';
-    return `Recibido — ${who} ha sido marcada como no asistira. Para cambiar: ${link}`;
+    return [
+      `Recibido — ${who} ha sido marcada como no asistira.`,
+      `Para cambiar:\n${link}`
+    ].join('\n\n');
   }
   const who = lastName ? `the ${lastName} household` : 'your household';
-  return `Got it — ${who} is marked as not attending. To change: ${link}`;
+  return [
+    `Got it — ${who} is marked as not attending.`,
+    `To change:\n${link}`
+  ].join('\n\n');
 }
 
 function replyYes(invite) {
   const link = magicLink(invite.inviteId);
   if (invite.locale === 'es') {
-    return `Estupendo! Confirma los detalles y elige el menu aqui: ${link}`;
+    return [
+      'Estupendo! Confirma los detalles y elige el menu aqui:',
+      link
+    ].join('\n\n');
   }
-  return `Great! Tap to confirm details and pick meals: ${link}`;
+  return [
+    'Great! Tap to confirm details and pick meals:',
+    link
+  ].join('\n\n');
 }
 
 // Marks the invite as declined-via-SMS (primary attending=false, zero

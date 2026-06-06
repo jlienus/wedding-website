@@ -158,13 +158,27 @@ function estimateSegments(body) {
 // Advertises only NO (decline) and STOP (opt out) as text-reply options.
 // "Yes" RSVPs must go through the website so guests can pick meals,
 // declare additional guests, etc. — capabilities SMS can't capture cleanly.
+//
+// Uses \n\n paragraph breaks for readability on iMessage / Android — costs
+// the same chars as spaces (GSM-7 LF is one char), no extra segments.
 function buildReminderBody({ locale, firstName, deadlineDisplay, siteOrigin, magicToken }) {
   const link = `${siteOrigin}/api/rsvp/magic?t=${magicToken}`;
-  const greeting = firstName ? (locale === 'es' ? `Hola ${firstName}, ` : `Hi ${firstName}, `) : '';
   if (locale === 'es') {
-    return `${greeting}recordatorio para confirmar tu asistencia a la boda de John & Diana antes del ${deadlineDisplay}. Responde aqui: ${link} O responde NO para declinar, STOP para no recibir mas mensajes.`;
+    const greeting = firstName ? `Hola ${firstName},` : 'Hola,';
+    return [
+      greeting,
+      `Recordatorio para confirmar tu asistencia a la boda de John & Diana antes del ${deadlineDisplay}.`,
+      `Responde aqui:\n${link}`,
+      'Responde NO para declinar o STOP para no recibir mas mensajes.'
+    ].join('\n\n');
   }
-  return `${greeting}friendly reminder to RSVP for John & Diana's wedding by ${deadlineDisplay}. Tap to respond: ${link} Or reply NO to decline, STOP to opt out.`;
+  const greeting = firstName ? `Hi ${firstName},` : 'Hi,';
+  return [
+    greeting,
+    `Friendly reminder to RSVP for John & Diana's wedding by ${deadlineDisplay}.`,
+    `Tap to respond:\n${link}`,
+    'Reply NO to decline or STOP to opt out.'
+  ].join('\n\n');
 }
 
 module.exports = {
