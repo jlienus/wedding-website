@@ -112,24 +112,24 @@ const locale: Locale = 'en';
           />
           <div class="admin-invites-chips" role="group" aria-label="Filter by response">
             <label class="admin-cat-toggle admin-cat-toggle--ok">
-              <input type="checkbox" data-invite-filter="responded" checked /><span>Responded</span>
+              <input type="checkbox" data-invite-filter="responded" /><span>Responded</span>
             </label>
             <label class="admin-cat-toggle admin-cat-toggle--muted">
-              <input type="checkbox" data-invite-filter="pending" checked /><span>Pending</span>
+              <input type="checkbox" data-invite-filter="pending" /><span>Pending</span>
             </label>
           </div>
           <div class="admin-invites-chips" role="group" aria-label="Filter by phone status">
             <label class="admin-cat-toggle admin-cat-toggle--info">
-              <input type="checkbox" data-invite-filter="hasPhone" checked /><span>Has phone</span>
+              <input type="checkbox" data-invite-filter="hasPhone" /><span>Has phone</span>
             </label>
             <label class="admin-cat-toggle admin-cat-toggle--muted">
-              <input type="checkbox" data-invite-filter="noPhone" checked /><span>No phone</span>
+              <input type="checkbox" data-invite-filter="noPhone" /><span>No phone</span>
             </label>
             <label class="admin-cat-toggle admin-cat-toggle--warn">
-              <input type="checkbox" data-invite-filter="optedOut" checked /><span>Opted out</span>
+              <input type="checkbox" data-invite-filter="optedOut" /><span>Opted out</span>
             </label>
             <label class="admin-cat-toggle admin-cat-toggle--warn">
-              <input type="checkbox" data-invite-filter="hardFail" checked /><span>Hard-fail</span>
+              <input type="checkbox" data-invite-filter="hardFail" /><span>Hard-fail</span>
             </label>
           </div>
           <button type="button" id="invites-reset" class="btn btn--ghost btn--small">Reset filters</button>
@@ -1516,14 +1516,20 @@ const locale: Locale = 'en';
       // applyInvitesFiltersAndSort(rows). Defaults keep every category
       // visible and sort by primary name A->Z, matching the previous
       // unfiltered server order.
+      // All chips start unchecked. Unchecked = no constraint from that chip.
+      // Each checked chip is an independent AND-constraint applied to every
+      // row. So "Responded + Has phone" returns rows that are BOTH responded
+      // AND have a phone. "Responded + Pending" returns nothing (impossible
+      // by definition) -- that's the user's signal that they have a
+      // contradictory combination checked.
       const INVITES_FILTERS = {
         search: '',
-        responded: true,
-        pending: true,
-        hasPhone: true,
-        noPhone: true,
-        optedOut: true,
-        hardFail: true
+        responded: false,
+        pending: false,
+        hasPhone: false,
+        noPhone: false,
+        optedOut: false,
+        hardFail: false
       };
       let INVITES_SORT: { key: string; dir: 'asc' | 'desc' } = { key: 'name', dir: 'asc' };
 
@@ -1560,24 +1566,27 @@ const locale: Locale = 'en';
         }
       }
 
+      // Each chip is an independent positive predicate. A row passes only
+      // if it satisfies EVERY checked chip (logical AND). Unchecked chips
+      // don't constrain. If NO chips are checked, the chip set contributes
+      // no constraint and all rows pass through (the search box still
+      // applies separately).
+      const CHIP_PREDICATES: Array<[keyof typeof INVITES_FILTERS, (inv: any) => boolean]> = [
+        ['responded', (i) => !!i.responded],
+        ['pending',   (i) => !i.responded],
+        ['hasPhone',  (i) => !!i.phoneNorm],
+        ['noPhone',   (i) => !i.phoneNorm],
+        ['optedOut',  (i) => !!i.optedOutOfSms],
+        ['hardFail',  (i) => !!i.smsHardFailedAt],
+      ];
+
       function applyInvitesFiltersAndSort(rows: any[]): any[] {
         const q = INVITES_FILTERS.search.trim().toLowerCase();
         const filtered = rows.filter((row) => {
           const inv = row.invite || {};
-          const responded = !!inv.responded;
-          if (responded && !INVITES_FILTERS.responded) return false;
-          if (!responded && !INVITES_FILTERS.pending) return false;
-          const hasPhone = !!inv.phoneNorm;
-          const isOpted = !!inv.optedOutOfSms;
-          const isHardFail = !!inv.smsHardFailedAt;
-          // Phone-status chips act as an OR-union over the four states.
-          // A row passes if at least one of its applicable states is checked.
-          const stateChecks: boolean[] = [];
-          if (hasPhone && !isOpted && !isHardFail) stateChecks.push(INVITES_FILTERS.hasPhone);
-          if (!hasPhone) stateChecks.push(INVITES_FILTERS.noPhone);
-          if (isOpted) stateChecks.push(INVITES_FILTERS.optedOut);
-          if (isHardFail) stateChecks.push(INVITES_FILTERS.hardFail);
-          if (stateChecks.length && !stateChecks.some(Boolean)) return false;
+          for (const [key, pred] of CHIP_PREDICATES) {
+            if (INVITES_FILTERS[key] && !pred(inv)) return false;
+          }
           if (q) {
             const hay = `${inv.primaryFirstName || ''} ${inv.primaryLastName || ''}`.toLowerCase();
             if (!hay.includes(q)) return false;
@@ -2160,11 +2169,14 @@ const locale: Locale = 'en';
       invitesReset?.addEventListener('click', () => {
         INVITES_FILTERS.search = '';
         if (invitesSearch) invitesSearch.value = '';
+        // Reset = back to the "no filter applied, show everything" default.
+        // Every chip starts (and resets to) unchecked. See INVITES_FILTERS
+        // initialization for the AND-of-checked-predicates rationale.
         document.querySelectorAll<HTMLInputElement>('.admin-invites-filters input[type="checkbox"][data-invite-filter]')
           .forEach((cb) => {
-            cb.checked = true;
+            cb.checked = false;
             const key = cb.dataset.inviteFilter || '';
-            if (key in INVITES_FILTERS) (INVITES_FILTERS as any)[key] = true;
+            if (key in INVITES_FILTERS) (INVITES_FILTERS as any)[key] = false;
           });
         INVITES_SORT = { key: 'name', dir: 'asc' };
         renderInvitesTable();
