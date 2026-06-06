@@ -139,12 +139,15 @@ module.exports = async function (context, req) {
     context.log.error(`rsvp_submit event_write_failed: ${err && err.message}`);
   }
 
-  // Best-effort admin notification. Errors are swallowed inside notify.js so
-  // a flaky inbox can never break the guest-facing 200. We await it because
-  // the SWA function host may freeze us the moment we return; the call
-  // typically resolves in 300-600ms with ACS Email's accept-and-poll model.
+  // Best-effort admin email notification. Errors are swallowed inside
+  // notify.js so a flaky inbox can never break the guest-facing 200. We
+  // await it because the SWA function host may freeze us the moment we
+  // return; the call typically resolves in 300-600ms with ACS Email's
+  // accept-and-poll model. SMS notifications (when wired) live in their
+  // own module and are dispatched separately so a failure in one channel
+  // doesn't suppress the other.
   try {
-    await notify.notifyAdminsOfRsvpUpdate(context, {
+    await notify.emailAdminsOfRsvpUpdate(context, {
       invite,
       payload: v.payload,
       summary: summarize(v.payload),
@@ -153,7 +156,7 @@ module.exports = async function (context, req) {
       receivedAt: now.toISOString()
     });
   } catch (err) {
-    context.log.error(`rsvp_submit notify_failed: ${err && err.message}`);
+    context.log.error(`rsvp_submit email_notify_failed: ${err && err.message}`);
   }
 
   context.res = {

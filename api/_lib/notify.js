@@ -2,11 +2,16 @@
 
 // Admin-facing transactional notifications.
 //
-// Currently exports a single sender, notifyAdminsOfRsvpUpdate, that emails
+// Currently exports a single sender, emailAdminsOfRsvpUpdate, that emails
 // every address on ADMIN_EMAIL_ALLOWLIST whenever a guest submits or updates
 // an RSVP. The rsvp_submit handler calls this AFTER the public 200 has been
 // composed but before the function returns, so failures here can never
 // affect the guest-facing response.
+//
+// SMS notifications for the same triggers live elsewhere (separate module),
+// which is why audit event types here are channel-explicit
+// (admin.notify.rsvp_email_sent, admin.notify.rsvp_email_failed) so the
+// activity feed on /admin can show "email" vs "sms" at a glance.
 //
 // Design notes:
 //   * Best-effort. Every failure path is caught and logged via context +
@@ -226,13 +231,13 @@ function buildText({ household, isUpdate, summary, payload, late, receivedAt, no
 // Best-effort. Never throws. Caller does not need to await -- but awaiting
 // adds at most ~500ms per recipient since ACS sendEmail returns on accept,
 // not on terminal delivery.
-async function notifyAdminsOfRsvpUpdate(context, ctx) {
+async function emailAdminsOfRsvpUpdate(context, ctx) {
   const log = (context && context.log) || (() => {});
   const logErr = (context && context.log && context.log.error) || (() => {});
 
   try {
     if (!isNotifyEnabled()) {
-      log('notify_rsvp skipped reason=disabled_env');
+      log('notify_rsvp_email skipped reason=disabled_env');
       return;
     }
 
@@ -240,7 +245,7 @@ async function notifyAdminsOfRsvpUpdate(context, ctx) {
     const payload = ctx && ctx.payload;
     const summary = ctx && ctx.summary;
     if (!invite || !payload || !summary) {
-      log('notify_rsvp skipped reason=missing_ctx');
+      log('notify_rsvp_email skipped reason=missing_ctx');
       return;
     }
 
@@ -248,11 +253,11 @@ async function notifyAdminsOfRsvpUpdate(context, ctx) {
     try {
       recipients = auth.getAdminEmailAllowlist();
     } catch (err) {
-      logErr(`notify_rsvp skipped reason=no_allowlist: ${err && err.message}`);
+      logErr(`notify_rsvp_email skipped reason=no_allowlist: ${err && err.message}`);
       return;
     }
     if (!recipients.length) {
-      log('notify_rsvp skipped reason=empty_allowlist');
+      log('notify_rsvp_email skipped reason=empty_allowlist');
       return;
     }
 
@@ -277,14 +282,15 @@ async function notifyAdminsOfRsvpUpdate(context, ctx) {
     const successCount = results.filter((r) => r.ok).length;
     const failureCount = results.length - successCount;
 
-    log(`notify_rsvp inviteId=${invite.inviteId} recipients=${recipients.length} ok=${successCount} fail=${failureCount} isUpdate=${isUpdate} late=${late}`);
+    log(`notify_rsvp_email inviteId=${invite.inviteId} recipients=${recipients.length} ok=${successCount} fail=${failureCount} isUpdate=${isUpdate} late=${late}`);
 
     try {
       await storage.appendEvent({
-        type: 'admin.notify.rsvp_submitted',
+        type: 'admin.notify.rsvp_email_sent',
         actor: `system:rsvp_submit`,
-        summary: `Notified ${successCount}/${results.length} admin(s) of ${household}'s ${isUpdate ? 'updated' : 'new'} RSVP`,
+        summary: `Emailed ${successCount}/${results.length} admin(s) about ${household}'s ${isUpdate ? 'updated' : 'new'} RSVP`,
         meta: {
+          channel: 'email',
           inviteId: invite.inviteId,
           recipientCount: results.length,
           successCount,
@@ -294,16 +300,17 @@ async function notifyAdminsOfRsvpUpdate(context, ctx) {
           messageIds: results.filter((r) => r.ok && r.messageId).map((r) => r.messageId)
         }
       });
-    } catch (err) { logErr(`notify_rsvp event_write_failed: ${err && err.message}`); }
+    } catch (err) { logErr(`notify_rsvp_email event_write_failed: ${err && err.message}`); }
 
     for (const r of results) {
       if (r.ok) continue;
       try {
         await storage.appendEvent({
-          type: 'admin.notify.rsvp_send_failed',
+          type: 'admin.notify.rsvp_email_failed',
           actor: `system:rsvp_submit`,
-          summary: `Failed to notify admin (${r.errorCode || r.status || 'unknown'}) for ${household}`,
+          summary: `Failed to email admin (${r.errorCode || r.status || 'unknown'}) about ${household}'s RSVP`,
           meta: {
+            channel: 'email',
             inviteId: invite.inviteId,
             recipientHash: hashRecipient(r.to),
             status: r.status,
@@ -311,10 +318,10 @@ async function notifyAdminsOfRsvpUpdate(context, ctx) {
             errorMessage: r.errorMessage
           }
         });
-      } catch (err) { logErr(`notify_rsvp fail_event_write_failed: ${err && err.message}`); }
+      } catch (err) { logErr(`notify_rsvp_email fail_event_write_failed: ${err && err.message}`); }
     }
   } catch (err) {
-    logErr(`notify_rsvp unexpected_failure: ${err && err.message}`);
+    logErr(`notify_rsvp_email unexpected_failure: ${err && err.message}`);
   }
 }
 
@@ -330,4 +337,4 @@ function hashRecipient(email) {
   }
 }
 
-module.exports = { notifyAdminsOfRsvpUpdate };
+module.exports = { emailAdminsOfRsvpUpdate };
