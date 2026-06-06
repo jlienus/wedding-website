@@ -114,7 +114,6 @@ module.exports = async function (context, req) {
   context.log(`admin_update_invite inviteId=${body.inviteId} fields=${Object.keys(patch).join(',')}`);
 
   try {
-    const principal = auth.readAdminPrincipal(req) || {};
     const meta = { inviteId: body.inviteId, fields: Object.keys(patch), rejected: rejected.length ? rejected : undefined };
     // When a payload edit is part of this patch, snapshot the pre-edit payload
     // into the audit log so an accidental destructive change (wiped meal picks,
@@ -140,7 +139,7 @@ module.exports = async function (context, req) {
     }
     await storage.appendEvent({
       type: 'admin.invite_updated',
-      actor: `admin:${String(principal.userDetails || 'unknown').toLowerCase()}`,
+      actor: auth.readAdminActor(req) || 'admin:unknown',
       summary: `Updated invite for ${existing.primaryFirstName} ${existing.primaryLastName}: ${Object.keys(patch).join(', ')}`,
       meta
     });

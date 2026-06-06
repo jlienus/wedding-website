@@ -663,7 +663,8 @@ async function getSettings() {
       ...DEFAULT_SETTINGS,
       remindersEnabled: !!e.remindersEnabled,
       remindersEnabledAt: e.remindersEnabledAt || '',
-      remindersDisabledAt: e.remindersDisabledAt || ''
+      remindersDisabledAt: e.remindersDisabledAt || '',
+      remindersStopOnUtc: e.remindersStopOnUtc || DEFAULT_SETTINGS.remindersStopOnUtc
     };
   } catch (err) {
     if (err && err.statusCode === 404) return { ...DEFAULT_SETTINGS };
@@ -681,6 +682,7 @@ async function setSettings(patch) {
     remindersEnabled: !!next.remindersEnabled,
     remindersEnabledAt: next.remindersEnabledAt || '',
     remindersDisabledAt: next.remindersDisabledAt || '',
+    remindersStopOnUtc: next.remindersStopOnUtc || DEFAULT_SETTINGS.remindersStopOnUtc,
     updatedAt: new Date().toISOString()
   }, 'Replace');
   return next;
@@ -806,24 +808,38 @@ async function getVerifyCode(inviteId) {
 async function incrementVerifyAttempts(inviteId) {
   if (!inviteId) throw new Error('incrementVerifyAttempts requires inviteId');
   const c = getClients();
-  // Read-modify-write. Concurrent verify calls for the same inviteId are
-  // extraordinarily rare (single guest, single device) so we don't bother
-  // with ETag CAS — the worst case is one missed increment, which the
-  // 5-attempt cap absorbs.
-  let current;
-  try {
-    current = await c.verifyCodes.getEntity(VERIFY_CODES_PARTITION, inviteId);
-  } catch (err) {
-    if (err && err.statusCode === 404) return 0;
-    throw err;
+  // ETag-conditional read-modify-write. Two concurrent verify calls for the
+  // same inviteId are rare in real wedding-guest traffic, but if they ever
+  // race the loser would otherwise silently overwrite the winner's increment
+  // and let an attacker burn ~2x the 5-attempt cap. One retry is enough — a
+  // sustained loss would mean a deeper concurrency problem we'd want to see.
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    let current;
+    try {
+      current = await c.verifyCodes.getEntity(VERIFY_CODES_PARTITION, inviteId);
+    } catch (err) {
+      if (err && err.statusCode === 404) return 0;
+      throw err;
+    }
+    const next = Number(current.attempts || 0) + 1;
+    try {
+      await c.verifyCodes.updateEntity({
+        partitionKey: VERIFY_CODES_PARTITION,
+        rowKey: inviteId,
+        attempts: next
+      }, 'Merge', { etag: current.etag });
+      return next;
+    } catch (err) {
+      const status = err && err.statusCode;
+      // 412 PreconditionFailed → another request bumped the counter under us.
+      // Re-read and try once more; surface anything else.
+      if (status !== 412) throw err;
+    }
   }
-  const next = Number(current.attempts || 0) + 1;
-  await c.verifyCodes.updateEntity({
-    partitionKey: VERIFY_CODES_PARTITION,
-    rowKey: inviteId,
-    attempts: next
-  }, 'Merge');
-  return next;
+  // Two ETag conflicts in a row → bail with the best-effort previous value.
+  // Caller logs and proceeds; the 5-attempt cap still bounds total exposure.
+  const final = await c.verifyCodes.getEntity(VERIFY_CODES_PARTITION, inviteId);
+  return Number(final.attempts || 0);
 }
 
 async function deleteVerifyCode(inviteId) {

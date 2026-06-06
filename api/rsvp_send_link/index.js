@@ -187,6 +187,25 @@ module.exports = async function (context, req) {
   }
 
   context.log(`rsvp_send_link ok inviteId=${inviteId} ipHash=${ipHash} seg=${result.segmentCount}`);
+
+  // Audit row so Twilio status callbacks can patch deliveryStatus, and
+  // operators can see verify SMS in the per-invite log alongside reminders.
+  // Body is template-only — the magic token stays out of storage.
+  try {
+    await storage.appendSmsLog(inviteId, {
+      type: 'verify_link',
+      body: `[verify_link:${invite.locale || 'en'}] token redacted, ttl=10m`,
+      toPhone: invite.phoneNorm,
+      deliveryStatus: 'pending',
+      sentAt: new Date(sentAtMs).toISOString(),
+      correlationId: result.messageId || ''
+    });
+  } catch (err) {
+    context.log.error(`rsvp_send_link smslog err inviteId=${inviteId}: ${err && err.message}`);
+    // Soft-fail: SMS already went out; missing audit row is annoying but
+    // doesn't compromise correctness.
+  }
+
   context.res = {
     status: 200,
     headers: { ...cors, 'Cache-Control': 'no-store' },

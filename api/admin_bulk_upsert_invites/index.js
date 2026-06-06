@@ -232,10 +232,9 @@ module.exports = async function (context, req) {
 
   if (!dryRun) {
     try {
-      const principal = auth.readAdminPrincipal(req) || {};
       await storage.appendEvent({
         type: 'admin.bulk_upsert',
-        actor: `admin:${String(principal.userDetails || 'unknown').toLowerCase()}`,
+        actor: auth.readAdminActor(req) || 'admin:unknown',
         summary: `Bulk import: ${summary.created} created, ${summary.updated} updated, ${summary.skipped} skipped, ${summary.errors} errors (${body.rows.length} rows)`,
         meta: { ...summary, totalRows: body.rows.length }
       });

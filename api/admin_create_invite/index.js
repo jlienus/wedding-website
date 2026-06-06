@@ -86,10 +86,9 @@ module.exports = async function (context, req) {
   context.log(`admin_create_invite inviteId=${inviteId} name="${primaryFirstName} ${primaryLastName}"`);
 
   try {
-    const principal = auth.readAdminPrincipal(req) || {};
     await storage.appendEvent({
       type: 'admin.invite_created',
-      actor: `admin:${String(principal.userDetails || 'unknown').toLowerCase()}`,
+      actor: auth.readAdminActor(req) || 'admin:unknown',
       summary: `Invite created for ${primaryFirstName} ${primaryLastName}`,
       meta: { inviteId, primaryFirstName, primaryLastName, locale, hasPhone: !!phone }
     });

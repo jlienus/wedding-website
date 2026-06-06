@@ -50,10 +50,9 @@ module.exports = async function (context, req) {
   context.log(`admin_toggle_reminders enabled=${payload.enabled}`);
 
   try {
-    const principal = auth.readAdminPrincipal(req) || {};
     await storage.appendEvent({
       type: 'admin.reminders_toggled',
-      actor: `admin:${String(principal.userDetails || 'unknown').toLowerCase()}`,
+      actor: auth.readAdminActor(req) || 'admin:unknown',
       summary: `Monthly reminder texts ${payload.enabled ? 'enabled' : 'disabled'}`,
       meta: { enabled: !!payload.enabled }
     });
