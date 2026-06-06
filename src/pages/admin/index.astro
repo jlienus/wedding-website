@@ -1680,7 +1680,7 @@ const locale: Locale = 'en';
           : '<span class="admin-muted">—</span>';
         const headcountBits: string[] = [];
         if (s.yes) headcountBits.push(`<strong>${s.yes}</strong> yes`);
-        if (s.no) headcountBits.push(`${s.no} no`);
+        if (s.no) headcountBits.push(`<span class="admin-badge admin-badge--warn">${s.no} no</span>`);
         if (s.pending) headcountBits.push(`<span class="admin-muted">${s.pending} ?</span>`);
         if (s.kids) headcountBits.push(`<span class="admin-muted">(${s.kids} kid${s.kids === 1 ? '' : 's'})</span>`);
         const headcount = headcountBits.length ? headcountBits.join(' · ') : '<span class="admin-muted">—</span>';
