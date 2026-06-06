@@ -27,7 +27,7 @@ module.exports = async function (context, req) {
       ...cors,
       'Content-Type': 'application/json',
       'Cache-Control': 'no-store',
-      'Set-Cookie': auth.clearSessionCookie()
+      'Set-Cookie': [auth.clearSessionCookie(), auth.clearLookupTicketCookie()]
     },
     body: { ok: true }
   };

@@ -181,8 +181,50 @@ function buildReminderBody({ locale, firstName, deadlineDisplay, siteOrigin, mag
   ].join('\n\n');
 }
 
+// Body for the SMS step-up auth "Text me a code" path. We DON'T mention NO
+// or STOP here — this is a verification flow, not a marketing/reminder
+// message, and conflating the two would let a guest opt out by replying to
+// the code message. Compliance is satisfied by the periodic reminder SMS
+// (which DOES advertise STOP) and the platform-level toll-free auto-reply.
+function buildVerifyCodeBody({ locale, code }) {
+  if (locale === 'es') {
+    return [
+      `Tu codigo de verificacion para el RSVP de John & Diana es:`,
+      code,
+      'Caduca en 10 minutos. Si no lo solicitaste, ignora este mensaje.'
+    ].join('\n\n');
+  }
+  return [
+    `Your John & Diana RSVP verification code is:`,
+    code,
+    'Expires in 10 minutes. If you did not request this, ignore this message.'
+  ].join('\n\n');
+}
+
+// Body for the SMS step-up auth "Text me a link" path. Same magic-link
+// token shape as the reminder body, but framed as a verification step
+// (not a generic reminder) so it makes sense when the user just clicked
+// "Text me a link" two seconds ago.
+function buildVerifyLinkBody({ locale, siteOrigin, magicToken }) {
+  const link = `${siteOrigin}/api/rsvp/magic?t=${magicToken}`;
+  if (locale === 'es') {
+    return [
+      'Tu enlace para acceder al RSVP de John & Diana:',
+      link,
+      'Caduca en 10 minutos. Si no lo solicitaste, ignora este mensaje.'
+    ].join('\n\n');
+  }
+  return [
+    'Your John & Diana RSVP sign-in link:',
+    link,
+    'Expires in 10 minutes. If you did not request this, ignore this message.'
+  ].join('\n\n');
+}
+
 module.exports = {
   sendSms,
   estimateSegments,
-  buildReminderBody
+  buildReminderBody,
+  buildVerifyCodeBody,
+  buildVerifyLinkBody
 };

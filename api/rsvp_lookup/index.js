@@ -33,6 +33,31 @@ function publicInvite(inv) {
   };
 }
 
+// Pre-verification shape — strictly the minimum needed to drive the
+// verification UI (greeting, locale toggle, "we'll text ***-***-1234"
+// hint). The inviteId stays inside the HttpOnly rsvp_ticket cookie; the
+// saved RSVP payload only comes back from /api/rsvp/get after the session
+// cookie is issued. Keep this fn paranoid — anything added here leaks to a
+// network-tab inspector who only had a guessable last name.
+function preVerifyInvite(inv) {
+  const last4 = inv.phoneNorm && inv.phoneNorm.length >= 4
+    ? inv.phoneNorm.slice(-4)
+    : '';
+  return {
+    firstName: inv.primaryFirstName || '',
+    locale: inv.locale || 'en',
+    phoneLast4: last4
+  };
+}
+
+function canStepUpViaSms(inv) {
+  if (!inv) return false;
+  if (!inv.phoneNorm) return false;
+  if (inv.optedOutOfSms) return false;
+  if (inv.smsHardFailedAt) return false;
+  return true;
+}
+
 module.exports = async function (context, req) {
   const pre = preflight(req, 'POST, OPTIONS');
   if (pre.handled) { context.res = pre.response; return; }
@@ -122,6 +147,43 @@ module.exports = async function (context, req) {
     return;
   }
 
+  // Step-up auth: if the invite has a usable phone, do NOT issue the
+  // session cookie yet. Issue a short-lived ticket cookie and force the
+  // caller through send_code / send_link + verify_code (or the magic-link
+  // 302). This is the security fix for the "name + last-4 lets anyone in"
+  // problem — the ticket alone proves only that the caller guessed a name,
+  // not that they control the phone on file.
+  if (canStepUpViaSms(invite)) {
+    let ticket;
+    try {
+      ticket = auth.issueLookupTicketCookie(invite.inviteId);
+    } catch (err) {
+      context.log.error(`rsvp_lookup ticket err: ${err && err.message}`);
+      context.res = { status: 503, headers: cors, body: { error: 'config_error' } };
+      return;
+    }
+    context.log(`rsvp_lookup hit-stepup mode=${lookupMode} ipHash=${ipHash} inviteId=${invite.inviteId}`);
+    context.res = {
+      status: 200,
+      headers: {
+        ...cors,
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store',
+        'Set-Cookie': ticket
+      },
+      body: {
+        found: true,
+        requiresVerification: true,
+        invite: preVerifyInvite(invite)
+      }
+    };
+    return;
+  }
+
+  // Phoneless / opted-out / hard-failed: can't do SMS step-up, so fall
+  // back to direct access. Same security level as before this PR for
+  // these specific invites — the host knows the small set of guests
+  // without a number on file and accepts the tradeoff.
   let cookie;
   try {
     cookie = auth.issueSessionCookie(invite.inviteId);
@@ -131,7 +193,7 @@ module.exports = async function (context, req) {
     return;
   }
 
-  context.log(`rsvp_lookup hit mode=${lookupMode} ipHash=${ipHash} inviteId=${invite.inviteId}`);
+  context.log(`rsvp_lookup hit-direct mode=${lookupMode} ipHash=${ipHash} inviteId=${invite.inviteId}`);
   context.res = {
     status: 200,
     headers: {
@@ -142,6 +204,7 @@ module.exports = async function (context, req) {
     },
     body: {
       found: true,
+      requiresVerification: false,
       invite: publicInvite(invite)
     }
   };

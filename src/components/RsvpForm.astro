@@ -47,6 +47,16 @@ const stringKeys = [
   'rsvp.attendingAllRequired','rsvp.guestNameRequired','rsvp.mealAllRequired',
   'rsvp.thanks','rsvp.thanksAttending','rsvp.thanksNotAttending','rsvp.thanksMixed','rsvp.edit',
   'rsvp.magicOk','rsvp.magicInvalid','rsvp.magicError','rsvp.magicMissing',
+  'rsvp.verifyHeading','rsvp.verifyHeadingNoName','rsvp.verifyPhoneHint',
+  'rsvp.verifySendCode','rsvp.verifySendingCode','rsvp.verifySendLink','rsvp.verifySendingLink',
+  'rsvp.verifyCodeLabel','rsvp.verifyCodeHint','rsvp.verifyConfirm','rsvp.verifyConfirming',
+  'rsvp.verifyResend','rsvp.verifyResendIn','rsvp.verifyStartOver',
+  'rsvp.verifyLinkSent',
+  'rsvp.verifyCodeInvalid','rsvp.verifyCodeMismatch','rsvp.verifyCodeMismatchRemaining',
+  'rsvp.verifyCodeLocked','rsvp.verifyCodeExpired','rsvp.verifyCodeError',
+  'rsvp.verifyTicketExpired',
+  'rsvp.verifySendCooldown','rsvp.verifySendNoPhone','rsvp.verifySendOptedOut',
+  'rsvp.verifySendFailed','rsvp.verifySendRateLimited',
   'rsvp.privacySummary','rsvp.privacyBody','rsvp.heading'
 ];
 const strings: Record<string, string> = {};
@@ -115,6 +125,46 @@ const initData = {
       <button type="button" id="rsvp-lookup-toggle-btn" class="rsvp-link">{t(locale, 'rsvp.lookupByPhoneLink')}</button>
     </div>
   </form>
+
+  <section id="rsvp-verify" class="rsvp-phase rsvp-verify" hidden aria-labelledby="rsvp-verify-heading">
+    <h3 id="rsvp-verify-heading"></h3>
+    <p class="rsvp-muted" id="rsvp-verify-intro"></p>
+
+    <div id="rsvp-verify-chooser" class="rsvp-verify-chooser">
+      <button type="button" id="rsvp-verify-send-code" class="btn btn--gold" data-label-default={t(locale, 'rsvp.verifySendCode')} data-label-busy={t(locale, 'rsvp.verifySendingCode')}>
+        {t(locale, 'rsvp.verifySendCode')}
+      </button>
+      <button type="button" id="rsvp-verify-send-link" class="btn" data-label-default={t(locale, 'rsvp.verifySendLink')} data-label-busy={t(locale, 'rsvp.verifySendingLink')}>
+        {t(locale, 'rsvp.verifySendLink')}
+      </button>
+    </div>
+
+    <form id="rsvp-verify-code-form" class="rsvp-verify-code" hidden novalidate>
+      <p class="rsvp-verify-status" id="rsvp-verify-code-sent" hidden></p>
+      <label>
+        <span class="rsvp-label">{t(locale, 'rsvp.verifyCodeLabel')}</span>
+        <input name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required />
+        <small class="rsvp-muted">{t(locale, 'rsvp.verifyCodeHint')}</small>
+      </label>
+      <div class="rsvp-actions">
+        <button type="submit" class="btn btn--gold" data-label-default={t(locale, 'rsvp.verifyConfirm')} data-label-busy={t(locale, 'rsvp.verifyConfirming')}>
+          {t(locale, 'rsvp.verifyConfirm')}
+        </button>
+      </div>
+    </form>
+
+    <p class="rsvp-verify-status" id="rsvp-verify-link-sent" hidden></p>
+
+    <div class="rsvp-verify-resend" id="rsvp-verify-resend-row" hidden>
+      <button type="button" id="rsvp-verify-resend-btn" class="rsvp-link" disabled></button>
+    </div>
+
+    <div id="rsvp-verify-error" class="rsvp-error" role="alert" aria-live="polite" hidden></div>
+
+    <div class="rsvp-verify-back">
+      <button type="button" id="rsvp-verify-back-btn" class="rsvp-link">{t(locale, 'rsvp.verifyStartOver')}</button>
+    </div>
+  </section>
 
   <form id="rsvp-form" class="rsvp-phase rsvp-form" hidden novalidate>
     <div class="rsvp-form-header">
@@ -285,11 +335,12 @@ const initData = {
   const phases = {
     loading: $('#rsvp-loading'),
     lookup: $('#rsvp-lookup-form'),
+    verify: $('#rsvp-verify'),
     form: $('#rsvp-form'),
     confirmation: $('#rsvp-confirmation')
   };
 
-  function show(phase: 'loading' | 'lookup' | 'form' | 'confirmation') {
+  function show(phase: 'loading' | 'lookup' | 'verify' | 'form' | 'confirmation') {
     for (const [name, el] of Object.entries(phases)) {
       if (!el) continue;
       el.hidden = name !== phase;
@@ -815,8 +866,18 @@ const initData = {
         }
         window.appTelemetry?.trackEvent('rsvp_lookup_success', {
           mode: submitMode,
-          partySize: (data.invite?.guests?.length ?? 0) + 1
+          partySize: (data.invite?.guests?.length ?? 0) + 1,
+          requiresVerification: !!data.requiresVerification
         });
+
+        // Step-up auth: the server returns a thin pre-verify payload (no
+        // inviteId, no saved RSVP data) and we drive the verify phase
+        // until the user proves they control the phone on file.
+        if (data.requiresVerification) {
+          startVerifyPhase(data.invite || {});
+          return;
+        }
+
         INVITE = data.invite;
         try { localStorage.setItem('rsvp.lastFirst', INVITE?.primaryFirstName || ''); } catch {}
         if (INVITE && INVITE.responded) {
@@ -833,6 +894,329 @@ const initData = {
       } finally {
         setBusy(btn, false);
       }
+    });
+  }
+
+  // --- Verification (step-up auth via SMS) ---
+  // The lookup phase only proves "the caller knows a name on the list".
+  // Anything past this gate proves "the caller controls the phone we have
+  // on file for that invite" — either by typing a 6-digit code we just
+  // texted them, or by clicking a TTL'd magic link sent to that phone.
+  // Phoneless / opted-out / hard-failed invites skip verification entirely
+  // (the server doesn't set requiresVerification for them).
+  type VerifyContext = { firstName: string; locale: string; phoneLast4: string };
+  let VERIFY_CTX: VerifyContext | null = null;
+  let verifyResendDeadline = 0;
+  let verifyResendTimer: number | null = null;
+  const VERIFY_RESEND_COOLDOWN_MS = 60_000;
+
+  const verifyPhase = phases.verify as HTMLElement | null;
+  const verifyHeading = $('#rsvp-verify-heading') as HTMLElement | null;
+  const verifyIntro = $('#rsvp-verify-intro') as HTMLElement | null;
+  const verifyChooser = $('#rsvp-verify-chooser') as HTMLElement | null;
+  const verifySendCodeBtn = $('#rsvp-verify-send-code') as HTMLButtonElement | null;
+  const verifySendLinkBtn = $('#rsvp-verify-send-link') as HTMLButtonElement | null;
+  const verifyCodeForm = $('#rsvp-verify-code-form') as HTMLFormElement | null;
+  const verifyCodeInput = verifyCodeForm?.querySelector('input[name="code"]') as HTMLInputElement | null;
+  const verifyCodeSentMsg = $('#rsvp-verify-code-sent') as HTMLElement | null;
+  const verifyLinkSentMsg = $('#rsvp-verify-link-sent') as HTMLElement | null;
+  const verifyResendRow = $('#rsvp-verify-resend-row') as HTMLElement | null;
+  const verifyResendBtn = $('#rsvp-verify-resend-btn') as HTMLButtonElement | null;
+  const verifyBackBtn = $('#rsvp-verify-back-btn') as HTMLButtonElement | null;
+  const verifyError = $('#rsvp-verify-error');
+
+  function maskPhoneHint(last4: string): string {
+    const tpl = S['rsvp.verifyPhoneHint'] || '';
+    return tpl.replace('{last4}', last4 || '••••');
+  }
+
+  function resetVerifyView() {
+    if (verifyCodeForm) {
+      verifyCodeForm.hidden = true;
+      verifyCodeForm.reset();
+    }
+    if (verifyChooser) verifyChooser.hidden = false;
+    if (verifyCodeSentMsg) verifyCodeSentMsg.hidden = true;
+    if (verifyLinkSentMsg) verifyLinkSentMsg.hidden = true;
+    if (verifyResendRow) verifyResendRow.hidden = true;
+    if (verifyResendBtn) {
+      verifyResendBtn.disabled = true;
+      verifyResendBtn.textContent = '';
+      verifyResendBtn.dataset.flavor = '';
+    }
+    if (verifyResendTimer !== null) {
+      window.clearInterval(verifyResendTimer);
+      verifyResendTimer = null;
+    }
+    verifyResendDeadline = 0;
+    clearError(verifyError);
+  }
+
+  function tickVerifyResend() {
+    if (!verifyResendBtn) return;
+    const remaining = Math.max(0, verifyResendDeadline - Date.now());
+    if (remaining <= 0) {
+      verifyResendBtn.disabled = false;
+      verifyResendBtn.textContent = S['rsvp.verifyResend'] || 'Resend';
+      if (verifyResendTimer !== null) {
+        window.clearInterval(verifyResendTimer);
+        verifyResendTimer = null;
+      }
+      return;
+    }
+    const secs = Math.ceil(remaining / 1000);
+    const tpl = S['rsvp.verifyResendIn'] || 'Resend in {s}s';
+    verifyResendBtn.disabled = true;
+    verifyResendBtn.textContent = tpl.replace('{s}', String(secs));
+  }
+
+  function startVerifyResendCountdown(flavor: 'code' | 'link') {
+    if (!verifyResendRow || !verifyResendBtn) return;
+    verifyResendRow.hidden = false;
+    verifyResendBtn.dataset.flavor = flavor;
+    verifyResendDeadline = Date.now() + VERIFY_RESEND_COOLDOWN_MS;
+    tickVerifyResend();
+    if (verifyResendTimer !== null) window.clearInterval(verifyResendTimer);
+    verifyResendTimer = window.setInterval(tickVerifyResend, 1000);
+  }
+
+  function startVerifyPhase(ctx: { firstName?: string; locale?: string; phoneLast4?: string }) {
+    VERIFY_CTX = {
+      firstName: String(ctx.firstName || ''),
+      locale: String(ctx.locale || LOCALE),
+      phoneLast4: String(ctx.phoneLast4 || '')
+    };
+    resetVerifyView();
+    if (verifyHeading) {
+      const tpl = S['rsvp.verifyHeading'] || 'Verify your phone';
+      verifyHeading.textContent = VERIFY_CTX.firstName
+        ? tpl.replace('{name}', VERIFY_CTX.firstName)
+        : (S['rsvp.verifyHeadingNoName'] || tpl.replace('{name}', '').trim());
+    }
+    if (verifyIntro) verifyIntro.textContent = maskPhoneHint(VERIFY_CTX.phoneLast4);
+    show('verify');
+  }
+
+  async function refreshInviteAfterVerify(): Promise<boolean> {
+    try {
+      const res = await fetch('/api/rsvp/get', { credentials: 'same-origin' });
+      if (!res.ok) return false;
+      const data = await res.json();
+      if (!data || !data.authenticated || !data.invite) return false;
+      INVITE = data.invite;
+      try { localStorage.setItem('rsvp.lastFirst', INVITE?.primaryFirstName || ''); } catch {}
+      if (INVITE && INVITE.responded) {
+        const payload = INVITE.payload || { primary: emptyPrimary(), additionalGuests: [] };
+        const primary = payload.primary || emptyPrimary();
+        const guests = Array.isArray(payload.additionalGuests) ? payload.additionalGuests : [];
+        renderConfirmation(!!INVITE.respondedLate, guests.length, primary, guests);
+      } else {
+        renderForm();
+      }
+      return true;
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function verifySendErrorMessage(reason: string | undefined, status: number): string {
+    switch (reason) {
+      case 'cooldown':       return S['rsvp.verifySendCooldown'] || '';
+      case 'no_phone':       return S['rsvp.verifySendNoPhone'] || '';
+      case 'opted_out':      return S['rsvp.verifySendOptedOut'] || '';
+      case 'sms_failed':     return S['rsvp.verifySendFailed'] || '';
+      case 'rate_limited':   return S['rsvp.verifySendRateLimited'] || '';
+      case 'invalid_ticket':
+      case 'no_ticket':      return S['rsvp.verifyTicketExpired'] || '';
+      default:               return status === 429
+        ? (S['rsvp.verifySendRateLimited'] || '')
+        : (S['rsvp.verifySendFailed'] || '');
+    }
+  }
+
+  async function sendVerify(flavor: 'code' | 'link'): Promise<boolean> {
+    const url = flavor === 'code' ? '/api/rsvp/send_code' : '/api/rsvp/send_link';
+    const btn = flavor === 'code' ? verifySendCodeBtn : verifySendLinkBtn;
+    clearError(verifyError);
+    setBusy(btn, true);
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}'
+      });
+      let data: any = null;
+      try { data = await res.json(); } catch {}
+      if (!res.ok || !data || data.ok === false) {
+        const reason = data && data.reason;
+        if (reason === 'invalid_ticket' || reason === 'no_ticket') {
+          window.appTelemetry?.trackEvent('rsvp_verify_send_failed', { flavor, reason });
+          showError(verifyError, S['rsvp.verifyTicketExpired'] || '');
+          // The ticket is gone — bounce back to lookup so the user can
+          // restart the flow.
+          setTimeout(() => {
+            VERIFY_CTX = null;
+            resetVerifyView();
+            setLookupMode('name');
+            show('lookup');
+          }, 1500);
+          return false;
+        }
+        showError(verifyError, verifySendErrorMessage(reason, res.status));
+        window.appTelemetry?.trackEvent('rsvp_verify_send_failed', { flavor, reason: reason || 'http_error', status: res.status });
+        return false;
+      }
+      window.appTelemetry?.trackEvent('rsvp_verify_send_ok', { flavor });
+      return true;
+    } catch (_e) {
+      showError(verifyError, S['rsvp.verifySendFailed'] || '');
+      window.appTelemetry?.trackEvent('rsvp_verify_send_failed', { flavor, reason: 'network_error' });
+      return false;
+    } finally {
+      setBusy(btn, false);
+    }
+  }
+
+  if (verifySendCodeBtn) {
+    verifySendCodeBtn.addEventListener('click', async () => {
+      const ok = await sendVerify('code');
+      if (!ok) return;
+      if (verifyChooser) verifyChooser.hidden = true;
+      if (verifyLinkSentMsg) verifyLinkSentMsg.hidden = true;
+      if (verifyCodeForm) verifyCodeForm.hidden = false;
+      if (verifyCodeSentMsg) {
+        verifyCodeSentMsg.textContent = maskPhoneHint(VERIFY_CTX?.phoneLast4 || '');
+        verifyCodeSentMsg.hidden = false;
+      }
+      if (verifyCodeInput) requestAnimationFrame(() => verifyCodeInput.focus());
+      startVerifyResendCountdown('code');
+    });
+  }
+
+  if (verifySendLinkBtn) {
+    verifySendLinkBtn.addEventListener('click', async () => {
+      const ok = await sendVerify('link');
+      if (!ok) return;
+      if (verifyChooser) verifyChooser.hidden = true;
+      if (verifyCodeForm) verifyCodeForm.hidden = true;
+      if (verifyCodeSentMsg) verifyCodeSentMsg.hidden = true;
+      if (verifyLinkSentMsg) {
+        verifyLinkSentMsg.textContent = (S['rsvp.verifyLinkSent'] || '').replace('{last4}', VERIFY_CTX?.phoneLast4 || '');
+        verifyLinkSentMsg.hidden = false;
+      }
+      startVerifyResendCountdown('link');
+    });
+  }
+
+  if (verifyResendBtn) {
+    verifyResendBtn.addEventListener('click', async () => {
+      if (verifyResendBtn.disabled) return;
+      const flavor = (verifyResendBtn.dataset.flavor === 'link' ? 'link' : 'code') as 'code' | 'link';
+      const ok = await sendVerify(flavor);
+      if (ok) startVerifyResendCountdown(flavor);
+    });
+  }
+
+  if (verifyCodeInput) {
+    verifyCodeInput.addEventListener('input', () => {
+      const cleaned = (verifyCodeInput.value || '').replace(/\D/g, '').slice(0, 6);
+      if (cleaned !== verifyCodeInput.value) verifyCodeInput.value = cleaned;
+    });
+  }
+
+  if (verifyCodeForm) {
+    verifyCodeForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearError(verifyError);
+      const btn = verifyCodeForm.querySelector('button[type="submit"]') as HTMLButtonElement;
+      const code = (verifyCodeInput?.value || '').replace(/\D/g, '');
+      if (code.length !== 6) {
+        showError(verifyError, S['rsvp.verifyCodeInvalid'] || '');
+        return;
+      }
+      setBusy(btn, true);
+      try {
+        const res = await fetch('/api/rsvp/verify_code', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code })
+        });
+        let data: any = null;
+        try { data = await res.json(); } catch {}
+        if (res.ok && data && data.ok === true) {
+          window.appTelemetry?.trackEvent('rsvp_verify_code_ok', {});
+          const loaded = await refreshInviteAfterVerify();
+          if (!loaded) {
+            // Server said ok but /get refused — unusual; bounce to lookup.
+            showError(verifyError, S['rsvp.verifyTicketExpired'] || '');
+            setTimeout(() => {
+              VERIFY_CTX = null;
+              resetVerifyView();
+              setLookupMode('name');
+              show('lookup');
+            }, 1500);
+          }
+          return;
+        }
+        const reason = data && data.reason;
+        window.appTelemetry?.trackEvent('rsvp_verify_code_failed', { reason: reason || 'http_error', status: res.status });
+        if (reason === 'locked') {
+          showError(verifyError, S['rsvp.verifyCodeLocked'] || '');
+          if (verifyCodeInput) verifyCodeInput.value = '';
+          return;
+        }
+        if (reason === 'expired' || reason === 'not_found') {
+          showError(verifyError, S['rsvp.verifyCodeExpired'] || '');
+          if (verifyCodeInput) verifyCodeInput.value = '';
+          return;
+        }
+        if (reason === 'invalid_ticket' || reason === 'no_ticket') {
+          showError(verifyError, S['rsvp.verifyTicketExpired'] || '');
+          setTimeout(() => {
+            VERIFY_CTX = null;
+            resetVerifyView();
+            setLookupMode('name');
+            show('lookup');
+          }, 1500);
+          return;
+        }
+        if (reason === 'invalid_code') {
+          const remaining = (data && typeof data.remaining === 'number') ? data.remaining : -1;
+          if (remaining >= 0) {
+            const tpl = S['rsvp.verifyCodeMismatchRemaining'] || '';
+            showError(verifyError, tpl.replace('{n}', String(remaining)));
+          } else {
+            showError(verifyError, S['rsvp.verifyCodeMismatch'] || '');
+          }
+          if (verifyCodeInput) {
+            verifyCodeInput.value = '';
+            requestAnimationFrame(() => verifyCodeInput.focus());
+          }
+          return;
+        }
+        if (res.status === 429) {
+          showError(verifyError, S['rsvp.verifySendRateLimited'] || '');
+          return;
+        }
+        showError(verifyError, S['rsvp.verifyCodeError'] || '');
+      } catch (_e) {
+        window.appTelemetry?.trackEvent('rsvp_verify_code_failed', { reason: 'network_error' });
+        showError(verifyError, S['rsvp.verifyCodeError'] || '');
+      } finally {
+        setBusy(btn, false);
+      }
+    });
+  }
+
+  if (verifyBackBtn) {
+    verifyBackBtn.addEventListener('click', () => {
+      window.appTelemetry?.trackEvent('rsvp_verify_canceled', {});
+      VERIFY_CTX = null;
+      resetVerifyView();
+      setLookupMode('name');
+      show('lookup');
     });
   }
 
@@ -1319,6 +1703,54 @@ const initData = {
     line-height: 1.4;
   }
 
+  .rsvp-verify {
+    max-width: 32rem;
+    margin: 0 auto;
+    padding: var(--space-3) 0;
+  }
+  .rsvp-verify h3 { margin: 0 0 var(--space-2); text-align: center; }
+  .rsvp-verify > p { text-align: center; margin: 0 0 var(--space-3); }
+  .rsvp-verify-chooser {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+  }
+  .rsvp-verify-chooser .btn { width: 100%; }
+  .rsvp-verify-code {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+  }
+  .rsvp-verify-code input[name="code"] {
+    max-width: 12rem;
+    letter-spacing: 0.5em;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.4rem;
+    margin: 0 auto;
+  }
+  .rsvp-verify-status {
+    text-align: center;
+    margin: 0 0 var(--space-2);
+    font-size: 0.95rem;
+    color: var(--color-muted, #6a6453);
+  }
+  .rsvp-verify-resend {
+    text-align: center;
+    margin-top: var(--space-2);
+  }
+  .rsvp-verify-back {
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--color-rule, #e8e0c8);
+    text-align: center;
+  }
+  .rsvp-verify-back .rsvp-link,
+  .rsvp-verify-resend .rsvp-link[disabled] {
+    color: var(--color-muted, #6a6453);
+  }
   .rsvp-additional { margin: var(--space-3) 0; }
   .rsvp-additional-header { margin-bottom: var(--space-2); }
   .rsvp-additional-hint { margin: 0; font-size: 0.9rem; }

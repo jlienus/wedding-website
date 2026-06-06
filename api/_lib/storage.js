@@ -36,13 +36,15 @@ const TABLE_SMSLOG = 'rsvpSmsLog';
 const TABLE_SETTINGS = 'rsvpSettings';
 const TABLE_EVENTS = 'rsvpEvents';
 const TABLE_ADMIN_NONCES = 'adminMagicNonces';
+const TABLE_VERIFY_CODES = 'rsvpVerifyCodes';
 
 // Tables to drop on migration cutover.
 const OBSOLETE_TABLES = ['rsvpParties', 'rsvpMembers', 'rsvpResponses'];
 
 const INVITES_PARTITION = 'invites'; // single fixed partition
 const EVENTS_PARTITION = 'events';   // single fixed partition; small (~5k rows lifetime)
-const ALL_TABLES = [TABLE_INVITES, TABLE_SMSLOG, TABLE_SETTINGS, TABLE_EVENTS, TABLE_ADMIN_NONCES];
+const VERIFY_CODES_PARTITION = 'verifyCodes'; // single fixed partition; at most ~1 row per active login
+const ALL_TABLES = [TABLE_INVITES, TABLE_SMSLOG, TABLE_SETTINGS, TABLE_EVENTS, TABLE_ADMIN_NONCES, TABLE_VERIFY_CODES];
 
 let _clients = null;
 
@@ -78,6 +80,7 @@ function getClients() {
     settings: make(TABLE_SETTINGS),
     events: make(TABLE_EVENTS),
     adminNonces: make(TABLE_ADMIN_NONCES),
+    verifyCodes: make(TABLE_VERIFY_CODES),
     _accountName: name,
     _endpoint: endpoint,
     _key: key,
@@ -92,7 +95,7 @@ async function ensureTables() {
   // it means the schema is already set up. Swallow that one specific error
   // per table so this function is safely idempotent.
   await Promise.all(
-    [c.invites, c.smslog, c.settings, c.events, c.adminNonces].map(async (tc) => {
+    [c.invites, c.smslog, c.settings, c.events, c.adminNonces, c.verifyCodes].map(async (tc) => {
       try {
         await tc.createTable();
       } catch (err) {
@@ -734,6 +737,107 @@ async function claimAdminNonce(emailLower, nonceHash, expiresAtIso) {
   }
 }
 
+// --- RSVP guest verify codes ---------------------------------------------
+// One-time-passcode storage for the RSVP step-up auth flow. After a
+// successful name lookup we issue a 10-minute lookup ticket cookie; the
+// guest then chooses "Text me a code" (this table) or "Text me a link"
+// (no row needed, magic-link token is self-contained).
+//
+// Single row per inviteId — sending a new code overwrites the previous
+// one (last-write-wins). Stored fields:
+//   codeHash    HMAC-SHA256(secret, purpose | code) hex; never the raw code
+//   expiresAtMs ASCII decimal epoch ms
+//   attempts    number of failed verify attempts; lock at 5
+//   sentVia     'code' | 'link' — informational only
+//   sentAtMs    ASCII decimal epoch ms; powers the per-invite resend cooldown
+//   createdAt   ISO 8601 string
+//
+// PK is the fixed VERIFY_CODES_PARTITION so single-table point-reads stay
+// O(1) on the partition. RK is the inviteId so we can getEntity by it.
+
+async function putVerifyCode(inviteId, { codeHash, expiresAtMs, sentVia, sentAtMs }) {
+  if (!inviteId) throw new Error('putVerifyCode requires inviteId');
+  const c = getClients();
+  const entity = {
+    partitionKey: VERIFY_CODES_PARTITION,
+    rowKey: inviteId,
+    codeHash: codeHash || '',
+    expiresAtMs: String(expiresAtMs || 0),
+    attempts: 0,
+    sentVia: sentVia || '',
+    sentAtMs: String(sentAtMs || Date.now()),
+    createdAt: new Date().toISOString()
+  };
+  try {
+    await c.verifyCodes.upsertEntity(entity, 'Replace');
+  } catch (err) {
+    const status = err && err.statusCode;
+    const code = err && (err.code || err.errorCode || '');
+    const isTableMissing = status === 404 || code === 'TableNotFound';
+    if (!isTableMissing) throw err;
+    try { await c.verifyCodes.createTable(); }
+    catch (e2) {
+      if (!(e2 && (e2.statusCode === 409 || e2.code === 'TableAlreadyExists'))) throw e2;
+    }
+    await c.verifyCodes.upsertEntity(entity, 'Replace');
+  }
+}
+
+async function getVerifyCode(inviteId) {
+  if (!inviteId) return null;
+  const c = getClients();
+  try {
+    const e = await c.verifyCodes.getEntity(VERIFY_CODES_PARTITION, inviteId);
+    return {
+      inviteId,
+      codeHash: String(e.codeHash || ''),
+      expiresAtMs: Number(e.expiresAtMs || 0),
+      attempts: Number(e.attempts || 0),
+      sentVia: String(e.sentVia || ''),
+      sentAtMs: Number(e.sentAtMs || 0),
+      createdAt: String(e.createdAt || '')
+    };
+  } catch (err) {
+    if (err && err.statusCode === 404) return null;
+    throw err;
+  }
+}
+
+async function incrementVerifyAttempts(inviteId) {
+  if (!inviteId) throw new Error('incrementVerifyAttempts requires inviteId');
+  const c = getClients();
+  // Read-modify-write. Concurrent verify calls for the same inviteId are
+  // extraordinarily rare (single guest, single device) so we don't bother
+  // with ETag CAS — the worst case is one missed increment, which the
+  // 5-attempt cap absorbs.
+  let current;
+  try {
+    current = await c.verifyCodes.getEntity(VERIFY_CODES_PARTITION, inviteId);
+  } catch (err) {
+    if (err && err.statusCode === 404) return 0;
+    throw err;
+  }
+  const next = Number(current.attempts || 0) + 1;
+  await c.verifyCodes.updateEntity({
+    partitionKey: VERIFY_CODES_PARTITION,
+    rowKey: inviteId,
+    attempts: next
+  }, 'Merge');
+  return next;
+}
+
+async function deleteVerifyCode(inviteId) {
+  if (!inviteId) return;
+  const c = getClients();
+  try {
+    await c.verifyCodes.deleteEntity(VERIFY_CODES_PARTITION, inviteId);
+  } catch (err) {
+    if (err && err.statusCode === 404) return;
+    throw err;
+  }
+}
+
+
 // Best-effort sweep of expired admin nonces. Safe to call from a cron or
 // from a periodic admin action. Bounded by `maxRows` to keep one invocation
 // cheap; remaining rows roll over to the next sweep.
@@ -831,6 +935,11 @@ module.exports = {
   // admin magic-link nonces (single-use enforcement)
   claimAdminNonce,
   pruneExpiredAdminNonces,
+  // RSVP guest verify codes (step-up auth)
+  putVerifyCode,
+  getVerifyCode,
+  incrementVerifyAttempts,
+  deleteVerifyCode,
   // migration
   dropObsoleteTables,
   // Test hooks -- exposed so unit tests can exercise the encryption + blind

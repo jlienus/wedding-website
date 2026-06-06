@@ -3,9 +3,14 @@
 const crypto = require('crypto');
 
 const MAGIC_PURPOSE = 'rsvp-magic-v1';
+const VERIFY_MAGIC_PURPOSE = 'rsvp-verify-magic-v1';
 const SESSION_PURPOSE = 'rsvp-session-v1';
+const TICKET_PURPOSE = 'rsvp-ticket-v1';
+const VERIFY_CODE_PURPOSE = 'rsvp-verify-code-v1';
 const SESSION_COOKIE_NAME = 'rsvp_session';
+const TICKET_COOKIE_NAME = 'rsvp_ticket';
 const SESSION_MAX_AGE_SEC = 60 * 60 * 24 * 60; // 60 days, covers post-deadline extension to Jan 15
+const TICKET_MAX_AGE_SEC = 60 * 10;            // 10 minutes; matches OTP TTL
 const SIG_LEN_CHARS = 22; // ~128 bits of base64url
 
 // Admin email magic-link constants. Separate from the RSVP guest magic
@@ -61,24 +66,56 @@ function constantTimeEqual(a, b) {
 }
 
 // --- Magic-link tokens ----------------------------------------------------
-// Format: <inviteId>.<sig>
-// Used in SMS links: /api/rsvp/magic?t=<inviteId>.<sig>
+// Format A (legacy, used by reminder SMS): <inviteId>.<sig>
+//   No expiry. The token stays valid for the life of the invite. We keep
+//   this shape because reminders go out weeks before the wedding and the
+//   recipient may sit on the link for days before clicking.
+// Format B (TTL'd, used by the verify-link step-up auth flow):
+//   <inviteId>.<expMs>.<sig>
+//   Short-lived (10 min). The signature covers inviteId + expMs together so
+//   you can't strip the expiry. Used when the user just clicked "Text me a
+//   link" in the RSVP login flow — same trust level as the OTP, so same TTL.
+// Both formats live behind the same MAGIC_PURPOSE keyspace but differ in
+// part count, so verifyMagicToken can disambiguate without an out-of-band
+// flag.
 
 function signMagicToken(inviteId) {
   const sig = hmacSign(getMagicSecret(), MAGIC_PURPOSE, inviteId);
   return `${inviteId}.${sig}`;
 }
 
+function signVerifyMagicToken(inviteId, opts = {}) {
+  const nowMs = opts.nowMs || Date.now();
+  const ttlSec = opts.maxAgeSec || TICKET_MAX_AGE_SEC;
+  const expMs = nowMs + ttlSec * 1000;
+  const payload = `${inviteId}.${expMs}`;
+  const sig = hmacSign(getMagicSecret(), VERIFY_MAGIC_PURPOSE, payload);
+  return `${inviteId}.${expMs}.${sig}`;
+}
+
 function verifyMagicToken(token) {
   if (typeof token !== 'string') return null;
-  const dot = token.lastIndexOf('.');
-  if (dot <= 0) return null;
-  const inviteId = token.slice(0, dot);
-  const sig = token.slice(dot + 1);
-  if (!/^[A-Za-z0-9_-]{1,128}$/.test(inviteId)) return null;
-  if (sig.length !== SIG_LEN_CHARS) return null;
-  const expected = hmacSign(getMagicSecret(), MAGIC_PURPOSE, inviteId);
-  return constantTimeEqual(sig, expected) ? inviteId : null;
+  const parts = token.split('.');
+  if (parts.length === 2) {
+    // Legacy unbounded format.
+    const [inviteId, sig] = parts;
+    if (!/^[A-Za-z0-9_-]{1,128}$/.test(inviteId)) return null;
+    if (sig.length !== SIG_LEN_CHARS) return null;
+    const expected = hmacSign(getMagicSecret(), MAGIC_PURPOSE, inviteId);
+    return constantTimeEqual(sig, expected) ? inviteId : null;
+  }
+  if (parts.length === 3) {
+    // TTL'd verify-link format.
+    const [inviteId, expStr, sig] = parts;
+    if (!/^[A-Za-z0-9_-]{1,128}$/.test(inviteId)) return null;
+    if (sig.length !== SIG_LEN_CHARS) return null;
+    const expMs = Number(expStr);
+    if (!Number.isFinite(expMs) || expMs <= 0) return null;
+    if (Date.now() > expMs) return null;
+    const expected = hmacSign(getMagicSecret(), VERIFY_MAGIC_PURPOSE, `${inviteId}.${expMs}`);
+    return constantTimeEqual(sig, expected) ? inviteId : null;
+  }
+  return null;
 }
 
 // --- Session cookies ------------------------------------------------------
@@ -116,6 +153,82 @@ function clearSessionCookie() {
     'SameSite=Lax',
     'Max-Age=0'
   ].join('; ');
+}
+
+// --- RSVP step-up auth: lookup ticket + verify-code hash ------------------
+// A lookup ticket is a short-lived (10 min) signed token issued after the
+// caller has proven they know an invite's last name (+ optional last-4 of
+// phone). It is NOT proof of phone control — it just permits the holder to
+// request a code or magic link be sent to the invite's registered phone.
+// The session cookie is only issued once the SMS code is verified or the
+// magic link is clicked.
+//
+// Format: <inviteId>.<issuedAtMs>.<sig>     (identical shape to session)
+// Cookie: rsvp_ticket=<value>; HttpOnly; Secure; SameSite=Lax; Max-Age=600;
+//         Path=/api/rsvp  -- only the rsvp_send_*/rsvp_verify_* endpoints
+//         need to read it.
+
+function signTicket(inviteId, issuedAtMs) {
+  const payload = `${inviteId}|${issuedAtMs}`;
+  return hmacSign(getSessionSecret(), TICKET_PURPOSE, payload);
+}
+
+function issueLookupTicketCookie(inviteId, opts = {}) {
+  const now = opts.nowMs || Date.now();
+  const sig = signTicket(inviteId, now);
+  const value = `${inviteId}.${now}.${sig}`;
+  const maxAge = opts.maxAgeSec || TICKET_MAX_AGE_SEC;
+  const attrs = [
+    `${TICKET_COOKIE_NAME}=${value}`,
+    'Path=/api/rsvp',
+    'HttpOnly',
+    'Secure',
+    'SameSite=Lax',
+    `Max-Age=${maxAge}`
+  ];
+  return attrs.join('; ');
+}
+
+function clearLookupTicketCookie() {
+  return [
+    `${TICKET_COOKIE_NAME}=`,
+    'Path=/api/rsvp',
+    'HttpOnly',
+    'Secure',
+    'SameSite=Lax',
+    'Max-Age=0'
+  ].join('; ');
+}
+
+function verifyLookupTicket(req, maxAgeSec) {
+  const raw = readCookie(req, TICKET_COOKIE_NAME);
+  if (!raw) return null;
+  const parts = raw.split('.');
+  if (parts.length !== 3) return null;
+  const [inviteId, issuedAtStr, sig] = parts;
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(inviteId)) return null;
+  const issuedAt = Number(issuedAtStr);
+  if (!Number.isFinite(issuedAt) || issuedAt <= 0) return null;
+  const ageMs = Date.now() - issuedAt;
+  const limit = (maxAgeSec || TICKET_MAX_AGE_SEC) * 1000;
+  if (ageMs < 0 || ageMs > limit) return null;
+  const expected = signTicket(inviteId, issuedAt);
+  return constantTimeEqual(sig, expected) ? { inviteId, issuedAt } : null;
+}
+
+// HMAC-SHA256 of the OTP, keyed with the session secret + a distinct
+// purpose tag. Hex output (not base64url) so we can store it in Table
+// Storage as a plain string field without worrying about case or padding
+// quirks. We use HMAC instead of plain SHA-256 so a DB leak alone (without
+// the server secret) is not enough to brute-force the 6-digit code.
+function hashVerifyCode(code) {
+  const normalized = String(code || '').replace(/\D/g, '');
+  if (!normalized) return '';
+  const h = crypto.createHmac('sha256', getSessionSecret());
+  h.update(VERIFY_CODE_PURPOSE);
+  h.update('\0');
+  h.update(normalized);
+  return h.digest('hex');
 }
 
 function readCookie(req, name) {
@@ -485,14 +598,21 @@ function generateId(prefix = '') {
 module.exports = {
   SESSION_COOKIE_NAME,
   SESSION_MAX_AGE_SEC,
+  TICKET_COOKIE_NAME,
+  TICKET_MAX_AGE_SEC,
   ADMIN_SESSION_COOKIE_NAME,
   ADMIN_SESSION_MAX_AGE_SEC,
   ADMIN_MAGIC_MAX_AGE_SEC,
   signMagicToken,
+  signVerifyMagicToken,
   verifyMagicToken,
   issueSessionCookie,
   clearSessionCookie,
   verifySessionCookie,
+  issueLookupTicketCookie,
+  clearLookupTicketCookie,
+  verifyLookupTicket,
+  hashVerifyCode,
   readAdminPrincipal,
   isAdmin,
   isAdminGitHub,
