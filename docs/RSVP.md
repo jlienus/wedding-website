@@ -117,7 +117,41 @@ setting `RSVP_STORAGE_CONNECTION`.
 Tables are created automatically on first `/api/cron/reminders` call (or
 via the seed script).
 
-### 2. Azure Communication Services + toll-free number
+### 2. SMS provider
+
+The runtime supports two providers. Pick one and set `SMS_PROVIDER` on
+the SWA accordingly:
+
+| Provider | `SMS_PROVIDER` | When to use |
+| --- | --- | --- |
+| Twilio | `twilio` | **Current production.** Provisioning takes ~1 day. Long-code 10DLC or toll-free both work. |
+| Azure Communication Services | `acs` (default) | Long-term destination. Toll-free verification takes 7–10 business days (often 2–3 months end-to-end). |
+
+#### 2a. Twilio setup (current production path)
+
+1. Create a Twilio account; upgrade out of trial so messages don't carry
+   the "Sent from your Twilio trial account" prefix.
+2. **Buy a number** (Console → Phone Numbers → Buy). Long-code 10DLC is
+   fastest; toll-free is slower (carrier registration).
+3. Copy the **Account SID** and **Auth Token** from Console → Account.
+4. Set the SWA app settings:
+   - `TWILIO_ACCOUNT_SID` — from Twilio console.
+   - `TWILIO_AUTH_TOKEN` — from Twilio console.
+   - `TWILIO_FROM` — the purchased number in E.164 (e.g. `+18555551234`).
+   - `TWILIO_STATUS_CALLBACK_URL` — *optional.* Defaults to
+     `${RSVP_SITE_ORIGIN}/api/twilio/webhook`. Set explicitly if you need
+     callbacks routed to a different host.
+   - `SMS_PROVIDER=twilio`
+5. The Twilio number's **A MESSAGE COMES IN** webhook is auto-pointed at
+   `/api/twilio/webhook` by `scripts/configure-twilio-webhook.ps1`. The
+   webhook validates `X-Twilio-Signature` against `TWILIO_AUTH_TOKEN`.
+
+STOP / START / HELP keywords are handled at the Twilio platform level
+(automatic replies). NO and YES keywords are interpreted by
+`api/twilio_webhook` — see [SMS step-up auth and inbound actions]
+documented inline in the relevant Function folders.
+
+#### 2b. Azure Communication Services setup (long-term)
 
 1. Create an ACS resource:
    ```bash
@@ -129,14 +163,16 @@ via the seed script).
    ```
 2. **Provision a toll-free number** in the ACS portal (Phone Numbers → Get).
    ~$2/month.
-3. **Submit toll-free verification.** This is mandatory in the US — carriers
-   reject unverified toll-free SMS. Approval typically takes **7–10 business
-   days**. Submit as soon as possible.
+3. **Submit toll-free verification.** Mandatory in the US — carriers
+   reject unverified toll-free SMS. Approval typically takes **7–10
+   business days** but in practice has been running 2–3 months.
    - Use case: "wedding RSVP reminders to invited guests"
    - Opt-in method: "consent collected via printed RSVP card with phone number"
    - Sample messages: copy from `api/_lib/sms.js` `buildReminderBody()`
-4. Copy the ACS connection string → set as `ACS_CONNECTION`.
-5. Set `ACS_SMS_FROM` to the toll-free number in E.164 (e.g. `+18885551234`).
+4. Set the SWA app settings:
+   - `ACS_CONNECTION` — ACS connection string.
+   - `ACS_SMS_FROM` — toll-free number in E.164 (e.g. `+18885551234`).
+   - `SMS_PROVIDER=acs`
 
 ### 3. (Optional) Event Grid subscription for SMS events
 
@@ -179,9 +215,14 @@ settings`):
 | `RSVP_MAGIC_SECRET` | 32+ char random secret for magic-link HMAC. | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 | `RSVP_SESSION_SECRET` | (Optional) Separate secret for session cookies. Defaults to `RSVP_MAGIC_SECRET`. | Same generator. |
 | `RSVP_CRON_SECRET` | 32+ char random secret guarding `/api/cron/reminders`. | Same generator. **Also set as GitHub repo secret with the same name.** |
-| `ACS_CONNECTION` | ACS connection string. | From ACS resource → Keys. |
-| `ACS_SMS_FROM` | Toll-free number in E.164. | The number you provisioned. |
-| `ACS_WEBHOOK_SECRET` | (Optional but recommended) Shared secret required as `?s=<value>` on the SMS webhook URL. Without it the webhook is anonymous. | Same `randomBytes(32).toString('hex')` generator. |
+| `SMS_PROVIDER` | `twilio` or `acs`. Picks which provider `api/_lib/sms.js` uses. Defaults to `acs`. | Set on the SWA. |
+| `TWILIO_ACCOUNT_SID` | Twilio account SID. Required when `SMS_PROVIDER=twilio`. | From Twilio Console → Account. |
+| `TWILIO_AUTH_TOKEN` | Twilio auth token. Also used to validate `X-Twilio-Signature` on inbound webhooks. | From Twilio Console → Account. |
+| `TWILIO_FROM` | Twilio sending number in E.164. | The number you purchased. |
+| `TWILIO_STATUS_CALLBACK_URL` | (Optional) URL Twilio POSTs delivery receipts to. Defaults to `${RSVP_SITE_ORIGIN}/api/twilio/webhook`. | |
+| `ACS_CONNECTION` | ACS connection string. Required when `SMS_PROVIDER=acs`. | From ACS resource → Keys. |
+| `ACS_SMS_FROM` | Toll-free number in E.164. Required when `SMS_PROVIDER=acs`. | The number you provisioned. |
+| `ACS_WEBHOOK_SECRET` | (Optional but recommended when `SMS_PROVIDER=acs`) Shared secret required as `?s=<value>` on the SMS webhook URL. Without it the webhook is anonymous. | Same `randomBytes(32).toString('hex')` generator. |
 | `ADMIN_GITHUB_USERNAME` | (Optional) GitHub username allowed to access `/admin`. Defaults to `jlienus`. | |
 | `RSVP_SITE_ORIGIN` | (Optional) Canonical site URL used in SMS links. Defaults to `https://johnanddianaswedding.com`. | |
 | `RSVP_GUEST_DEADLINE_UTC` | (Optional) Override guest deadline. Default `2026-11-15T23:59:59-05:00`. | |

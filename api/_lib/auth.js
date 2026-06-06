@@ -75,9 +75,11 @@ function constantTimeEqual(a, b) {
 //   Short-lived (10 min). The signature covers inviteId + expMs together so
 //   you can't strip the expiry. Used when the user just clicked "Text me a
 //   link" in the RSVP login flow — same trust level as the OTP, so same TTL.
-// Both formats live behind the same MAGIC_PURPOSE keyspace but differ in
-// part count, so verifyMagicToken can disambiguate without an out-of-band
-// flag.
+// Both formats are disambiguated by part count, NOT by purpose-key:
+// Format A signs with MAGIC_PURPOSE (legacy unbounded), Format B signs
+// with VERIFY_MAGIC_PURPOSE (TTL'd). Using distinct purpose keys means
+// a legacy Format A token can never be reinterpreted as a Format B
+// token or vice versa, even if an attacker controls the part count.
 
 function signMagicToken(inviteId) {
   const sig = hmacSign(getMagicSecret(), MAGIC_PURPOSE, inviteId);

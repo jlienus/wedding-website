@@ -13,7 +13,7 @@ Wedding website for **John Michael Lien & Diana Duchicela Guajan**.
 - **Azure Static Web Apps** for hosting (Free tier, on Visual Studio subscription)
 - **Azure App Service Domains** for the custom domain (on Pay-As-You-Go subscription)
 - **Azure DNS** for record hosting
-- **RSVPify** embedded for RSVP collection
+- **Custom RSVP flow** backed by Azure Functions + Azure Table Storage with SMS step-up auth (see [docs/RSVP.md](docs/RSVP.md))
 - **Bilingual English + Spanish** content
 
 ## Quick start

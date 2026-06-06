@@ -1,5 +1,11 @@
 # Wedding Website Architecture
 
+> **Note on subscription IDs:** Actual Azure subscription GUIDs are kept in
+> private notes, not in this public document. The placeholders
+> `<SUBSCRIPTION_ID_PAYG>` and `<SUBSCRIPTION_ID_VSE>` appear in CLI
+> examples below — substitute the real values from `1Password / personal
+> notes` when running them locally.
+
 ## 1. Overview
 
 Bilingual (EN/ES) wedding site for John & Diana Lien, March 13, 2027, in Quito, Ecuador. Static Astro site, hosted on Azure Static Web Apps, custom domain `johnanddianaswedding.com`, auto-deployed via GitHub Actions, ~$1.50/mo to operate.
@@ -475,15 +481,15 @@ Subscription split:
 
 | Subscription | Display name | Purpose |
 | --- | --- | --- |
-| `612cdeac-2ab8-417c-9df6-c8b2c54028bd` | Azure subscription 1 | App Service Domain and Azure DNS zone. |
-| `32c8caee-4dce-4973-94f4-d1d18736ff4f` | Visual Studio Enterprise Subscription | Azure Static Web Apps hosting and planned AI-related resources. |
+| `<SUBSCRIPTION_ID_PAYG>` | PAYG subscription (placeholder display name) | App Service Domain and Azure DNS zone. |
+| `<SUBSCRIPTION_ID_VSE>` | Visual Studio Enterprise Subscription | Azure Static Web Apps hosting and planned AI-related resources. |
 
 PAYG subscription resources:
 
 | Resource | Value |
 | --- | --- |
-| Subscription id | `612cdeac-2ab8-417c-9df6-c8b2c54028bd` |
-| Subscription display name | `Azure subscription 1` |
+| Subscription id | `<SUBSCRIPTION_ID_PAYG>` |
+| Subscription display name | `PAYG subscription (placeholder display name)` |
 | Resource group | `j_and_d_wedding` |
 | Domain | `johnanddianaswedding.com` |
 | Domain resource type | App Service Domain |
@@ -496,7 +502,7 @@ VS Enterprise subscription resources:
 
 | Resource | Value |
 | --- | --- |
-| Subscription id | `32c8caee-4dce-4973-94f4-d1d18736ff4f` |
+| Subscription id | `<SUBSCRIPTION_ID_VSE>` |
 | Resource group | `rg-wedding-swa` |
 | Static Web App name | `swa-wedding` |
 | Static Web App SKU | Free tier |
@@ -510,7 +516,7 @@ VS Enterprise subscription resources:
 Verified Static Web App resource id:
 
 ```text
-/subscriptions/32c8caee-4dce-4973-94f4-d1d18736ff4f/resourceGroups/rg-wedding-swa/providers/Microsoft.Web/staticSites/swa-wedding
+/subscriptions/<SUBSCRIPTION_ID_VSE>/resourceGroups/rg-wedding-swa/providers/Microsoft.Web/staticSites/swa-wedding
 ```
 
 Custom hostname validation:
@@ -557,25 +563,25 @@ Operational Azure commands:
 ```powershell
 # Show the Static Web App.
 az staticwebapp show `
-  --subscription 32c8caee-4dce-4973-94f4-d1d18736ff4f `
+  --subscription <SUBSCRIPTION_ID_VSE> `
   --resource-group rg-wedding-swa `
   --name swa-wedding
 
 # List custom hostnames.
 az staticwebapp hostname list `
-  --subscription 32c8caee-4dce-4973-94f4-d1d18736ff4f `
+  --subscription <SUBSCRIPTION_ID_VSE> `
   --resource-group rg-wedding-swa `
   --name swa-wedding
 
 # Show the DNS zone.
 az network dns zone show `
-  --subscription 612cdeac-2ab8-417c-9df6-c8b2c54028bd `
+  --subscription <SUBSCRIPTION_ID_PAYG> `
   --resource-group j_and_d_wedding `
   --name johnanddianaswedding.com
 
 # List DNS records.
 az network dns record-set list `
-  --subscription 612cdeac-2ab8-417c-9df6-c8b2c54028bd `
+  --subscription <SUBSCRIPTION_ID_PAYG> `
   --resource-group j_and_d_wedding `
   --zone-name johnanddianaswedding.com `
   --output table
@@ -1080,13 +1086,13 @@ Rotate SWA deploy token:
 ```powershell
 # Reset the token in Azure.
 az staticwebapp secrets reset-api-key `
-  --subscription 32c8caee-4dce-4973-94f4-d1d18736ff4f `
+  --subscription <SUBSCRIPTION_ID_VSE> `
   --resource-group rg-wedding-swa `
   --name swa-wedding
 
 # Fetch the new token.
 az staticwebapp secrets list `
-  --subscription 32c8caee-4dce-4973-94f4-d1d18736ff4f `
+  --subscription <SUBSCRIPTION_ID_VSE> `
   --resource-group rg-wedding-swa `
   --name swa-wedding
 ```
@@ -1102,7 +1108,7 @@ Check Azure Static Web App:
 
 ```powershell
 az staticwebapp show `
-  --subscription 32c8caee-4dce-4973-94f4-d1d18736ff4f `
+  --subscription <SUBSCRIPTION_ID_VSE> `
   --resource-group rg-wedding-swa `
   --name swa-wedding `
   --query "{name:name,defaultHostname:defaultHostname,sku:sku,location:location}"
@@ -1112,7 +1118,7 @@ Check hostnames:
 
 ```powershell
 az staticwebapp hostname list `
-  --subscription 32c8caee-4dce-4973-94f4-d1d18736ff4f `
+  --subscription <SUBSCRIPTION_ID_VSE> `
   --resource-group rg-wedding-swa `
   --name swa-wedding `
   --output table
@@ -1122,7 +1128,7 @@ Check DNS records:
 
 ```powershell
 az network dns record-set list `
-  --subscription 612cdeac-2ab8-417c-9df6-c8b2c54028bd `
+  --subscription <SUBSCRIPTION_ID_PAYG> `
   --resource-group j_and_d_wedding `
   --zone-name johnanddianaswedding.com `
   --output table

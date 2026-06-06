@@ -36,7 +36,7 @@
 #>
 [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
 param(
-    [string]$Subscription   = '32c8caee-4dce-4973-94f4-d1d18736ff4f',
+    [string]$Subscription   = $env:WEDDING_SUBSCRIPTION_ID,
     [string]$ResourceGroup  = 'rg-wedding-swa',
     [string]$SwaName        = 'swa-wedding',
     [string]$StorageAccount = 'stweddingrsvp1296',
@@ -45,6 +45,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+if ([string]::IsNullOrWhiteSpace($Subscription)) {
+    throw "Subscription required: pass -Subscription <guid> or set `$env:WEDDING_SUBSCRIPTION_ID."
+}
 
 function Invoke-Az {
     param([Parameter(Mandatory)][string[]]$AzArgs)

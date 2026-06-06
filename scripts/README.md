@@ -221,8 +221,8 @@ If you'd like quarterly auto-rotation without manual intervention, wire this scr
 1. Create a least-privilege service principal:
 
    ```powershell
-   az ad sp create-for-rbac --name wedding-key-rotator --role "Cognitive Services Contributor" --scopes /subscriptions/32c8caee-4dce-4973-94f4-d1d18736ff4f/resourceGroups/rg-wedding-swa/providers/Microsoft.CognitiveServices/accounts/aoai-wedding-concierge
-   az role assignment create --role "Website Contributor" --assignee <appId-from-above> --scope /subscriptions/32c8caee-4dce-4973-94f4-d1d18736ff4f/resourceGroups/rg-wedding-swa/providers/Microsoft.Web/staticSites/swa-wedding
+   az ad sp create-for-rbac --name wedding-key-rotator --role "Cognitive Services Contributor" --scopes /subscriptions/<SUBSCRIPTION_ID_VSE>/resourceGroups/rg-wedding-swa/providers/Microsoft.CognitiveServices/accounts/aoai-wedding-concierge
+   az role assignment create --role "Website Contributor" --assignee <appId-from-above> --scope /subscriptions/<SUBSCRIPTION_ID_VSE>/resourceGroups/rg-wedding-swa/providers/Microsoft.Web/staticSites/swa-wedding
    ```
 
 2. Save the JSON output as the GitHub secret `AZURE_CREDENTIALS` on the `jlienus/wedding-website` repo.
