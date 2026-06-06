@@ -36,6 +36,22 @@ node scripts/test-rsvp-lookup.cjs    # exit 0 on all pass, 1 on any failure
 ```
 
 
+## `smoke-sms.cjs` — Send one real SMS via the active provider
+
+End-to-end test of `api/_lib/sms.js`: loads `api/local.settings.json`,
+dispatches through whichever provider `SMS_PROVIDER` selects (`acs` or
+`twilio`), and prints the result. Useful when wiring a new provider or
+verifying credentials without spinning up the SWA dev server.
+
+```powershell
+# Requires api/local.settings.json with the provider's env vars set
+node scripts/smoke-sms.cjs +15551234567
+```
+
+For Twilio trial accounts the destination must already be on your
+**Verified Caller IDs** list in the Twilio console.
+
+
 ## `mask-sms-log-phones.cjs` — One-time mask of full numbers in `rsvpSmsLog`
 
 Companion to the field-encryption work. Existing rows in the SMS audit log

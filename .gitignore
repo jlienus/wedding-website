@@ -8,6 +8,9 @@ dist
 # environment variables
 .env*
 
+# Azure Functions local settings (contains secrets)
+api/local.settings.json
+
 # OS files
 .DS_Store
 Thumbs.db

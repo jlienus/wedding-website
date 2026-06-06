@@ -1,26 +1,32 @@
 'use strict';
 
-// Wraps Azure Communication Services SMS. Lazy-loaded so importing this
-// module doesn't crash function cold-starts that don't need SMS.
+// SMS sending abstraction. Defaults to Azure Communication Services; can be
+// switched to Twilio for pre-verification dev/testing by setting
+// SMS_PROVIDER=twilio. Both branches return the same shape so callers
+// (admin_send_test, cron_reminders, etc.) don't care which provider ran.
 
-let _client = null;
-let _fromNumber = null;
+function provider() {
+  return (process.env.SMS_PROVIDER || 'acs').toLowerCase();
+}
 
-function getClient() {
-  if (_client) return { client: _client, from: _fromNumber };
+// --- ACS branch ---------------------------------------------------------
+let _acsClient = null;
+let _acsFrom = null;
+
+function getAcsClient() {
+  if (_acsClient) return { client: _acsClient, from: _acsFrom };
   const cs = process.env.ACS_CONNECTION;
   const from = process.env.ACS_SMS_FROM;
   if (!cs) throw new Error('CONFIG_MISSING_ACS_CONNECTION');
   if (!from) throw new Error('CONFIG_MISSING_ACS_SMS_FROM');
   const { SmsClient } = require('@azure/communication-sms');
-  _client = new SmsClient(cs);
-  _fromNumber = from;
-  return { client: _client, from: _fromNumber };
+  _acsClient = new SmsClient(cs);
+  _acsFrom = from;
+  return { client: _acsClient, from: _acsFrom };
 }
 
-// Returns: { successful, messageId, deliveryStatus, errorCode, segmentCount }
-async function sendSms(toPhone, body, opts = {}) {
-  const { client, from } = getClient();
+async function sendViaAcs(toPhone, body, opts) {
+  const { client, from } = getAcsClient();
   const sendOpts = {
     enableDeliveryReport: true,
     tag: opts.tag || 'rsvp'
@@ -56,6 +62,72 @@ async function sendSms(toPhone, body, opts = {}) {
     errorMessage: r.errorMessage || '',
     segmentCount: estimateSegments(body)
   };
+}
+
+// --- Twilio branch (dev/testing) ---------------------------------------
+let _twilioClient = null;
+let _twilioFrom = null;
+
+function getTwilioClient() {
+  if (_twilioClient) return { client: _twilioClient, from: _twilioFrom };
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  const from = process.env.TWILIO_FROM;
+  if (!sid) throw new Error('CONFIG_MISSING_TWILIO_ACCOUNT_SID');
+  if (!token) throw new Error('CONFIG_MISSING_TWILIO_AUTH_TOKEN');
+  if (!from) throw new Error('CONFIG_MISSING_TWILIO_FROM');
+  const twilio = require('twilio');
+  _twilioClient = twilio(sid, token);
+  _twilioFrom = from;
+  return { client: _twilioClient, from: _twilioFrom };
+}
+
+async function sendViaTwilio(toPhone, body, _opts) {
+  let client, from;
+  try {
+    ({ client, from } = getTwilioClient());
+  } catch (err) {
+    return {
+      successful: false,
+      messageId: '',
+      deliveryStatus: 'send_failed',
+      errorCode: (err && err.message) || 'CONFIG_ERROR',
+      errorMessage: (err && err.message) || String(err),
+      segmentCount: 0
+    };
+  }
+  try {
+    const msg = await client.messages.create({ from, to: toPhone, body });
+    const status = String(msg.status || '').toLowerCase();
+    // Twilio status values: queued, sending, sent, delivered, undelivered, failed.
+    // queued/accepted/sending/sent/delivered are all "we successfully handed it
+    // off"; final delivery state comes later via status callbacks.
+    const accepted = ['queued', 'accepted', 'sending', 'sent', 'delivered'].includes(status);
+    return {
+      successful: accepted,
+      messageId: msg.sid || '',
+      deliveryStatus: accepted ? 'accepted' : (status || 'unknown'),
+      errorCode: msg.errorCode != null ? String(msg.errorCode) : '',
+      errorMessage: msg.errorMessage || '',
+      segmentCount: estimateSegments(body)
+    };
+  } catch (err) {
+    return {
+      successful: false,
+      messageId: '',
+      deliveryStatus: 'send_failed',
+      errorCode: err && (err.code != null ? String(err.code) : (err.status != null ? `HTTP_${err.status}` : 'EXCEPTION')),
+      errorMessage: (err && err.message) || String(err),
+      segmentCount: 0
+    };
+  }
+}
+
+// --- Dispatch ----------------------------------------------------------
+// Returns: { successful, messageId, deliveryStatus, errorCode, errorMessage, segmentCount }
+async function sendSms(toPhone, body, opts = {}) {
+  if (provider() === 'twilio') return sendViaTwilio(toPhone, body, opts);
+  return sendViaAcs(toPhone, body, opts);
 }
 
 // GSM-7 default alphabet check; messages with characters outside GSM-7 must
