@@ -1,14 +1,16 @@
 'use strict';
-// Spot test for the new rsvp_lookup endpoint shapes.
+// Spot test for the rsvp_lookup endpoint shapes.
 // Mocks storage + auth + ratelimit so we can exercise every branch without
-// hitting Azure.  Run: node scripts/test-rsvp-lookup.cjs
+// hitting Azure. Covers both the legacy direct-session path (phoneless /
+// opted-out / hard-failed invites) AND the new step-up auth path
+// (phone-eligible invites → rsvp_ticket cookie + requiresVerification).
+// Run: node scripts/test-rsvp-lookup.cjs
 
 const Module = require('module');
 
-// Shared mutable state for the storage mock.
 const mock = {
-  byLastName: new Map(),    // norm => invite[]
-  byPhoneNorm: new Map(),   // phoneNorm => invite[]
+  byLastName: new Map(),
+  byPhoneNorm: new Map(),
 };
 
 function normalizeName(s) {
@@ -24,8 +26,6 @@ function normalizePhone(p) {
   return '';
 }
 
-// Swap require() for the three modules the endpoint depends on.
-const origResolve = Module._resolveFilename;
 const origLoad = Module._load;
 const stubs = {
   '../_lib/cors': {
@@ -38,7 +38,9 @@ const stubs = {
     check: () => ({ ok: true, retryAfter: 0 }),
   },
   '../_lib/auth': {
-    issueSessionCookie: (id) => `wedrsvp=cookie-for-${id}; Path=/; HttpOnly`,
+    issueSessionCookie: (id) => `rsvp_session=session-for-${id}; Path=/; HttpOnly`,
+    issueLookupTicketCookie: (id) => `rsvp_ticket=ticket-for-${id}; Path=/api/rsvp; HttpOnly`,
+    clearLookupTicketCookie: () => `rsvp_ticket=; Path=/api/rsvp; HttpOnly; Max-Age=0`,
   },
   '../_lib/storage': {
     normalizeName,
@@ -72,7 +74,7 @@ async function call(body) {
   return captured;
 }
 
-function fakeInvite(id, firstName, lastName, phone) {
+function fakeInvite(id, firstName, lastName, phone, opts) {
   const phoneNorm = normalizePhone(phone || '');
   return {
     inviteId: id,
@@ -87,6 +89,8 @@ function fakeInvite(id, firstName, lastName, phone) {
     responded: false,
     respondedAt: '',
     respondedLate: false,
+    optedOutOfSms: !!(opts && opts.optedOut),
+    smsHardFailedAt: (opts && opts.hardFailed) ? '2026-01-01T00:00:00Z' : '',
   };
 }
 
@@ -111,106 +115,187 @@ function assert(name, cond, detail) {
   else { failed += 1; console.log(`  FAIL  ${name}${detail ? ` :: ${detail}` : ''}`); }
 }
 
+function cookieStr(r) {
+  const sc = r && r.headers && r.headers['Set-Cookie'];
+  if (!sc) return '';
+  return Array.isArray(sc) ? sc.join(' || ') : String(sc);
+}
+
+// Assert phone-eligible invite → step-up auth: rsvp_ticket cookie + thin payload.
+function assertStepUp(name, r, inviteId, last4) {
+  assert(`${name}.status200`, r.status === 200);
+  assert(`${name}.found`, r.body && r.body.found === true);
+  assert(`${name}.requiresVerification=true`, r.body.requiresVerification === true);
+  assert(`${name}.ticketCookieForInvite`, cookieStr(r).includes(`ticket-for-${inviteId}`));
+  assert(`${name}.noSessionCookie`, !cookieStr(r).includes(`session-for-${inviteId}`));
+  assert(`${name}.payloadHasFirstNameOnly`,
+    r.body.invite && !!r.body.invite.firstName && !r.body.invite.inviteId && !r.body.invite.primaryLastName && !r.body.invite.payload);
+  assert(`${name}.phoneLast4=${last4}`, r.body.invite.phoneLast4 === last4);
+}
+
+// Assert phoneless / opted-out / hard-failed invite → direct session + full publicInvite payload.
+function assertDirect(name, r, inviteId) {
+  assert(`${name}.status200`, r.status === 200);
+  assert(`${name}.found`, r.body && r.body.found === true);
+  assert(`${name}.requiresVerification=false`, r.body.requiresVerification === false);
+  assert(`${name}.sessionCookieForInvite`, cookieStr(r).includes(`session-for-${inviteId}`));
+  assert(`${name}.noTicketCookie`, !cookieStr(r).includes(`ticket-for-${inviteId}`));
+  assert(`${name}.fullPublicInvite`,
+    r.body.invite && r.body.invite.inviteId === inviteId && 'payload' in r.body.invite && 'hasPhone' in r.body.invite);
+  assert(`${name}.publicInviteHidesPhone`, !('phoneNorm' in r.body.invite) && !('phone' in r.body.invite));
+}
+
 (async () => {
-  // Scenario A: unique last name → success
+  // ============================================================
+  // STEP-UP PATH (invite has usable phone): rsvp_ticket cookie,
+  // thin payload, requiresVerification: true
+  // ============================================================
+
+  // A: unique lastname, phone on file → step-up
   indexInvites([fakeInvite('i_lien', 'John', 'Lien', '5551112222')]);
   let r = await call({ lastName: 'Lien' });
-  assert('A.1 unique lastname returns invite', r.status === 200 && r.body.found === true && r.body.invite.inviteId === 'i_lien');
-  assert('A.2 sets cookie', typeof r.headers['Set-Cookie'] === 'string' && r.headers['Set-Cookie'].includes('i_lien'));
-  assert('A.3 public shape hides phoneNorm', !('phoneNorm' in r.body.invite) && !('phone' in r.body.invite));
+  assertStepUp('A unique-lastname-with-phone', r, 'i_lien', '2222');
 
-  // Scenario B: not found
-  r = await call({ lastName: 'Smyth' });
-  assert('B.1 not_found returns found:false (no ambiguous)', r.status === 200 && r.body.found === false && !r.body.ambiguous && !r.body.requiresPhoneLast4);
-
-  // Scenario C: ambiguous, both have phones → requiresPhoneLast4
+  // D/E: ambiguous → phone-4 resolves to one, that one has phone → step-up
   indexInvites([
     fakeInvite('i_g1', 'Maria', 'Guajan', '5552221111'),
     fakeInvite('i_g2', 'Jose', 'Guajan', '5553334444'),
   ]);
-  r = await call({ lastName: 'Guajan' });
-  assert('C.1 ambiguous with 2+ phones → requiresPhoneLast4', r.status === 200 && r.body.found === false && r.body.ambiguous === true && r.body.requiresPhoneLast4 === true);
-
-  // Scenario D: ambiguous + correct phone-4 (Maria's 5552221111 → last 4 = 1111)
   r = await call({ lastName: 'Guajan', phoneLast4: '1111' });
-  assert('D.1 phone-4 narrows to Maria', r.status === 200 && r.body.found === true && r.body.invite.inviteId === 'i_g1');
-
-  // Scenario E: ambiguous + correct phone-4 for Jose (4444)
+  assertStepUp('D phone4-resolves-Maria', r, 'i_g1', '1111');
   r = await call({ lastName: 'Guajan', phoneLast4: '4444' });
-  assert('E.1 phone-4 narrows to Jose', r.status === 200 && r.body.found === true && r.body.invite.inviteId === 'i_g2');
+  assertStepUp('E phone4-resolves-Jose', r, 'i_g2', '4444');
 
-  // Scenario F: ambiguous + wrong phone-4 → still requiresPhoneLast4 (re-prompt)
-  r = await call({ lastName: 'Guajan', phoneLast4: '9999' });
-  assert('F.1 wrong phone-4 returns requiresPhoneLast4 again', r.status === 200 && r.body.found === false && r.body.ambiguous === true && r.body.requiresPhoneLast4 === true);
-
-  // Scenario G: ambiguous + bad phone-4 length → re-prompt
-  r = await call({ lastName: 'Guajan', phoneLast4: '12' });
-  assert('G.1 short phone-4 returns requiresPhoneLast4', r.status === 200 && r.body.ambiguous === true && r.body.requiresPhoneLast4 === true);
-
-  // Scenario H: ambiguous AND same phone-4 (both end 1234)
-  indexInvites([
-    fakeInvite('i_x1', 'A', 'Same', '5551111234'),
-    fakeInvite('i_x2', 'B', 'Same', '5552221234'),
-  ]);
-  r = await call({ lastName: 'Same', phoneLast4: '1234' });
-  assert('H.1 multi-match on phone-4 → plain ambiguous (contact-us)', r.status === 200 && r.body.ambiguous === true && !r.body.requiresPhoneLast4);
-
-  // Scenario I: ambiguous but neither has a phone → plain ambiguous
-  indexInvites([
-    fakeInvite('i_n1', 'A', 'Nophone', ''),
-    fakeInvite('i_n2', 'B', 'Nophone', ''),
-  ]);
-  r = await call({ lastName: 'Nophone' });
-  assert('I.1 ambiguous no-phones → plain ambiguous', r.status === 200 && r.body.ambiguous === true && !r.body.requiresPhoneLast4);
-
-  // Scenario J: phone-only lookup, unique → success
+  // J: phone lookup unique → step-up
   indexInvites([fakeInvite('i_p1', 'Pat', 'Phoner', '5559876543')]);
   r = await call({ phone: '(555) 987-6543' });
-  assert('J.1 phone lookup unique → success', r.status === 200 && r.body.found === true && r.body.invite.inviteId === 'i_p1');
+  assertStepUp('J phone-lookup-unique', r, 'i_p1', '6543');
 
-  // Scenario K: phone-only, not found
-  r = await call({ phone: '5550000000' });
-  assert('K.1 phone not found', r.status === 200 && r.body.found === false && !r.body.ambiguous);
-
-  // Scenario L: phone-only ambiguous (shared landline)
-  indexInvites([
-    fakeInvite('i_s1', 'A', 'House1', '5555555555'),
-    fakeInvite('i_s2', 'B', 'House2', '5555555555'),
-  ]);
-  r = await call({ phone: '555-555-5555' });
-  assert('L.1 shared phone → ambiguous', r.status === 200 && r.body.found === false && r.body.ambiguous === true);
-
-  // Scenario M: invalid phone format
-  r = await call({ phone: '123' });
-  assert('M.1 invalid phone → 400 invalid_phone', r.status === 400 && r.body.error === 'invalid_phone');
-
-  // Scenario N: missing input
-  r = await call({});
-  assert('N.1 empty body → 400 missing_lookup_input', r.status === 400 && r.body.error === 'missing_lookup_input');
-
-  // Scenario O: too-short last name
-  r = await call({ lastName: 'X' });
-  assert('O.1 single-char lastname → 400 name_too_short', r.status === 400 && r.body.error === 'name_too_short');
-
-  // Scenario P: legacy {firstName, lastName} → uses lastName only
+  // P: legacy {firstName, lastName} → uses lastName only, has phone → step-up
   indexInvites([fakeInvite('i_legacy', 'OldFirst', 'Legacy', '5550001111')]);
   r = await call({ firstName: 'IgnoredOldClient', lastName: 'Legacy' });
-  assert('P.1 legacy firstName ignored, lookup by lastName succeeds', r.status === 200 && r.body.found === true && r.body.invite.inviteId === 'i_legacy');
+  assertStepUp('P legacy-firstName-ignored', r, 'i_legacy', '1111');
 
-  // Scenario Q: precedence — both phone and lastName present, phone wins
+  // Q: phone wins precedence over lastName
   indexInvites([
     fakeInvite('i_phone_target', 'Phone', 'Match', '5557778888'),
     fakeInvite('i_name_other',  'Other', 'Lookup', '5551231234'),
   ]);
   r = await call({ lastName: 'Lookup', phone: '5557778888' });
-  assert('Q.1 phone wins precedence over lastName', r.status === 200 && r.body.found === true && r.body.invite.inviteId === 'i_phone_target');
+  assertStepUp('Q phone-wins-precedence', r, 'i_phone_target', '8888');
 
-  // Scenario R: case + accent normalization
+  // R: case + accent normalization, has phone → step-up
   indexInvites([fakeInvite('i_acc', 'José', 'Núñez', '5551234567')]);
   r = await call({ lastName: 'NUNEZ' });
-  assert('R.1 case+accent insensitive lastName lookup', r.status === 200 && r.body.found === true && r.body.invite.inviteId === 'i_acc');
+  assertStepUp('R case-accent-insensitive', r, 'i_acc', '4567');
 
-  // Scenario S: invalid JSON body
+  // T: unique + matching phone-4, has phone → step-up
+  indexInvites([fakeInvite('i_only', 'Sole', 'Loner', '5559991111')]);
+  r = await call({ lastName: 'Loner', phoneLast4: '1111' });
+  assertStepUp('T unique-matching-phone4', r, 'i_only', '1111');
+
+  // ============================================================
+  // DIRECT PATH (no usable phone): session cookie, full publicInvite
+  // ============================================================
+
+  // U: unique lastname, no phone on file → direct session
+  indexInvites([fakeInvite('i_nophone', 'Phoneless', 'Person', '')]);
+  r = await call({ lastName: 'Person' });
+  assertDirect('U unique-no-phone', r, 'i_nophone');
+
+  // V: unique lastname, has phone but opted out → direct session
+  indexInvites([fakeInvite('i_optout', 'Opted', 'Out', '5556667777', { optedOut: true })]);
+  r = await call({ lastName: 'Out' });
+  assertDirect('V opted-out-fallback', r, 'i_optout');
+
+  // W: unique lastname, has phone but hard-failed → direct session
+  indexInvites([fakeInvite('i_hf', 'Hard', 'Failed', '5558889999', { hardFailed: true })]);
+  r = await call({ lastName: 'Failed' });
+  assertDirect('W hard-failed-fallback', r, 'i_hf');
+
+  // ============================================================
+  // NEGATIVE / AMBIGUOUS / VALIDATION PATHS (no cookie, no body.invite)
+  // ============================================================
+
+  // B: not found
+  indexInvites([fakeInvite('i_lien', 'John', 'Lien', '5551112222')]);
+  r = await call({ lastName: 'Smyth' });
+  assert('B not_found',
+    r.status === 200 && r.body.found === false && !r.body.ambiguous && !r.body.requiresPhoneLast4);
+
+  // C: ambiguous, both have phones → requiresPhoneLast4
+  indexInvites([
+    fakeInvite('i_g1', 'Maria', 'Guajan', '5552221111'),
+    fakeInvite('i_g2', 'Jose', 'Guajan', '5553334444'),
+  ]);
+  r = await call({ lastName: 'Guajan' });
+  assert('C ambiguous-with-phones-requires-phone4',
+    r.status === 200 && r.body.found === false && r.body.ambiguous === true && r.body.requiresPhoneLast4 === true);
+
+  // F: wrong phone-4 → re-prompt
+  r = await call({ lastName: 'Guajan', phoneLast4: '9999' });
+  assert('F wrong-phone4-reprompt',
+    r.status === 200 && r.body.found === false && r.body.ambiguous === true && r.body.requiresPhoneLast4 === true);
+
+  // G: short phone-4 → re-prompt
+  r = await call({ lastName: 'Guajan', phoneLast4: '12' });
+  assert('G short-phone4-reprompt',
+    r.status === 200 && r.body.ambiguous === true && r.body.requiresPhoneLast4 === true);
+
+  // H: ambiguous + same phone-4 → plain ambiguous (contact-us)
+  indexInvites([
+    fakeInvite('i_x1', 'A', 'Same', '5551111234'),
+    fakeInvite('i_x2', 'B', 'Same', '5552221234'),
+  ]);
+  r = await call({ lastName: 'Same', phoneLast4: '1234' });
+  assert('H multi-match-on-phone4-plain-ambiguous',
+    r.status === 200 && r.body.ambiguous === true && !r.body.requiresPhoneLast4);
+
+  // I: ambiguous, neither has phone → plain ambiguous
+  indexInvites([
+    fakeInvite('i_n1', 'A', 'Nophone', ''),
+    fakeInvite('i_n2', 'B', 'Nophone', ''),
+  ]);
+  r = await call({ lastName: 'Nophone' });
+  assert('I ambiguous-no-phones-plain-ambiguous',
+    r.status === 200 && r.body.ambiguous === true && !r.body.requiresPhoneLast4);
+
+  // K: phone-only, not found
+  r = await call({ phone: '5550000000' });
+  assert('K phone-not-found',
+    r.status === 200 && r.body.found === false && !r.body.ambiguous);
+
+  // L: phone-only ambiguous (shared landline)
+  indexInvites([
+    fakeInvite('i_s1', 'A', 'House1', '5555555555'),
+    fakeInvite('i_s2', 'B', 'House2', '5555555555'),
+  ]);
+  r = await call({ phone: '555-555-5555' });
+  assert('L shared-phone-ambiguous',
+    r.status === 200 && r.body.found === false && r.body.ambiguous === true);
+
+  // M: invalid phone format
+  r = await call({ phone: '123' });
+  assert('M invalid-phone-400',
+    r.status === 400 && r.body.error === 'invalid_phone');
+
+  // N: missing input
+  r = await call({});
+  assert('N empty-body-400-missing-input',
+    r.status === 400 && r.body.error === 'missing_lookup_input');
+
+  // O: too-short last name
+  r = await call({ lastName: 'X' });
+  assert('O single-char-lastname-400-name-too-short',
+    r.status === 400 && r.body.error === 'name_too_short');
+
+  // T.2: unique + mismatching phone-4 → requiresPhoneLast4
+  indexInvites([fakeInvite('i_only', 'Sole', 'Loner', '5559991111')]);
+  r = await call({ lastName: 'Loner', phoneLast4: '9999' });
+  assert('T2 unique-mismatching-phone4-requiresPhone4',
+    r.status === 200 && r.body.found === false && r.body.requiresPhoneLast4 === true);
+
+  // S: invalid JSON body
   let captured;
   const ctx = {
     log: Object.assign(() => {}, { error: () => {} }),
@@ -223,15 +308,8 @@ function assert(name, cond, detail) {
     body: 'not json',
     rawBody: 'not json',
   });
-  assert('S.1 non-JSON body → 400 invalid_json', captured.status === 400 && captured.body.error === 'invalid_json');
-
-  // Scenario T: unique last-name match BUT user submitted phone-4 (shouldn't reach in normal client flow,
-  // but legacy bug-prevention).  If the lone match's phone ends with the digits → success; else re-prompt.
-  indexInvites([fakeInvite('i_only', 'Sole', 'Loner', '5559991111')]);
-  r = await call({ lastName: 'Loner', phoneLast4: '1111' });
-  assert('T.1 unique + matching phone-4 still returns success', r.status === 200 && r.body.found === true);
-  r = await call({ lastName: 'Loner', phoneLast4: '9999' });
-  assert('T.2 unique + mismatching phone-4 returns requiresPhoneLast4', r.status === 200 && r.body.found === false && r.body.requiresPhoneLast4 === true);
+  assert('S non-JSON-body-400-invalid-json',
+    captured.status === 400 && captured.body.error === 'invalid_json');
 
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
