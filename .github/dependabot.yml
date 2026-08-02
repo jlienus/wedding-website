@@ -1,0 +1,82 @@
+# Dependabot configuration
+#
+# Why this file exists
+# --------------------
+# Security alerts were enabled on this repo late, and with no config file
+# Dependabot only ran *security* updates against the root manifest. That left
+# the Azure Functions app in api/ effectively unwatched, and it is the half of
+# the codebase that actually handles guest PII.
+#
+# It also matters that axios / form-data in api/ are TRANSITIVE dependencies of
+# `twilio` (twilio declares axios ^1.13.5, which already permits the patched
+# 1.18.x). Those cannot be bumped by editing api/package.json -- they need a
+# regenerated lockfile. That regeneration MUST happen on GitHub's runners, not
+# on a corporate workstation: npm there resolves through an internal Azure
+# Artifacts mirror, which rewrites `resolved` URLs to internal feed hosts and
+# emits sha1 integrity values instead of the registry's sha512. Committing that
+# to a public repo would leak internal feed paths and pin unverifiable hashes.
+# Letting Dependabot own the lockfile avoids the problem entirely.
+#
+# Updates are grouped so a live wedding site gets a few reviewable PRs a month
+# rather than a constant drip.
+
+version: 2
+
+updates:
+  # ---------------------------------------------------------------- Astro site
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "05:00"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build(deps)"
+    groups:
+      site-minor-and-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      # Astro 7 moved Vite onto rolldown and the build fails on this project
+      # with "Cannot find package 'esbuild'". Verified on PR #5 (6.4.2 -> 7.1.1).
+      # A 6 -> 7 migration is deliberate work, not a dependency bump, and it is
+      # not something to attempt on a live site before the wedding. Re-evaluate
+      # after March 2027 by deleting this entry.
+      - dependency-name: astro
+        update-types: ["version-update:semver-major"]
+
+  # ------------------------------------------------------- Azure Functions API
+  - package-ecosystem: npm
+    directory: "/api"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "05:00"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build(deps)"
+    groups:
+      api-minor-and-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      # @azure/communication-sms only clears its uuid advisory on 1.2.0-beta.4.
+      # Shipping a beta of the SMS SDK on a live RSVP flow is a worse risk than
+      # the advisory itself, which needs local code execution to matter.
+      - dependency-name: "@azure/communication-sms"
+        update-types: ["version-update:semver-major"]
+
+  # ------------------------------------------------------------ GitHub Actions
+  # Picks up the Node 20 runtime deprecations on checkout / setup-node /
+  # azure-login before GitHub force-migrates them out from under us.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "ci(deps)"
+    groups:
+      actions:
+        patterns: ["*"]
