@@ -1,0 +1,73 @@
+name: Keepalive (prevent scheduled-workflow auto-disable)
+
+# GitHub automatically disables *every* scheduled workflow in a PUBLIC
+# repository after 60 consecutive days with no repository activity, and this
+# repo has already come close: there was a 56.2-day gap between 2026-06-06 and
+# 2026-08-01. That is under four days from silently losing both
+# `rsvp-reminders.yml` (daily, guest-facing) and `rotate-field-keys.yml`
+# (monthly key rotation) with no failure to alert on -- disabled workflows
+# simply stop running.
+#
+# The site is feature-complete well ahead of the March 2027 wedding, so long
+# quiet stretches are the expected steady state, not an anomaly. This job
+# pushes an empty commit on the 1st and 15th of each month purely to reset the
+# inactivity clock, giving ~2x margin against the 60-day threshold.
+#
+# It also re-enables the two scheduled workflows on every run. That is
+# idempotent and cheap, and covers the case where one was disabled for some
+# other reason (manual toggle, a prior lapse) without anyone noticing.
+#
+# Not covered here, and deliberately so: the nightly RSVP backup runs from the
+# Azure Logic App `la-wedding-rsvp-backup` (rg-wedding-swa, daily 07:00 UTC),
+# which is Azure-side and unaffected by this GitHub rule.
+#
+# To remove this safety net: delete this file and either keep the repo active
+# manually or make it private (the 60-day rule applies only to public repos).
+
+on:
+  schedule:
+    - cron: '0 5 1,15 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Push empty commit to reset the inactivity clock
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # [skip ci] keeps this from queuing a redundant SWA deploy. Pushes made
+          # with GITHUB_TOKEN already don't trigger other workflows, so this is
+          # belt-and-suspenders and, more usefully, self-documenting in the log.
+          git commit --allow-empty -m "chore: keepalive - reset scheduled-workflow inactivity clock [skip ci]"
+          git push origin HEAD:main
+
+      - name: Re-enable scheduled workflows if they were disabled
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          for wf in rsvp-reminders.yml rotate-field-keys.yml; do
+            state=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${wf}" --jq '.state' 2>/dev/null || echo "unknown")
+            echo "${wf}: ${state}"
+            if [ "$state" != "active" ]; then
+              echo "::warning::${wf} was '${state}' -- re-enabling"
+              gh api --method PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/${wf}/enable" || \
+                echo "::error::failed to re-enable ${wf}"
+            fi
+          done

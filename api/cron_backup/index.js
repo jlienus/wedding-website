@@ -1,9 +1,12 @@
 'use strict';
 
-// POST /api/cron/backup — nightly RSVP backup. Triggered by GitHub Actions
-// cron with an `X-Backup-Secret` header. Snapshots all four RSVP tables to a
-// timestamped JSON blob in a private `backups` container, then conservatively
-// prunes old snapshots (keep all <90 days; for older keep first-of-month).
+// POST /api/cron/backup — nightly RSVP backup. Triggered daily at 07:00 UTC by
+// the Azure Logic App `la-wedding-rsvp-backup` (rg-wedding-swa), which sends an
+// `X-Backup-Secret` header. Note this is NOT a GitHub Actions cron, so it is
+// unaffected by GitHub's 60-day auto-disable of scheduled workflows in public
+// repos. Snapshots all four RSVP tables to a timestamped JSON blob in a private
+// `backups` container, then conservatively prunes old snapshots (keep all
+// <90 days; for older keep first-of-month).
 //
 // Threat model (be honest about scope):
 //   This backup protects against accidental corruption / deletion / app bugs.
