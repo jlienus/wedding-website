@@ -155,8 +155,32 @@ sides of the rotation window):
 5. Clear `RSVP_FIELD_KEY_PREVIOUS` once the sweep succeeds
 
 If the sweep fails, `PREVIOUS` is left in place so the partially-migrated
-data stays readable. Resume by re-running the sweep manually, then re-run
-this script with `-SkipSweep` for the cleanup phase.
+data stays readable. **The script refuses to start while `PREVIOUS` is set** —
+rotating again would discard it and permanently orphan every row still
+encrypted under it. Finish the interrupted rotation by hand first:
+
+```powershell
+# 1. Pull CURRENT + PREVIOUS + blind-index key off the SWA, plus the storage conn string
+$p  = (az staticwebapp appsettings list -n swa-wedding -g rg-wedding-swa -o json 2>$null | ConvertFrom-Json).properties
+$env:RSVP_STORAGE_CONNECTION = (az storage account show-connection-string -n stweddingrsvp1296 `
+                                  -g rg-wedding-swa -o json 2>$null | ConvertFrom-Json).connectionString
+$env:RSVP_FIELD_KEY_CURRENT  = $p.RSVP_FIELD_KEY_CURRENT
+$env:RSVP_FIELD_KEY_PREVIOUS = $p.RSVP_FIELD_KEY_PREVIOUS
+$env:RSVP_BLIND_INDEX_KEY    = $p.RSVP_BLIND_INDEX_KEY
+
+# 2. Dry run first — confirms every row decrypts under the current pair
+node scripts/encrypt-existing-fields.cjs --dry-run --verbose
+
+# 3. Only if "Errors: 0", run it for real
+node scripts/encrypt-existing-fields.cjs --verbose
+
+# 4. Only after a clean sweep, drop the stale key
+az staticwebapp appsettings delete -n swa-wedding -g rg-wedding-swa `
+  --setting-names RSVP_FIELD_KEY_PREVIOUS
+```
+
+Then re-run the script normally. Never delete `PREVIOUS` before a clean
+sweep — that is the one action that loses data irrecoverably.
 
 ```powershell
 pwsh ./scripts/rotate-field-keys.ps1 -WhatIf       # preview
@@ -165,10 +189,42 @@ pwsh ./scripts/rotate-field-keys.ps1 -PropagationSec 90   # slower SWA = wait lo
 ```
 
 **Automating monthly rotation:** `.github/workflows/rotate-field-keys.yml`
-runs this script on the 1st of every month at 07:00 UTC. Needs the
-`AZURE_CREDENTIALS` repo secret (Service Principal with Contributor on the
-wedding RG). See the workflow file header for the `az ad sp create-for-rbac`
-+ `gh secret set` one-liners.
+runs this script on the 1st of every month at 07:00 UTC (plus
+`workflow_dispatch` for manual runs).
+
+It authenticates with **GitHub OIDC federated credentials** — there is no
+long-lived client secret to expire. Repo secrets required (all three are
+non-sensitive identifiers, not credentials):
+
+| Secret | Value |
+|---|---|
+| `AZURE_CLIENT_ID` | appId of the `gh-wedding-rotate-keys` Entra app |
+| `AZURE_TENANT_ID` | tenant hosting the wedding subscription |
+| `AZURE_SUBSCRIPTION_ID` | subscription holding `rg-wedding-swa` (also passed to the script as `WEDDING_SUBSCRIPTION_ID`) |
+
+The app has a federated credential with subject
+`repo:jlienus/wedding-website:ref:refs/heads/main`, issuer
+`https://token.actions.githubusercontent.com`, audience
+`api://AzureADTokenExchange`.
+
+RBAC the service principal actually needs (all four — each covers a
+distinct call the script makes):
+
+| Role | Scope | Why |
+|---|---|---|
+| `Contributor` | the `swa-wedding` static site resource | read/set/delete SWA app settings |
+| `Reader` | the `stweddingrsvp1296` storage account | `az storage account show-connection-string` needs control-plane `read` |
+| `Storage Account Key Operator Service Role` | `rg-wedding-swa` | `listKeys` for that connection string |
+| `Storage Blob Data Reader` | `rg-wedding-swa` | data-plane read during the sweep |
+
+> There is **no** built-in "Static Web Apps Contributor" role, and
+> `Website Contributor` grants `Microsoft.Web/sites/*` but **not**
+> `Microsoft.Web/staticSites/*` — it does not work here. Use `Contributor`
+> scoped to the single SWA resource.
+
+Do **not** use `az ad sp create-for-rbac --sdk-auth` / an `AZURE_CREDENTIALS`
+secret. A key-rotation job whose own credential silently expires after ~12
+months is precisely the failure this workflow exists to prevent.
 
 ## `test-field-encryption.cjs` / `test-storage-encryption.cjs` — Crypto tests
 
@@ -222,10 +278,15 @@ If you'd like quarterly auto-rotation without manual intervention, wire this scr
 
    ```powershell
    az ad sp create-for-rbac --name wedding-key-rotator --role "Cognitive Services Contributor" --scopes /subscriptions/<SUBSCRIPTION_ID_VSE>/resourceGroups/rg-wedding-swa/providers/Microsoft.CognitiveServices/accounts/aoai-wedding-concierge
-   az role assignment create --role "Website Contributor" --assignee <appId-from-above> --scope /subscriptions/<SUBSCRIPTION_ID_VSE>/resourceGroups/rg-wedding-swa/providers/Microsoft.Web/staticSites/swa-wedding
+   az role assignment create --role "Contributor" --assignee <appId-from-above> --scope /subscriptions/<SUBSCRIPTION_ID_VSE>/resourceGroups/rg-wedding-swa/providers/Microsoft.Web/staticSites/swa-wedding
    ```
 
-2. Save the JSON output as the GitHub secret `AZURE_CREDENTIALS` on the `jlienus/wedding-website` repo.
+   > Use `Contributor` scoped to the SWA resource, **not** `Website Contributor` —
+   > the latter covers `Microsoft.Web/sites/*` but not `Microsoft.Web/staticSites/*`.
+
+2. Prefer OIDC federated credentials over a stored `--sdk-auth` blob, exactly as
+   `rotate-field-keys.yml` now does (see the automation table above). A rotation
+   job authenticating with a secret that itself expires defeats the purpose.
 
 3. Add `.github/workflows/rotate-aoai-key.yml` with a `schedule: cron: '0 8 1 */3 *'` (first of every 3rd month at 08:00 UTC) trigger that runs `azure/login@v2` then `pwsh ./scripts/rotate-aoai-key.ps1`.
 

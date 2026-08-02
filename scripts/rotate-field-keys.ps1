@@ -168,7 +168,9 @@ Start-Sleep -Seconds $PropagationSec
 
 if ($SkipSweep) {
     Write-Host "`n[5/7] -SkipSweep set; you'll need to run encrypt-existing-fields.cjs manually." -ForegroundColor Yellow
-    Write-Host "       Then re-run this script with -ResumeCleanup (not yet implemented)" -ForegroundColor Yellow
+    Write-Host "       PREVIOUS is now set, so re-running this script will be blocked until you" -ForegroundColor Yellow
+    Write-Host "       finish by hand: run the sweep, confirm Errors: 0, then delete" -ForegroundColor Yellow
+    Write-Host "       RSVP_FIELD_KEY_PREVIOUS. See scripts/README.md for the exact commands." -ForegroundColor Yellow
     return
 }
 
@@ -181,7 +183,10 @@ $env:RSVP_BLIND_INDEX_KEY    = (Get-SwaSetting -Name 'RSVP_BLIND_INDEX_KEY')
 node "$PSScriptRoot/encrypt-existing-fields.cjs" --verbose
 if ($LASTEXITCODE -ne 0) {
     Write-Host "       Sweep returned non-zero; LEAVING PREVIOUS in place so unmigrated rows stay readable." -ForegroundColor Red
-    Write-Host "       Investigate, then re-run encrypt-existing-fields.cjs and call this script with -SkipSweep + cleanup separately." -ForegroundColor Red
+    Write-Host "       DO NOT delete RSVP_FIELD_KEY_PREVIOUS until a sweep reports Errors: 0 --" -ForegroundColor Red
+    Write-Host "       rows still under the old key would become permanently unreadable." -ForegroundColor Red
+    Write-Host "       Recover: node scripts/encrypt-existing-fields.cjs --dry-run --verbose  (diagnose)," -ForegroundColor Red
+    Write-Host "       then the same without --dry-run, then delete PREVIOUS. See scripts/README.md." -ForegroundColor Red
     exit 1
 }
 
