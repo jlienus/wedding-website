@@ -1,0 +1,15 @@
+# johnanddianaswedding.com
+#
+# The guest-facing pages are meant to be findable - people who are invited do
+# search for the couple's names. The host console and the API are not.
+#
+# This is hygiene, not a security control. /admin is already a login gate and
+# every /api/mgmt/* route returns 403 without a valid session cookie; this just
+# keeps the sign-in shell and the JSON endpoints out of search results.
+
+User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /admin/
+Disallow: /api/
