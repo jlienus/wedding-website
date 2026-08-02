@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@microsoft/applicationinsights-web": "^3.3.6",
-    "astro": "^6.4.2"
+    "astro": "^7.1.6"
   },
   "devDependencies": {
     "@types/qrcode": "^1.5.6",
