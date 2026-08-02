@@ -288,6 +288,6 @@ If you'd like quarterly auto-rotation without manual intervention, wire this scr
    `rotate-field-keys.yml` now does (see the automation table above). A rotation
    job authenticating with a secret that itself expires defeats the purpose.
 
-3. Add `.github/workflows/rotate-aoai-key.yml` with a `schedule: cron: '0 8 1 */3 *'` (first of every 3rd month at 08:00 UTC) trigger that runs `azure/login@v2` then `pwsh ./scripts/rotate-aoai-key.ps1`.
+3. Add `.github/workflows/rotate-aoai-key.yml` with a `schedule: cron: '0 8 1 */3 *'` (first of every 3rd month at 08:00 UTC) trigger that runs `azure/login@v3` then `pwsh ./scripts/rotate-aoai-key.ps1`.
 
 Left unimplemented for now because (a) the wedding site is short-lived and (b) the service principal needs `Owner`/`User Access Administrator` to create, which is a human decision. Add it later if the manual cadence becomes annoying.
