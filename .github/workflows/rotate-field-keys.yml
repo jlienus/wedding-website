@@ -7,13 +7,16 @@ name: Rotate RSVP Field Keys (monthly)
 # Cadence: 1st of every month at 07:00 UTC (3am ET, comfortably outside
 # wedding-window traffic). Manual trigger also supported.
 #
-# Setup (one-time): create a service principal scoped to the wedding RG,
-# store its credentials as the AZURE_CREDENTIALS repo secret:
+# Auth: OIDC federated credential (no stored secret to expire). The Entra app
+# "gh-wedding-rotate-keys" trusts token.actions.githubusercontent.com for
+# subject repo:jlienus/wedding-website:ref:refs/heads/main.
 #
-#   az ad sp create-for-rbac --name "sp-wedding-rotate-keys" \
-#       --role Contributor --sdk-auth \
-#       --scopes /subscriptions/<sub>/resourceGroups/rg-wedding-swa
-#   gh secret set AZURE_CREDENTIALS --body "<json from above>"
+# Its RBAC, scoped as tightly as the script needs:
+#   Contributor                                on staticSites/swa-wedding
+#   Storage Blob Data Reader                   on rg-wedding-swa
+#   Storage Account Key Operator Service Role  on rg-wedding-swa
+#
+# Repo secrets consumed: AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID
 
 on:
   schedule:
@@ -27,6 +30,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write  # required for OIDC federated login to Azure
 
 jobs:
   rotate:
@@ -47,10 +51,14 @@ jobs:
       - name: Azure login
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Rotate field keys + re-encrypt sweep
         shell: pwsh
+        env:
+          WEDDING_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           $propagation = if ('${{ inputs.propagation_sec }}') { [int]'${{ inputs.propagation_sec }}' } else { 60 }
           ./scripts/rotate-field-keys.ps1 -Confirm:$false -PropagationSec $propagation

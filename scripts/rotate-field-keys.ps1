@@ -127,6 +127,25 @@ $oldCurrent = Get-SwaSetting -Name 'RSVP_FIELD_KEY_CURRENT'
 if (-not $oldCurrent) {
     throw "RSVP_FIELD_KEY_CURRENT is not set on $SwaName -- bootstrap with init-field-keys.ps1 first."
 }
+
+# A leftover PREVIOUS means the last rotation's sweep never finished, so some rows
+# are still encrypted under it. Step 3 overwrites PREVIOUS with the current key --
+# doing that here would drop the only key those rows can be decrypted with. Refuse
+# to start until the half-finished rotation is reconciled by hand.
+$stalePrevious = Get-SwaSetting -Name 'RSVP_FIELD_KEY_PREVIOUS'
+if ($stalePrevious) {
+    throw @"
+RSVP_FIELD_KEY_PREVIOUS is still set on $SwaName -- a previous rotation did not complete.
+Rotating now would discard it and permanently orphan any rows still encrypted under it.
+
+Finish the interrupted rotation first:
+  1. node scripts/encrypt-existing-fields.cjs --verbose   (with CURRENT/PREVIOUS from SWA)
+  2. az staticwebapp appsettings delete -n $SwaName -g $ResourceGroup ``
+       --setting-names RSVP_FIELD_KEY_PREVIOUS
+Then re-run this script.
+"@
+}
+
 $oldHash = [System.Security.Cryptography.SHA256]::HashData([System.Convert]::FromBase64String($oldCurrent))
 $oldId8 = (($oldHash | ForEach-Object { $_.ToString('x2') }) -join '').Substring(0, 8)
 Write-Host "       current keyId8: $oldId8"
