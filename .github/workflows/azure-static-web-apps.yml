@@ -34,6 +34,14 @@ jobs:
           app_location: '/'
           api_location: 'api'
           output_location: 'dist'
+          # Dependabot (and fork) PRs run without access to repo secrets, so the
+          # deployment token is empty and this action hard-fails. That made every
+          # dependency PR show a red X for a reason unrelated to the change,
+          # which is the fastest way to train ourselves to ignore CI. With this
+          # set, such PRs still run npm ci + npm run build above -- so we keep
+          # the signal that actually matters, "does this bump still build?" --
+          # and simply skip the deploy they were never able to perform.
+          skip_deploy_on_missing_secrets: true
 
       # Best-effort: log a deploy.succeeded event into the admin Recent-activity
       # feed via the internal-event endpoint. Deploy success matters more than
@@ -111,3 +119,4 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           action: 'close'
+          skip_deploy_on_missing_secrets: true
