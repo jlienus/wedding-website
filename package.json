@@ -13,8 +13,8 @@
     "test": "node scripts/test-mask-phone.cjs && node scripts/test-phone-format.cjs && node scripts/test-field-encryption.cjs && node scripts/test-storage-encryption.cjs && node scripts/test-classify-inbound.cjs && node scripts/test-i18n-parity.cjs && node scripts/test-http-helpers.cjs && node scripts/test-magic-token-rotation.cjs && node scripts/test-rsvp-lookup.cjs"
   },
   "dependencies": {
-    "@microsoft/applicationinsights-web": "^3.3.6",
-    "astro": "^6.4.2"
+    "@microsoft/applicationinsights-web": "^3.4.3",
+    "astro": "^6.4.8"
   },
   "devDependencies": {
     "@types/qrcode": "^1.5.6",
