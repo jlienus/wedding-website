@@ -37,8 +37,8 @@
       "morning": {
         "titleEn": "Old Town acclimatization walk",
         "titleEs": "Caminata de aclimatación por el Centro Histórico",
-        "bodyEn": "Keep the pace gentle with a self-guided Old Town walk: Plaza Grande, Iglesia de La Compañía de Jesús, San Francisco, and Calle La Ronda. La Compañía has a modest entry fee and a dazzling gold-leaf interior; San Francisco is free to enter. Pause often, enjoy the plazas, and treat this as acclimatization rather than a marathon.",
-        "bodyEs": "Mantengan un ritmo tranquilo con una caminata autoguiada por el Centro Histórico: Plaza Grande, Iglesia de La Compañía de Jesús, San Francisco y Calle La Ronda. La Compañía tiene una entrada moderada y un interior impresionante cubierto de pan de oro; San Francisco suele ser de ingreso libre. Hagan pausas y tómenlo como aclimatación, no como maratón."
+        "bodyEn": "Keep the pace gentle with a self-guided Old Town walk: Plaza Grande, Iglesia de La Compañía de Jesús, San Francisco, and Calle La Ronda. La Compañía has a modest entry fee and a dazzling gold-leaf interior; San Francisco is free to enter. Pause often, enjoy the plazas, and treat this as acclimatization rather than a marathon. The Basílica del Voto Nacional, where Saturday's ceremony will be, is about a ten-minute walk from Plaza Grande and open to visitors for a small fee; you can climb its towers for one of the best views in Quito, though the last stretch is steep ladders and open walkways. If the altitude is still catching up with you, save the climb for later in the week.",
+        "bodyEs": "Mantengan un ritmo tranquilo con una caminata autoguiada por el Centro Histórico: Plaza Grande, Iglesia de La Compañía de Jesús, San Francisco y Calle La Ronda. La Compañía tiene una entrada moderada y un interior impresionante cubierto de pan de oro; San Francisco suele ser de ingreso libre. Hagan pausas y tómenlo como aclimatación, no como maratón. La Basílica del Voto Nacional, donde será la ceremonia del sábado, queda a unos diez minutos a pie de la Plaza Grande y se puede visitar por una entrada módica; se puede subir a sus torres para ver una de las mejores vistas de Quito, aunque el tramo final son escaleras empinadas y pasarelas abiertas. Si la altura todavía les está costando, dejen la subida para más adelante en la semana."
       },
       "afternoon": {
         "titleEn": "Mercado Central lunch",
@@ -67,8 +67,8 @@
       "morning": {
         "titleEn": "Mitad del Mundo excursion",
         "titleEs": "Excursión a la Mitad del Mundo",
-        "bodyEn": "Head about 26 km north to Mitad del Mundo, roughly a 45-minute taxi ride from central Quito. The equator monument is typically open weekdays from 9 AM to 5 PM with about a $5 entry fee. Nearby Museo Solar Inti Ñan offers playful equator demonstrations and gravity experiments if you want a second stop.",
-        "bodyEs": "Vayan unos 26 km al norte hasta la Mitad del Mundo, aproximadamente 45 minutos en taxi desde el centro de Quito. El monumento ecuatorial suele abrir entre semana de 9 AM a 5 PM y la entrada cuesta alrededor de $5. Cerca, el Museo Solar Inti Ñan ofrece demostraciones divertidas sobre la línea ecuatorial y experimentos de gravedad."
+        "bodyEn": "Head about 26 km north to Mitad del Mundo, roughly a 45-minute taxi ride from central Quito. The equator monument is typically open weekdays from 9 AM to 5 PM with about a $5 entry fee. Nearby Museo Solar Inti Ñan offers playful equator demonstrations and gravity experiments if you want a second stop. About 15 minutes further north, the free Ventanillas lookout peers down into the Pululahua crater, one of the few inhabited volcanic calderas in the world. Go early if you can, since the crater often fills with cloud by late morning.",
+        "bodyEs": "Vayan unos 26 km al norte hasta la Mitad del Mundo, aproximadamente 45 minutos en taxi desde el centro de Quito. El monumento ecuatorial suele abrir entre semana de 9 AM a 5 PM y la entrada cuesta alrededor de $5. Cerca, el Museo Solar Inti Ñan ofrece demostraciones divertidas sobre la línea ecuatorial y experimentos de gravedad. A unos 15 minutos más al norte, el mirador de Ventanillas es de ingreso libre y se asoma al cráter del Pululahua, una de las pocas calderas volcánicas habitadas del mundo. Vayan temprano si pueden, porque el cráter suele nublarse hacia el final de la mañana."
       },
       "afternoon": {
         "titleEn": "Crafts or Guayasamín",
@@ -102,8 +102,8 @@
       "afternoon": {
         "titleEn": "Chocolate, trout, and adventure",
         "titleEs": "Chocolate, trucha y aventura",
-        "bodyEn": "Take a chocolate tour at El Quetzal de Mindo, usually around $10, and enjoy a lunch of fresh trout. In the afternoon, choose your adventure: butterfly garden, ziplines, or river tubing depending on weather and comfort level. Keep dry layers handy, since cloud forest conditions can change quickly.",
-        "bodyEs": "Hagan un tour de chocolate en El Quetzal de Mindo, normalmente alrededor de $10, y disfruten un almuerzo con trucha fresca. Por la tarde, elijan su aventura: mariposario, canopy o tubing en el río, según el clima y su comodidad. Lleven capas secas a mano, porque el clima del bosque nublado cambia rápido."
+        "bodyEn": "Take a chocolate tour at El Quetzal de Mindo, usually around $10, and enjoy a lunch of fresh trout. In the afternoon, choose your adventure: butterfly garden, ziplines, river tubing, or the tarabita — a small open cable car that crosses a river gorge to the Santuario de Cascadas waterfall trails, where the walk to Reina falls runs about an hour round trip over uneven ground. Keep dry layers handy, since cloud forest conditions can change quickly.",
+        "bodyEs": "Hagan un tour de chocolate en El Quetzal de Mindo, normalmente alrededor de $10, y disfruten un almuerzo con trucha fresca. Por la tarde, elijan su aventura: mariposario, canopy, tubing en el río o la tarabita, una pequeña góndola abierta que cruza el cañón del río hacia los senderos del Santuario de Cascadas, donde la caminata hasta la cascada Reina toma cerca de una hora ida y vuelta por terreno irregular. Lleven capas secas a mano, porque el clima del bosque nublado cambia rápido."
       },
       "evening": {
         "titleEn": "Return to Quito",
