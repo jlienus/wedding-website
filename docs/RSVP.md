@@ -39,7 +39,9 @@ Guests           SMS (ACS toll-free)        Admin (jlienus@github)
 - **Scheduling**: SWA Free Functions don't support timer triggers, so we use a
   GitHub Actions cron workflow (`.github/workflows/rsvp-reminders.yml`) that
   POSTs `/api/cron/reminders` daily with a shared secret header. The endpoint
-  enforces a 30-day per-invite cadence, so daily polling is safe.
+  enforces a 30-day per-invite cadence, so daily polling is safe. A second,
+  **manual-only** workflow (`rsvp-cutoff.yml`) runs the post-deadline sweep —
+  see [Post-deadline cutoff sweep](#post-deadline-cutoff-sweep).
 
 ### Data model (v2)
 
@@ -54,6 +56,7 @@ row key = `'invite'`. Schema:
 | `locale` | `'en'` \| `'es'` | Drives SMS language + magic-link redirect target. |
 | `payload` | JSON | `{ schemaVersion: 1, primary: { attending, isKid?, entradaChoice?, sorbetChoice?, mealChoice?, postreChoice?, dietary?, songRequest? }, additionalGuests: [{ id, name, attending, isKid?, entradaChoice?, sorbetChoice?, mealChoice?, postreChoice?, dietary? }], notes? }`. Per-course choices map to the 4-tiempos menu (entrada/sorbet/plato fuerte/postre) — old responses predating the migration may only carry `mealChoice`. |
 | `responded`, `respondedAt` | bool / iso8601 | Server auto-derives `responded` from `payload` completeness at submit time. |
+| `autoDeclinedAt` | iso8601 | Set only by the post-deadline cutoff sweep, to distinguish a guest's own "no" from one recorded on their behalf. Cleared by any genuine later submission. |
 | `optedOutOfSms`, `smsHardFailedAt` | bool / iso8601 | Suppress reminder fan-out. |
 | `lastReminderSentAt`, `reminderCount` | iso8601 / int | Cadence accounting. |
 | `adminNotes` | string | Admin-only free text. |
@@ -93,6 +96,69 @@ in-place migration** — v1 data is wiped, v2 seeds fresh.
 
 Both dates are env-var overridable: `RSVP_GUEST_DEADLINE_UTC` and
 `RSVP_PERMANENT_LOCK_UTC` (ISO 8601).
+
+### Post-deadline cutoff sweep
+
+Once Nov 15 passes, outstanding RSVPs are not left as nulls — the venue needs a
+real headcount. The cutoff sweep records every household that never finished as
+**not attending** and texts each one a link to change it before Jan 15.
+
+Run it from the **RSVP Cutoff (manual)** GitHub Actions workflow. There is no
+`schedule:` trigger on purpose: this is the only job that can text the whole
+guest list at once, so a human decides when it happens.
+
+1. Run with `mode=dry-run`. Writes nothing, sends nothing. Check the job summary
+   and the emailed digest — it reports the real rendered copy and segment counts.
+2. Run again with `mode=execute` **and** `confirm=DECLINE-OUTSTANDING`.
+
+What it does, and what it deliberately does not:
+
+| Case | Recorded as declined | Texted |
+| --- | --- | --- |
+| Never responded, has a usable phone | yes | yes |
+| Never responded, no phone on file | yes | no |
+| Opted out of SMS (`STOP`) | yes | **no** — opt-out is respected |
+| Previously hard-failed number | yes | no |
+| Two households sharing one handset | both | one text |
+| Already responded | untouched | no |
+| Partially answered **with someone attending** | **untouched** | no — bucketed `needs_review` for you to finish by hand |
+
+Only *unanswered* attendees flip to no. An explicit yes or no already on the
+record is the guest's own answer and survives the sweep.
+
+The sweep is **idempotent**: it only selects invites where `responded === false`,
+and declining one flips that to `true`. A second run finds nothing to do and
+cannot double-text, so re-running after a partial failure is safe. Each decline
+is written *before* its text is sent — if a send then fails, the household is
+correctly declined but un-notified, and the run summary lists it under
+`sendFailedRows` so you can follow up.
+
+Auto-declines are stamped `autoDeclinedAt` so the admin view can tell "the guest
+told us no" from "we recorded a no on their behalf". Any genuine later
+submission clears that stamp.
+
+**Nothing is disabled afterwards, and nothing needs to be.** Reminders stop on
+their own: `reminders.sendReminderToInvite` skips any invite where `responded`
+is true, so after a completed sweep the monthly cron has nobody left to text.
+Guest-initiated login codes keep working, which is what lets people actually act
+on the link in the message.
+
+Endpoint, if you ever need it directly (`POST /api/cron/rsvp-cutoff`, header
+`X-Cron-Secret`):
+
+```bash
+# Preview — dryRun defaults to true, so this is what a bare call does.
+curl -X POST https://johnanddianaswedding.com/api/cron/rsvp-cutoff \
+  -H "X-Cron-Secret: $RSVP_CRON_SECRET" -H 'Content-Type: application/json' -d '{}'
+
+# Execute — needs BOTH flags. Either one alone is refused.
+curl -X POST https://johnanddianaswedding.com/api/cron/rsvp-cutoff \
+  -H "X-Cron-Secret: $RSVP_CRON_SECRET" -H 'Content-Type: application/json' \
+  -d '{"dryRun":false,"confirm":"DECLINE-OUTSTANDING"}'
+```
+
+It returns 409 if called before `RSVP_GUEST_DEADLINE_UTC` (override with
+`force=true` in a test environment only).
 
 ## Azure resources required
 
@@ -232,10 +298,13 @@ settings`):
 
 | Name | Description |
 | --- | --- |
-| `RSVP_CRON_SECRET` | **Must match the SWA app setting of the same name.** Cron workflow sends this in the `X-Cron-Secret` header. |
+| `RSVP_CRON_SECRET` | **Must match the SWA app setting of the same name.** Cron workflow sends this in the `X-Cron-Secret` header. Used by both the reminders and the cutoff workflow. |
 
 The workflow at `.github/workflows/rsvp-reminders.yml` runs daily at 16:00 UTC
 (11 AM ET) and is also manually triggerable from the Actions tab.
+
+`.github/workflows/rsvp-cutoff.yml` has **no schedule** — it only ever runs when
+you dispatch it by hand, and defaults to dry-run.
 
 ## Seed starter data
 

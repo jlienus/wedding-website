@@ -1,0 +1,125 @@
+name: RSVP Cutoff (manual)
+
+# Post-deadline sweep: records every household that never finished its RSVP as
+# "not attending" and texts each one a link to change it before Jan 15.
+#
+# Manual dispatch ONLY -- there is deliberately no `schedule:` trigger. This is
+# the one job that can text the whole guest list at once, and it should happen
+# when a human decides it should, not because a cron fired while nobody was
+# watching.
+#
+# Normal usage:
+#   1. Run with mode=dry-run. Nothing is written or sent. Read the summary in
+#      the job output (and the emailed digest) and confirm the counts and the
+#      rendered message copy look right.
+#   2. Run again with mode=execute AND confirm=DECLINE-OUTSTANDING.
+#
+# The endpoint is idempotent: a second execute finds every household already
+# responded and does nothing, so a re-run after a partial failure is safe.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'dry-run previews only. execute writes and sends real texts.'
+        required: true
+        type: choice
+        default: dry-run
+        options:
+          - dry-run
+          - execute
+      confirm:
+        description: 'Required for execute. Type exactly: DECLINE-OUTSTANDING'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+# Never let two sweeps overlap. Even though the endpoint is idempotent, two
+# concurrent runs could both read an invite as un-responded before either
+# writes, and double-text it.
+concurrency:
+  group: rsvp-cutoff
+  cancel-in-progress: false
+
+jobs:
+  cutoff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Guard the execute confirmation
+        if: inputs.mode == 'execute' && inputs.confirm != 'DECLINE-OUTSTANDING'
+        run: |
+          echo "::error::mode=execute requires confirm=DECLINE-OUTSTANDING (got '${{ inputs.confirm }}'). Nothing was sent."
+          exit 1
+
+      - name: Announce what is about to happen
+        run: |
+          if [ "${{ inputs.mode }}" = "execute" ]; then
+            echo "::warning::EXECUTE run -- this will write auto-declines and send real texts to guests."
+          else
+            echo "Dry run -- no writes, no texts."
+          fi
+
+      - name: Hit /api/cron/rsvp-cutoff
+        env:
+          CRON_SECRET: ${{ secrets.RSVP_CRON_SECRET }}
+          ENDPOINT: https://johnanddianaswedding.com/api/cron/rsvp-cutoff
+          MODE: ${{ inputs.mode }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::RSVP_CRON_SECRET repo secret is not set"
+            exit 1
+          fi
+
+          if [ "$MODE" = "execute" ]; then
+            PAYLOAD='{"dryRun":false,"confirm":"DECLINE-OUTSTANDING"}'
+          else
+            PAYLOAD='{"dryRun":true}'
+          fi
+
+          echo "POST $ENDPOINT (mode=$MODE)"
+          set +e
+          HTTP_CODE=$(curl -sS -o response.json -w "%{http_code}" \
+            -X POST "$ENDPOINT" \
+            -H "X-Cron-Secret: $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            --max-time 300)
+          CURL_RC=$?
+          set -e
+          echo "HTTP $HTTP_CODE (curl rc=$CURL_RC)"
+          echo "--- response body ---"
+          cat response.json || true
+          echo
+          echo "--- end response ---"
+          if [ "$CURL_RC" -ne 0 ] || [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::cutoff call failed"
+            exit 1
+          fi
+
+      - name: Summarize
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then
+            echo "jq unavailable; see the raw body above."
+            exit 0
+          fi
+          {
+            echo "### RSVP cutoff — \`${{ inputs.mode }}\`"
+            echo ""
+            echo "| Metric | Count |"
+            echo "|---|---|"
+            echo "| Total invites | $(jq -r '.totalInvites // "?"' response.json) |"
+            echo "| Auto-declined | $(jq -r '.declined // "?"' response.json) |"
+            echo "| Texted | $(jq -r '.texted // "?"' response.json) |"
+            echo "| Send failures | $(jq -r '.sendFailed // 0' response.json) |"
+            echo "| Needs review | $(jq -r '(.needsReview // []) | length' response.json) |"
+            echo ""
+            echo "Skipped: \`$(jq -rc '.skipped // {}' response.json)\`"
+            if [ "$(jq -r '.dryRun' response.json)" = "true" ]; then
+              echo ""
+              echo "> Dry run — nothing was written and no texts were sent."
+              echo "> Re-run with \`mode=execute\` and \`confirm=DECLINE-OUTSTANDING\` to apply."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -178,6 +178,10 @@ function entityToInvite(e) {
     responded: !!e.responded,
     respondedAt: e.respondedAt || '',
     respondedLate: !!e.respondedLate,
+    // Set only by the post-deadline cutoff sweep (see _lib/cutoff.js). Lets
+    // the admin view distinguish "the guest told us no" from "we recorded a
+    // no on their behalf because the deadline passed".
+    autoDeclinedAt: e.autoDeclinedAt || '',
     payload, // parsed JSON or null
     adminNotes: e.adminNotes || '',
     createdAt: e.createdAt || '',
@@ -226,6 +230,7 @@ function inviteToEntity(inv) {
     responded: !!inv.responded,
     respondedAt: inv.respondedAt || '',
     respondedLate: !!inv.respondedLate,
+    autoDeclinedAt: inv.autoDeclinedAt || '',
     payload: typeof inv.payload === 'string' ? inv.payload : (inv.payload ? JSON.stringify(inv.payload) : ''),
     adminNotes: inv.adminNotes || '',
     createdAt: inv.createdAt || new Date().toISOString(),
@@ -410,10 +415,19 @@ async function markResponded(inviteId, payloadJson, opts = {}) {
     payload: payloadJson,
     // RSVP submissions are stored canonically in English. The invite locale is
     // only needed before a response to choose SMS reminder copy.
-    locale: 'en',
+    //
+    // keepLocale exists for responses the guest did NOT author -- specifically
+    // the post-deadline auto-decline sweep. Those guests never actually
+    // answered and may still come back to change it, so their language has to
+    // survive the write or the confirmation text (and any later reminder copy)
+    // would switch to English on them.
+    locale: opts.keepLocale ? (opts.locale === 'es' ? 'es' : 'en') : 'en',
     responded: true,
     respondedAt: opts.respondedAt || new Date().toISOString(),
     respondedLate: !!opts.late,
+    // Stamped by the cutoff sweep; blanked by every other caller so a genuine
+    // guest submission after an auto-decline stops being reported as one.
+    autoDeclinedAt: opts.autoDeclinedAt || '',
     updatedAt: new Date().toISOString()
   }, 'Merge');
 }

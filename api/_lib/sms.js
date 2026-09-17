@@ -194,6 +194,40 @@ function buildReminderBody({ locale, firstName, deadlineDisplay, siteOrigin, mag
   ].join('\n\n');
 }
 
+// Body for the post-deadline auto-decline sweep (see _lib/cutoff.js). Sent
+// once per household that never finished its RSVP, telling them we recorded a
+// "no" on their behalf and how to change it.
+//
+// Advertises STOP because this is a bulk outbound send, same class as the
+// reminder body. (The transactional verify bodies deliberately don't -- see
+// buildVerifyCodeBody.) It does NOT advertise NO, since a "no" is already on
+// file; replying NO would just re-apply the same state.
+//
+// Spanish copy is deliberately unaccented so the message stays in the GSM-7
+// alphabet (160 chars/segment instead of UCS-2's 70) -- same convention as
+// buildReminderBody.
+function buildAutoDeclineBody({ locale, firstName, lastName, deadlineDisplay, updateUntilDisplay, siteOrigin, magicToken }) {
+  const link = `${siteOrigin}/api/rsvp/magic?t=${magicToken}`;
+  if (locale === 'es') {
+    const greeting = firstName ? `Hola ${firstName},` : 'Hola,';
+    const who = lastName ? `la familia ${lastName}` : 'tu familia';
+    return [
+      greeting,
+      `El plazo cerro el ${deadlineDisplay}, asi que ${who} figura como no asistira a la boda de John & Diana.`,
+      `Para cambiarlo, entra aqui antes del ${updateUntilDisplay}:\n${link}`,
+      'Responde STOP para no recibir mas mensajes.'
+    ].join('\n\n');
+  }
+  const greeting = firstName ? `Hi ${firstName},` : 'Hi,';
+  const who = lastName ? `the ${lastName} household` : 'your household';
+  return [
+    greeting,
+    `RSVPs closed ${deadlineDisplay}, so ${who} is marked as not attending John & Diana's wedding.`,
+    `To change it, tap here before ${updateUntilDisplay}:\n${link}`,
+    'Reply STOP to opt out.'
+  ].join('\n\n');
+}
+
 // Body for the SMS step-up auth "Text me a code" path. We DON'T mention NO
 // or STOP here — this is a verification flow, not a marketing/reminder
 // message, and conflating the two would let a guest opt out by replying to
@@ -238,6 +272,7 @@ module.exports = {
   sendSms,
   estimateSegments,
   buildReminderBody,
+  buildAutoDeclineBody,
   buildVerifyCodeBody,
   buildVerifyLinkBody
 };

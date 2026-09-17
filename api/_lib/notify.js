@@ -337,4 +337,101 @@ function hashRecipient(email) {
   }
 }
 
-module.exports = { emailAdminsOfRsvpUpdate };
+// One-shot summary of a cutoff sweep (see _lib/cutoff.js). Deliberately a
+// single digest rather than reusing emailAdminsOfRsvpUpdate per household --
+// that would fire one email per auto-declined invite and bury the inbox at
+// exactly the moment the host needs a clear picture.
+//
+// Sent for dry runs too, so a rehearsal produces the same artifact the real
+// run will, and the subject line makes which one obvious at a glance.
+async function emailAdminsOfCutoffSummary(context, result) {
+  const log = (context && context.log) || (() => {});
+  const logErr = (context && context.log && context.log.error) || (() => {});
+
+  try {
+    if (!isNotifyEnabled()) {
+      log('notify_cutoff_email skipped reason=disabled_env');
+      return;
+    }
+    if (!result || typeof result !== 'object') {
+      log('notify_cutoff_email skipped reason=missing_result');
+      return;
+    }
+
+    let recipients = [];
+    try {
+      recipients = auth.getAdminEmailAllowlist();
+    } catch (err) {
+      logErr(`notify_cutoff_email skipped reason=no_allowlist: ${err && err.message}`);
+      return;
+    }
+    if (!recipients.length) {
+      log('notify_cutoff_email skipped reason=empty_allowlist');
+      return;
+    }
+
+    const mode = result.dryRun ? 'DRY RUN' : 'EXECUTED';
+    const subject = result.dryRun
+      ? `[Dry run] RSVP cutoff would auto-decline ${result.declined} household(s)`
+      : `RSVP cutoff: ${result.declined} auto-declined, ${result.texted} texted`;
+
+    const skippedPairs = Object.entries(result.skipped || {});
+    const rows = [
+      ['Mode', mode],
+      ['Ran at', result.ranAt || ''],
+      ['Total invites', String(result.totalInvites ?? '')],
+      ['Auto-declined', String(result.declined ?? '')],
+      ['Texted', String(result.texted ?? '')],
+      ['Send failures', String(result.sendFailed ?? '')],
+      ['Needs review', String((result.needsReview || []).length)]
+    ];
+
+    const reviewList = (result.needsReview || [])
+      .map((r) => `${r.lastName || r.inviteId} (${r.yes} attending, ${r.pending} unanswered)`);
+    const failList = (result.sendFailedRows || [])
+      .map((r) => `${r.lastName || r.inviteId} -- ${r.errorCode || 'unknown'} ${r.errorMessage || ''}`.trim());
+
+    const html = [
+      `<h2 style="margin:0 0 12px;font-family:Georgia,serif;">RSVP cutoff sweep &mdash; ${escapeHtml(mode)}</h2>`,
+      result.dryRun
+        ? '<p style="margin:0 0 16px;padding:8px 12px;background:#fff4d6;border-left:4px solid #c9a961;font-size:14px;color:#5a4318;">Nothing was written and no texts were sent. This is a preview of what an execute run would do.</p>'
+        : '',
+      '<table style="border-collapse:collapse;font-size:14px;">',
+      rows.map(([k, v]) => `<tr><td style="padding:4px 12px 4px 0;color:#666;">${escapeHtml(k)}</td><td style="padding:4px 0;"><strong>${escapeHtml(v)}</strong></td></tr>`).join(''),
+      '</table>',
+      skippedPairs.length
+        ? `<p style="font-size:14px;"><strong>Skipped:</strong> ${escapeHtml(skippedPairs.map(([k, v]) => `${k}=${v}`).join(', '))}</p>`
+        : '',
+      reviewList.length
+        ? `<p style="font-size:14px;"><strong>Needs your review</strong> (someone already said yes, so these were left alone):</p><ul style="font-size:14px;">${reviewList.map((r) => `<li>${escapeHtml(r)}</li>`).join('')}</ul>`
+        : '',
+      failList.length
+        ? `<p style="font-size:14px;"><strong>Declined but NOT notified</strong> (text failed &mdash; follow up by hand):</p><ul style="font-size:14px;">${failList.map((r) => `<li>${escapeHtml(r)}</li>`).join('')}</ul>`
+        : ''
+    ].join('\n');
+
+    const plainText = [
+      `RSVP cutoff sweep -- ${mode}`,
+      '',
+      ...rows.map(([k, v]) => `${k}: ${v}`),
+      skippedPairs.length ? `Skipped: ${skippedPairs.map(([k, v]) => `${k}=${v}`).join(', ')}` : '',
+      reviewList.length ? `\nNeeds your review:\n${reviewList.map((r) => `  - ${r}`).join('\n')}` : '',
+      failList.length ? `\nDeclined but NOT notified:\n${failList.map((r) => `  - ${r}`).join('\n')}` : ''
+    ].filter(Boolean).join('\n');
+
+    const results = await Promise.all(recipients.map(async (to) => {
+      try {
+        const r = await email.sendEmail({ to, subject, html, plainText });
+        return { to, ok: !!r.successful };
+      } catch {
+        return { to, ok: false };
+      }
+    }));
+    const successCount = results.filter((r) => r.ok).length;
+    log(`notify_cutoff_email recipients=${results.length} ok=${successCount} dryRun=${!!result.dryRun}`);
+  } catch (err) {
+    logErr(`notify_cutoff_email unexpected_failure: ${err && err.message}`);
+  }
+}
+
+module.exports = { emailAdminsOfRsvpUpdate, emailAdminsOfCutoffSummary };
