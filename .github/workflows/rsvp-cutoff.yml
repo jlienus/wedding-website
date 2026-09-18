@@ -74,9 +74,16 @@ jobs:
           fi
 
           if [ "$MODE" = "execute" ]; then
+            # Deliberately no "force" here. The endpoint refuses to execute
+            # before the guest deadline, and not sending the flag means this
+            # workflow *cannot* fire a real send early, even by mistake.
             PAYLOAD='{"dryRun":false,"confirm":"DECLINE-OUTSTANDING"}'
           else
-            PAYLOAD='{"dryRun":true}'
+            # Dry runs pass force so you can rehearse the sweep any time,
+            # including months before Nov 15. A dry run writes nothing and
+            # sends nothing, so skipping the date gate costs nothing -- and
+            # being able to preview the blast radius early is the point.
+            PAYLOAD='{"dryRun":true,"force":true}'
           fi
 
           echo "POST $ENDPOINT (mode=$MODE)"
@@ -120,6 +127,12 @@ jobs:
             if [ "$(jq -r '.dryRun' response.json)" = "true" ]; then
               echo ""
               echo "> Dry run — nothing was written and no texts were sent."
+              if [ "$(jq -r '.pastDeadline' response.json)" = "false" ]; then
+                echo ">"
+                echo "> **Rehearsal — run before the Nov 15 deadline.** These counts are a"
+                echo "> worst case: they include everyone who simply hasn't replied *yet*."
+                echo "> Expect the real number on Nov 15 to be lower."
+              fi
               echo "> Re-run with \`mode=execute\` and \`confirm=DECLINE-OUTSTANDING\` to apply."
             fi
           } >> "$GITHUB_STEP_SUMMARY"

@@ -341,6 +341,10 @@ async function runCutoff(context, opts = {}) {
     dryRun,
     ranAt: now.toISOString(),
     deadlineUtc: GUEST_DEADLINE_UTC.toISOString(),
+    // A dry run can legitimately be rehearsed months early (force). Say so in
+    // the result, because before the deadline the outstanding count is a
+    // worst case -- it includes people who simply have not replied *yet*.
+    pastDeadline: isPastDeadline(now),
     updateUntilUtc: PERMANENT_LOCK_UTC.toISOString(),
     totalInvites: invites.length,
     declined: declined.length,

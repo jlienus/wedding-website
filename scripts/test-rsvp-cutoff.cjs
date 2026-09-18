@@ -195,6 +195,34 @@ async function testRefusesBeforeDeadline() {
   eq(calls.sent.length, 0, 'pre-deadline -> no texts');
 }
 
+// The workflow lets you rehearse a dry run months early, so forcing past the
+// date gate must still write and send nothing -- and must say it was early,
+// since the outstanding count before the deadline is a worst case.
+async function testForcedPreDeadlineDryRun() {
+  reset();
+  const r = await cutoff.runCutoff(null, {
+    dryRun: true,
+    force: true,
+    now: BEFORE,
+    invites: [invite(), invite({ inviteId: 'inv2', phoneNorm: '+15551230001' })]
+  });
+  eq(r.refused, undefined, 'force lets a pre-deadline dry run proceed');
+  eq(r.dryRun, true, 'forced rehearsal is still a dry run');
+  eq(r.pastDeadline, false, 'forced rehearsal reports it ran before the deadline');
+  eq(r.declined, 2, 'forced rehearsal still previews the counts');
+  eq(calls.markResponded.length, 0, 'forced rehearsal writes nothing');
+  eq(calls.sent.length, 0, 'forced rehearsal sends nothing');
+
+  reset();
+  const after = await cutoff.runCutoff(null, { dryRun: true, now: AFTER, invites: [invite()] });
+  eq(after.pastDeadline, true, 'a real post-deadline run reports pastDeadline');
+
+  // force must never be a backdoor to an early real send.
+  reset();
+  const exec = await cutoff.runCutoff(null, { dryRun: false, now: BEFORE, invites: [invite()] });
+  eq(exec.refused, 'before_deadline', 'execute without force is still refused early');
+}
+
 async function testDryRunIsInert() {
   reset();
   const r = await cutoff.runCutoff(null, {
@@ -362,6 +390,7 @@ async function main() {
   testPlan();
   testCopy();
   await testRefusesBeforeDeadline();
+  await testForcedPreDeadlineDryRun();
   await testDryRunIsInert();
   await testExecute();
   await testSharedHandset();

@@ -111,6 +111,13 @@ guest list at once, so a human decides when it happens.
    and the emailed digest — it reports the real rendered copy and segment counts.
 2. Run again with `mode=execute` **and** `confirm=DECLINE-OUTSTANDING`.
 
+You can rehearse `dry-run` at any time, **including months before Nov 15** — it
+passes `force` to skip the date gate, which is harmless when nothing is written
+or sent. Note the counts in an early rehearsal are a *worst case*: they include
+everyone who simply hasn't replied yet, so expect a smaller number on the day.
+`mode=execute` never sends `force`, so the workflow cannot fire a real send
+before the deadline even if you pick it by mistake.
+
 What it does, and what it deliberately does not:
 
 | Case | Recorded as declined | Texted |
