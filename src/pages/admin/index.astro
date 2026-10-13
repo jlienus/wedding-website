@@ -79,6 +79,23 @@ const locale: Locale = 'en';
         <div id="settings-status" class="admin-status"></div>
       </section>
 
+      <section class="admin-card admin-cutoff" id="cutoff-card">
+        <div class="admin-card-header">
+          <h2>RSVP cutoff</h2>
+          <div class="admin-card-actions">
+            <button id="cutoff-preview" class="btn btn--ghost btn--small">Preview</button>
+          </div>
+        </div>
+        <p class="admin-muted admin-cutoff__blurb">
+          Records every household that never finished their RSVP as <strong>not attending</strong>,
+          and texts each one a link to change it. People who already answered are
+          left alone. Preview is safe to run any time — it writes nothing and
+          sends nothing.
+        </p>
+        <div id="cutoff-result" class="admin-cutoff__result" hidden></div>
+        <div id="cutoff-status" class="admin-status"></div>
+      </section>
+
       <section class="admin-card">
         <div class="admin-card-header">
           <h2>Overall</h2>
@@ -2132,6 +2149,146 @@ const locale: Locale = 'en';
         });
       }
 
+      // RSVP cutoff panel. Preview is a plain GET-shaped POST that writes and
+      // sends nothing, so it needs no ceremony. Execute is behind a typed
+      // confirmation phrase, because one click here texts every household that
+      // never replied.
+      const cutoffBtn = document.getElementById('cutoff-preview') as HTMLButtonElement | null;
+      const cutoffResult = document.getElementById('cutoff-result') as HTMLDivElement | null;
+      const cutoffStatus = document.getElementById('cutoff-status') as HTMLDivElement | null;
+
+      function setCutoffStatus(msg: string, tone: 'ok' | 'warn' | '' = '') {
+        if (!cutoffStatus) return;
+        cutoffStatus.textContent = msg;
+        cutoffStatus.dataset.tone = tone;
+      }
+
+      async function callCutoff(payload: any) {
+        const res = await fetch('/api/mgmt/rsvp-cutoff', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        let data: any = null;
+        try { data = await res.json(); } catch { data = null; }
+        return { res, data };
+      }
+
+      function renderCutoff(data: any) {
+        if (!cutoffResult) return;
+        const skipped = (data && data.skipped) || {};
+        const skippedPairs = Object.keys(skipped)
+          .filter((k) => k !== 'already_responded')
+          .map((k) => `${k.replace(/_/g, ' ')}: ${skipped[k]}`);
+        const needsReview: any[] = Array.isArray(data.needsReview) ? data.needsReview : [];
+        const sample: any[] = Array.isArray(data.textedRows) ? data.textedRows.slice(0, 3) : [];
+
+        const parts: string[] = [];
+
+        if (data.dryRun) {
+          parts.push(
+            data.pastDeadline
+              ? `<p class="admin-cutoff__banner">Preview — nothing was written or sent.</p>`
+              : `<p class="admin-cutoff__banner admin-cutoff__banner--early">Preview — nothing was written or sent.<br />
+                 <strong>This is a rehearsal.</strong> The deadline hasn't passed yet, so these
+                 counts are a worst case: they include everyone who simply hasn't replied <em>yet</em>.</p>`
+          );
+        } else {
+          parts.push(`<p class="admin-cutoff__banner admin-cutoff__banner--done">Done — these households are now recorded as not attending.</p>`);
+        }
+
+        parts.push(`<ul class="admin-cutoff__stats">
+          <li><strong>${escapeHtml(data.declined)}</strong> household${data.declined === 1 ? '' : 's'} ${data.dryRun ? 'would be' : ''} marked not attending</li>
+          <li><strong>${escapeHtml(data.texted)}</strong> text${data.texted === 1 ? '' : 's'} ${data.dryRun ? 'would be' : ''} sent</li>
+          ${data.sendFailed ? `<li class="admin-cutoff__bad"><strong>${escapeHtml(data.sendFailed)}</strong> send failure${data.sendFailed === 1 ? '' : 's'}</li>` : ''}
+          <li class="admin-muted">${escapeHtml(data.totalInvites)} invitations total</li>
+        </ul>`);
+
+        if (skippedPairs.length) {
+          parts.push(`<p class="admin-muted">Skipped — ${escapeHtml(skippedPairs.join(' · '))}</p>`);
+        }
+
+        if (needsReview.length) {
+          parts.push(`<p class="admin-cutoff__warn"><strong>${needsReview.length} need${needsReview.length === 1 ? 's' : ''} your review</strong> —
+            someone in the household said yes, so it was left untouched:
+            ${escapeHtml(needsReview.map((r: any) => r.lastName || r.inviteId).join(', '))}</p>`);
+        }
+
+        if (data.dryRun && sample.length) {
+          parts.push(`<details class="admin-cutoff__sample"><summary>What the text says</summary>
+            ${sample.map((r: any) => `<pre class="admin-cutoff__sms">${escapeHtml(r.bodyPreview || '')}</pre>
+              <p class="admin-muted">${escapeHtml(r.lastName || r.inviteId)} · ${escapeHtml(r.locale)} · ${escapeHtml(r.bodyLen)} chars · ${escapeHtml(r.segments)} segment${r.segments === 1 ? '' : 's'}</p>`).join('')}
+            <p class="admin-muted">The link is shown redacted here. Each household gets their own.</p>
+          </details>`);
+        }
+
+        if (data.dryRun && data.declined > 0) {
+          parts.push(`<div class="admin-cutoff__exec">
+            ${data.pastDeadline
+              ? `<p>To apply this for real, type <code>DECLINE-OUTSTANDING</code> and confirm.</p>
+                 <div class="admin-row">
+                   <input type="text" id="cutoff-confirm" placeholder="DECLINE-OUTSTANDING" autocomplete="off" spellcheck="false" />
+                   <button id="cutoff-execute" class="btn btn--small" disabled>Send for real</button>
+                 </div>`
+              : `<p class="admin-muted">Running this for real unlocks after the November 15 deadline.</p>`}
+          </div>`);
+        }
+
+        cutoffResult.innerHTML = parts.join('\n');
+        cutoffResult.hidden = false;
+
+        const confirmInput = document.getElementById('cutoff-confirm') as HTMLInputElement | null;
+        const execBtn = document.getElementById('cutoff-execute') as HTMLButtonElement | null;
+        if (confirmInput && execBtn) {
+          confirmInput.addEventListener('input', () => {
+            execBtn.disabled = confirmInput.value !== 'DECLINE-OUTSTANDING';
+          });
+          execBtn.addEventListener('click', async () => {
+            if (confirmInput.value !== 'DECLINE-OUTSTANDING') return;
+            if (!window.confirm(`This sends ${data.texted} real text message${data.texted === 1 ? '' : 's'} and marks ${data.declined} household${data.declined === 1 ? '' : 's'} as not attending.\n\nThis cannot be undone from here. Continue?`)) return;
+            execBtn.disabled = true;
+            confirmInput.disabled = true;
+            setCutoffStatus('Running the sweep…');
+            try {
+              const { res, data: out } = await callCutoff({ dryRun: false, confirm: 'DECLINE-OUTSTANDING' });
+              if (!res.ok) {
+                setCutoffStatus(`Failed (HTTP ${res.status}) — ${(out && (out.message || out.error)) || 'unknown error'}`, 'warn');
+                execBtn.disabled = false;
+                confirmInput.disabled = false;
+                return;
+              }
+              renderCutoff(out);
+              setCutoffStatus(`Done — ${out.declined} declined, ${out.texted} texted.`, 'ok');
+              loadEvents();
+              loadGuests();
+            } catch (e: any) {
+              setCutoffStatus(`Failed: ${e && e.message}`, 'warn');
+              execBtn.disabled = false;
+              confirmInput.disabled = false;
+            }
+          });
+        }
+      }
+
+      cutoffBtn?.addEventListener('click', async () => {
+        cutoffBtn.disabled = true;
+        setCutoffStatus('Checking…');
+        try {
+          const { res, data } = await callCutoff({ dryRun: true });
+          if (!res.ok) {
+            setCutoffStatus(`Preview failed (HTTP ${res.status}) — ${(data && (data.message || data.error)) || 'unknown error'}`, 'warn');
+            return;
+          }
+          renderCutoff(data);
+          setCutoffStatus('');
+        } catch (e: any) {
+          setCutoffStatus(`Preview failed: ${e && e.message}`, 'warn');
+        } finally {
+          cutoffBtn.disabled = false;
+        }
+      });
+
       (async () => {
         const ok = await ensureAuthed();
         if (!ok) return;
@@ -2839,6 +2996,45 @@ const locale: Locale = 'en';
     .admin-status { font-size: 0.9rem; min-height: 1.2em; margin-top: 0.5rem; }
     .admin-status[data-tone="ok"] { color: #2a6a2c; }
     .admin-status[data-tone="warn"] { color: #8a2c2c; }
+
+    .admin-cutoff__blurb { margin: 0.25rem 0 0.75rem; }
+    .admin-cutoff__result { margin-top: 0.5rem; }
+    .admin-cutoff__banner {
+      margin: 0 0 0.6rem;
+      padding: 0.5rem 0.7rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      background: rgba(0, 0, 0, 0.04);
+      border-left: 3px solid rgba(0, 0, 0, 0.25);
+    }
+    .admin-cutoff__banner--early { background: rgba(200, 150, 40, 0.1); border-left-color: #c89628; }
+    .admin-cutoff__banner--done { background: rgba(60, 140, 70, 0.1); border-left-color: #2a6a2c; }
+    .admin-cutoff__stats { list-style: none; padding: 0; margin: 0 0 0.6rem; }
+    .admin-cutoff__stats li { margin: 0.2rem 0; font-size: 0.95rem; }
+    .admin-cutoff__bad { color: #8a2c2c; }
+    .admin-cutoff__warn {
+      margin: 0.6rem 0;
+      padding: 0.5rem 0.7rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      background: rgba(200, 150, 40, 0.1);
+      border-left: 3px solid #c89628;
+    }
+    .admin-cutoff__sample { margin: 0.6rem 0; font-size: 0.9rem; }
+    .admin-cutoff__sample summary { cursor: pointer; }
+    .admin-cutoff__sms {
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 0.4rem 0;
+      padding: 0.5rem 0.7rem;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.04);
+      font-size: 0.85rem;
+      line-height: 1.45;
+    }
+    .admin-cutoff__exec { margin-top: 0.9rem; padding-top: 0.75rem; border-top: 1px solid rgba(0, 0, 0, 0.1); }
+    .admin-cutoff__exec p { margin: 0 0 0.5rem; font-size: 0.9rem; }
+    .admin-cutoff__exec input[type="text"] { font-family: ui-monospace, Menlo, Consolas, monospace; }
     .admin-list { padding-left: 1.25rem; }
     .admin-list li { margin-bottom: 0.4rem; }
     .admin-list--small li { margin-bottom: 0.2rem; font-size: 0.9rem; }

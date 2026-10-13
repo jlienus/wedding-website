@@ -40,8 +40,9 @@ Guests           SMS (ACS toll-free)        Admin (jlienus@github)
   GitHub Actions cron workflow (`.github/workflows/rsvp-reminders.yml`) that
   POSTs `/api/cron/reminders` daily with a shared secret header. The endpoint
   enforces a 30-day per-invite cadence, so daily polling is safe. A second,
-  **manual-only** workflow (`rsvp-cutoff.yml`) runs the post-deadline sweep —
-  see [Post-deadline cutoff sweep](#post-deadline-cutoff-sweep).
+  **manual-only** workflow (`rsvp-cutoff.yml`) is a fallback trigger for the
+  post-deadline sweep, which normally runs from the admin page — see
+  [Post-deadline cutoff sweep](#post-deadline-cutoff-sweep).
 
 ### Data model (v2)
 
@@ -103,20 +104,24 @@ Once Nov 15 passes, outstanding RSVPs are not left as nulls — the venue needs 
 real headcount. The cutoff sweep records every household that never finished as
 **not attending** and texts each one a link to change it before Jan 15.
 
-Run it from the **RSVP Cutoff (manual)** GitHub Actions workflow. There is no
-`schedule:` trigger on purpose: this is the only job that can text the whole
-guest list at once, so a human decides when it happens.
+Run it from the **RSVP cutoff** card on the [admin page](https://johnanddianaswedding.com/admin/).
 
-1. Run with `mode=dry-run`. Writes nothing, sends nothing. Check the job summary
-   and the emailed digest — it reports the real rendered copy and segment counts.
-2. Run again with `mode=execute` **and** `confirm=DECLINE-OUTSTANDING`.
+1. Click **Preview**. Writes nothing, sends nothing. It reports how many
+   households would be declined and texted, the real rendered copy and segment
+   counts, and anyone it refuses to touch.
+2. If that looks right, type `DECLINE-OUTSTANDING` in the box that appears and
+   click **Send for real**.
 
-You can rehearse `dry-run` at any time, **including months before Nov 15** — it
-passes `force` to skip the date gate, which is harmless when nothing is written
-or sent. Note the counts in an early rehearsal are a *worst case*: they include
-everyone who simply hasn't replied yet, so expect a smaller number on the day.
-`mode=execute` never sends `force`, so the workflow cannot fire a real send
-before the deadline even if you pick it by mistake.
+You can hit **Preview** at any time, **including months before Nov 15** — it
+skips the date gate, which is harmless when nothing is written or sent. Note the
+counts in an early rehearsal are a *worst case*: they include everyone who simply
+hasn't replied yet, so expect a smaller number on the day. The admin page shows
+a rehearsal banner when this is the case, and hides the execute controls
+entirely until the deadline has passed.
+
+The execute path **never** skips the date gate. Before Nov 15 the server refuses
+it outright, and the browser is given no override — so no sequence of clicks can
+auto-decline the guest list early.
 
 What it does, and what it deliberately does not:
 
@@ -150,7 +155,16 @@ is true, so after a completed sweep the monthly cron has nobody left to text.
 Guest-initiated login codes keep working, which is what lets people actually act
 on the link in the message.
 
-Endpoint, if you ever need it directly (`POST /api/cron/rsvp-cutoff`, header
+#### Fallbacks
+
+The same sweep is reachable two other ways if the admin page is unavailable.
+
+The **RSVP Cutoff (manual)** GitHub Actions workflow takes `mode=dry-run` or
+`mode=execute` (the latter also needs `confirm=DECLINE-OUTSTANDING`). It has no
+`schedule:` trigger on purpose: this is the only job that can text the whole
+guest list at once, so a human decides when it happens.
+
+Or call the cron endpoint directly (`POST /api/cron/rsvp-cutoff`, header
 `X-Cron-Secret`):
 
 ```bash
@@ -166,6 +180,11 @@ curl -X POST https://johnanddianaswedding.com/api/cron/rsvp-cutoff \
 
 It returns 409 if called before `RSVP_GUEST_DEADLINE_UTC` (override with
 `force=true` in a test environment only).
+
+The admin page talks to `POST /api/mgmt/rsvp-cutoff` instead, which takes an
+admin session rather than the cron secret and accepts only
+`{ dryRun, confirm }` — it chooses `force` itself, so the browser can preview
+early but can never send early.
 
 ## Azure resources required
 

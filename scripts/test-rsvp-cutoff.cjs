@@ -238,6 +238,14 @@ async function testDryRunIsInert() {
   eq(calls.events.length, 0, 'dry run logs no events');
   ok(r.textedRows[0].segments >= 1, 'dry run reports real segment counts');
 
+  // The preview is rendered in a browser, so the body it carries must not be
+  // a working magic link -- an open devtools window would otherwise hand over
+  // credentials to someone else's RSVP.
+  const preview = r.textedRows[0].bodyPreview;
+  ok(typeof preview === 'string' && preview.length > 0, 'dry run carries a body preview for the admin page');
+  ok(preview.includes('?t=<redacted>'), 'the preview redacts the magic token');
+  ok(!/\?t=[A-Za-z0-9._-]{8,}/.test(preview), 'no live token survives in the preview');
+
   reset();
   const d = await cutoff.runCutoff(null, { now: AFTER, invites: [invite()] });
   eq(d.dryRun, true, 'omitting dryRun defaults to a dry run');
@@ -385,6 +393,83 @@ async function testEndpointGuards() {
   eq(lastRun().dryRun, false, 'only the fully-confirmed call executes');
 }
 
+// --- admin endpoint guards -------------------------------------------------
+// The admin twin of the cron endpoint. Its distinguishing property is the
+// ASYMMETRIC force flag: a preview forces past the date gate so the host can
+// rehearse today, while an execute never does -- so no sequence of browser
+// clicks can auto-decline the guest list before the deadline.
+function loadAdminHandlerWithStubs() {
+  const corsPath = require.resolve('../api/_lib/cors');
+  const authPath = require.resolve('../api/_lib/auth');
+  const storagePath = require.resolve('../api/_lib/storage');
+  const cutoffPath = require.resolve('../api/_lib/cutoff');
+  const notifyPath = require.resolve('../api/_lib/notify');
+  const handlerPath = require.resolve('../api/admin_rsvp_cutoff');
+
+  const seen = { runs: [], digests: 0 };
+  const stub = (p, exports) => { require.cache[p] = { id: p, filename: p, loaded: true, exports }; };
+
+  stub(corsPath, {
+    preflight: () => ({ handled: false, cors: {}, origin: 'https://johnanddianaswedding.com' }),
+    isAllowedOrigin: (o) => o === 'https://johnanddianaswedding.com'
+  });
+  stub(authPath, {
+    isAdmin: (req) => (req.headers || {})['x-admin'] === 'yes',
+    readAdminActor: () => 'admin:host@example.com'
+  });
+  stub(storagePath, { ensureTables: async () => {} });
+  stub(cutoffPath, {
+    runCutoff: async (ctx, opts) => { seen.runs.push(opts); return { ok: true, dryRun: opts.dryRun, declined: 0, texted: 0, skipped: {} }; }
+  });
+  stub(notifyPath, { emailAdminsOfCutoffSummary: async () => { seen.digests += 1; } });
+
+  delete require.cache[handlerPath];
+  const handler = require(handlerPath);
+  return { handler, seen };
+}
+
+async function testAdminEndpointGuards() {
+  const { handler, seen } = loadAdminHandlerWithStubs();
+  const call = async (body, headers) => {
+    const ctx = { log: Object.assign(() => {}, { error: () => {} }), res: null };
+    await handler(ctx, {
+      method: 'POST',
+      headers: Object.assign({ 'x-admin': 'yes' }, headers || {}),
+      body
+    });
+    return ctx.res;
+  };
+  const lastRun = () => seen.runs[seen.runs.length - 1] || {};
+
+  eq((await call({}, { 'x-admin': 'no' })).status, 403, 'non-admin -> 403');
+  eq((await call({}, { 'x-admin': 'no' })).body.error, 'admin_required', 'non-admin names the reason');
+  eq(seen.runs.length, 0, 'non-admin never reaches the sweep');
+
+  let res = await call({});
+  eq(res.status, 200, 'admin preview -> 200');
+  eq(lastRun().dryRun, true, 'empty body -> dry run (default-deny)');
+  eq(lastRun().force, true, 'a preview forces past the date gate so it can be rehearsed early');
+  eq(lastRun().actor, 'admin:host@example.com', 'the audit actor is the admin, not cron');
+  eq(seen.digests, 0, 'a preview does not email the digest');
+
+  let before = seen.runs.length;
+  res = await call({ dryRun: false });
+  eq(res.status, 400, 'execute without the confirm phrase -> 400');
+  eq(res.body.error, 'confirm_required', 'execute without confirm names the reason');
+  eq(seen.runs.length, before, 'execute without confirm never reaches the sweep');
+
+  before = seen.runs.length;
+  res = await call({ dryRun: false, confirm: 'decline-outstanding' });
+  eq(res.status, 400, 'confirm phrase is case-sensitive');
+  eq(seen.runs.length, before, 'wrong-case confirm never reaches the sweep');
+
+  res = await call({ dryRun: false, confirm: 'DECLINE-OUTSTANDING' });
+  eq(res.status, 200, 'admin execute with the confirm phrase -> 200');
+  eq(lastRun().dryRun, false, 'only the fully-confirmed call executes');
+  eq(lastRun().force, false, 'an execute NEVER forces -- the browser gets no early-send override');
+  eq(seen.digests, 1, 'a real run emails the digest');
+}
+
 async function main() {
   testBuildPayload();
   testPlan();
@@ -397,6 +482,7 @@ async function main() {
   await testIdempotent();
   await testSendFailure();
   await testEndpointGuards();
+  await testAdminEndpointGuards();
 
   console.log('rsvp-cutoff:', count - fails, '/', count, 'passed');
   process.exit(fails ? 1 : 0);

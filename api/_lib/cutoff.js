@@ -60,6 +60,13 @@ function updateUntilDisplay(locale) {
   return locale === 'es' ? '15 de enero' : 'January 15';
 }
 
+// Keep the readable copy for audit logs and admin previews but strip the magic
+// token, so a log leak -- or a browser devtools window left open on the admin
+// page -- can't be replayed into someone else's RSVP.
+function redactToken(body) {
+  return String(body == null ? '' : body).replace(/(\?t=)[A-Za-z0-9._\-]+/g, '$1<redacted>');
+}
+
 function isPastDeadline(now = new Date()) {
   const t = now instanceof Date ? now : new Date(now);
   return Number.isFinite(GUEST_DEADLINE_UTC.getTime()) && t.getTime() > GUEST_DEADLINE_UTC.getTime();
@@ -173,6 +180,8 @@ function buildBodyForInvite(invite) {
 //   now     -- injectable clock for tests.
 //   invites -- injectable invite list for tests.
 //   force   -- run even before the deadline (test/staging only).
+//   actor   -- audit-trail attribution for the run event. Defaults to 'cron';
+//              the admin endpoint passes the signed-in admin instead.
 async function runCutoff(context, opts = {}) {
   const dryRun = opts.dryRun !== false;
   const now = opts.now instanceof Date ? opts.now : new Date();
@@ -242,7 +251,7 @@ async function runCutoff(context, opts = {}) {
         // Surface the real rendered copy + segment count so the host reviews
         // exactly what would go out, not an approximation of it.
         const body = buildBodyForInvite(invite);
-        texted.push({ ...row, bodyLen: body.length, segments: sms.estimateSegments(body) });
+        texted.push({ ...row, bodyPreview: redactToken(body), bodyLen: body.length, segments: sms.estimateSegments(body) });
       } else {
         bump(`not_texted_${row.noTextReason}`);
       }
@@ -303,10 +312,7 @@ async function runCutoff(context, opts = {}) {
       result = { successful: false, deliveryStatus: 'exception', errorCode: 'EXCEPTION', errorMessage: (err && err.message) || String(err) };
     }
 
-    // Same redaction as reminders.js: keep the readable copy in the audit log
-    // but strip the magic token so a secret leak plus log access can't be
-    // replayed into someone else's RSVP.
-    const auditBody = body.replace(/(\?t=)[A-Za-z0-9._\-]+/g, '$1<redacted>');
+    const auditBody = redactToken(body);
     try {
       await storage.appendSmsLog(invite.inviteId, {
         type: 'auto_decline',
@@ -363,7 +369,10 @@ async function runCutoff(context, opts = {}) {
     try {
       await storage.appendEvent({
         type: 'cron.rsvp_cutoff_run',
-        actor: 'cron',
+        // Who pulled the trigger. The cron workflow is not the only caller --
+        // the admin page can run this too, and the audit trail should say
+        // which human did it rather than blaming "cron" for all of them.
+        actor: opts.actor || 'cron',
         summary: `RSVP cutoff: auto-declined ${declined.length}, texted ${texted.length}${sendFailed.length ? `, ${sendFailed.length} send failures` : ''}${needsReview.length ? `, ${needsReview.length} need review` : ''}`,
         meta: {
           declined: declined.length,
